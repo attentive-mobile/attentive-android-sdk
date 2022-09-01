@@ -2,32 +2,8 @@
 plugins {
     id 'com.android.application' version '7.2.2' apply false
     id 'com.android.library' version '7.2.2' apply false
-    id 'checkstyle'
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-checkstyle {
-    toolVersion = "8.36"
-}
-
-subprojects { project ->
-    apply plugin: 'checkstyle'
-
-    task checkstyle(type: Checkstyle) {
-        description 'Runs Checkstyle inspection against ICanPlayer sourcesets.'
-        group = 'Code Quality'
-        configFile rootProject.file('config/checkstyle/checkstyle.xml')
-        ignoreFailures false
-        showViolations true
-        //classpath = files()
-        source 'src/main/java'
-    }
-
-    // check code style after project evaluation
-    afterEvaluate {
-        check.dependsOn('checkstyle')
-    }
 }

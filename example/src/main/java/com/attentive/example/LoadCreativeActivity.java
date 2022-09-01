@@ -25,6 +25,12 @@ public class LoadCreativeActivity extends AppCompatActivity {
         this.creative = new Creative(attentiveConfig, parentView);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        creative.destroy();
+    }
+
     public void displayCreative(View view) {
         // Clear cookies to avoid creative filtering
         clearCookies();
@@ -34,11 +40,5 @@ public class LoadCreativeActivity extends AppCompatActivity {
     private void clearCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        creative.destroy();
     }
 }
