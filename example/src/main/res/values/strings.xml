@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Attentive Example</string>
+    <string name="push_me_for_next_activity">Push me for next activity!</string>
+    <string name="push_me_for_creative">Push Me for creative!</string>
+</resources>
