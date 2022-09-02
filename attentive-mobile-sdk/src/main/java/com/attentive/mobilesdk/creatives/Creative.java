@@ -10,12 +10,9 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
-
 import com.attentive.mobilesdk.AttentiveConfig;
-
 import java.util.Set;
 
 public class Creative {
@@ -64,7 +61,8 @@ public class Creative {
     }
 
     public void trigger(String appUserId) {
-        if(webView != null) {
+        if (webView != null) {
+
             String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
                     .appendQueryParameter("app_user_id", appUserId)
                     .toString();
@@ -80,10 +78,10 @@ public class Creative {
     }
 
     public void destroy() {
-        if(parentView != null && webView != null) {
+        if (parentView != null && webView != null) {
             ((ViewGroup) parentView).removeView(webView);
         }
-        if(webView != null) {
+        if (webView != null) {
             webView.destroy();
             webView = null;
         }

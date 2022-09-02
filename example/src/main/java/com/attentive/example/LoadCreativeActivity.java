@@ -3,16 +3,14 @@ package com.attentive.example;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.attentive.mobilesdk.AttentiveConfig;
 import com.attentive.mobilesdk.creatives.Creative;
 
 
 public class LoadCreativeActivity extends AppCompatActivity {
-    private final String APP_USER_ID = "olivia115";
-    private final AttentiveConfig attentiveConfig= new AttentiveConfig(
+    private static final String APP_USER_ID = "olivia115";
+    private final AttentiveConfig attentiveConfig = new AttentiveConfig(
             "pocket7games", AttentiveConfig.Mode.PRODUCTION);
     private Creative creative;
 
