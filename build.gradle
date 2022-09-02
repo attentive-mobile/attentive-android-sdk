@@ -2,8 +2,41 @@
 plugins {
     id 'com.android.application' version '7.2.2' apply false
     id 'com.android.library' version '7.2.2' apply false
+    id 'checkstyle'
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+checkstyle {
+    toolVersion = "8.36"
+}
+
+def checkstyleConfig = {
+    group 'verification'
+    configFile file('config/checkstyle/checkstyle.xml')
+    include '**/*.java'
+    exclude '**/gen/**'
+    classpath = files()
+    ignoreFailures = false
+}
+
+task checkExample(type: Checkstyle) {
+    configure checkstyleConfig
+    description 'Check code standard for Example app'
+    source 'example'
+}
+
+task checkSdk(type: Checkstyle) {
+    configure checkstyleConfig
+    description 'Check code standard for SDK'
+    source 'attentive-mobile-sdk'
+}
+
+task checkstyle() {
+    group 'verification'
+    description 'Check code standard'
+    finalizedBy(checkExample)
+    finalizedBy(checkSdk)
 }
