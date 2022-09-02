@@ -73,7 +73,7 @@ public class Creative {
 
             webView.loadUrl(url);
         } else {
-            Log.e(this.getClass().getName(), "destroy() already called on this Creative. Cannot trigger Creative after destroyed.");
+            Log.e(this.getClass().getName(), "WebView not properly created or destroy() already called on this Creative. Cannot trigger Creative after destroyed.");
         }
     }
 
