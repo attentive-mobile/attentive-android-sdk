@@ -1,9 +1,10 @@
-package com.attentive.example;
+package com.attentive.example.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
+import com.attentive.example.R;
 
 
 public class MainActivity extends AppCompatActivity {

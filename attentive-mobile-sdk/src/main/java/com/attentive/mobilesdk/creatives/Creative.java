@@ -60,21 +60,25 @@ public class Creative {
                 webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
     }
 
-    public void trigger(String appUserId) {
-        if (webView != null) {
-
-            String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
-                    .appendQueryParameter("app_user_id", appUserId)
-                    .toString();
-
-            if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
-                webView.setVisibility(View.VISIBLE);
-            }
-
-            webView.loadUrl(url);
-        } else {
-            Log.e(this.getClass().getName(), "WebView not properly created or destroy() already called on this Creative. Cannot trigger Creative after destroyed.");
+    public void trigger() {
+        if (attentiveConfig.getAppUserId() == null) {
+            Log.e(this.getClass().getName(), "Cannot call `trigger` without calling `identify` in the AttentiveConfig");
+            return;
         }
+        if (webView == null) {
+            Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
+            return;
+        }
+
+        String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
+                .appendQueryParameter("app_user_id", attentiveConfig.getAppUserId())
+                .toString();
+
+        if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
+            webView.setVisibility(View.VISIBLE);
+        }
+
+        webView.loadUrl(url);
     }
 
     public void destroy() {
