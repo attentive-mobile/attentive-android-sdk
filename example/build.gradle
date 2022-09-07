@@ -32,5 +32,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.5.0'
+    // Use the attentive-mobile-sdk package from your local attentive-mobile-sdk folder
     implementation project(path: ':attentive-mobile-sdk')
+    // Use the published version of the attentive-mobile-sdk
+    //implementation 'com.attentive:attentive-mobile-sdk:VERSION_NUMBER'
 }
