@@ -37,7 +37,7 @@ AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", A
 attentiveConfig.identify("APP_USER_ID");
 ```
 
-### Loading the Creative
+### Load the Creative
 ```java
 // Create a new creative and attach it to a parent View. This will not render the creative.
 Creative creative = new Creative(attentiveConfig, parentView);
