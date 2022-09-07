@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
 }
 
 android {
@@ -21,10 +22,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_9
         targetCompatibility JavaVersion.VERSION_1_9
     }
+
     testFixtures {
         enable = true
     }
@@ -35,4 +38,34 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.5.0'
+}
+
+Properties ghProperties = new Properties()
+ghProperties.load(project.rootProject.file("github.properties").newDataInputStream())
+
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId 'com.attentive'
+                artifactId 'attentive-mobile-sdk'
+                version '0.0.0'
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/attentive-mobile/mobile-sdk-android")
+
+                credentials {
+                    username = ghProperties.getProperty('gpr.user', System.getenv("GH_USERNAME"))
+                    password = ghProperties.getProperty('gpr.key', System.getenv("GH_TOKEN"))
+                }
+            }
+        }
+    }
 }
