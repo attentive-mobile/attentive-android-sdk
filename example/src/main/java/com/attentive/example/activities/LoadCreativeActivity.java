@@ -4,10 +4,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
+import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
-import com.attentive.mobilesdk.AttentiveConfig;
-import com.attentive.mobilesdk.creatives.Creative;
 
 
 public class LoadCreativeActivity extends AppCompatActivity {

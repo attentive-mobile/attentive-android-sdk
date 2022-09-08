@@ -1,26 +1,26 @@
-# Attentive Mobile SDK for Android
-The Attentive Mobile SDK for Android provides the functionality to render Attentive creative units in Android mobile applications.
+# Attentive Android SDK
+The Attentive Android SDK provides the functionality to render Attentive creative units in Android mobile applications.
 
 ## Installation
-Add the Attentive Mobile SDK GitHub Package maven repository to your `build.gradle` `buildscript` or
+Add the Attentive Android SDK GitHub Package maven repository to your `build.gradle` `buildscript` or
 `settings.gradle` `dependencyResolutionManagement`:
 ```groovy
 repositories {
     ...
     maven {
-        url = uri("https://maven.pkg.github.com/attentive-mobile/mobile-sdk-android")
+        url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
     }
 }
 ```
 
-Add the `attentive-mobile-sdk` package to your `build.gradle`:
+Add the `attentive-android-sdk` package to your `build.gradle`:
 ```groovy
-implementation 'com.attentive:attentive-mobile-sdk:VERSION_NUMBER'
+implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 ```
 
 ## Usage
 See the [Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example)
-for a sample of how the Attentive Mobile SDK is used.
+for a sample of how the Attentive Android SDK is used.
 
 ### Create the AttentiveConfig
 ```groovy

@@ -11,10 +11,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven {
-            url = uri("https://maven.pkg.github.com/attentive-mobile/mobile-sdk-android")
+            url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-adk")
         }
     }
 }
-rootProject.name = "Attentive Mobile SDK"
+rootProject.name = "Attentive Android SDK"
 include ':example'
-include ':attentive-mobile-sdk'
+include ':attentive-android-sdk'
