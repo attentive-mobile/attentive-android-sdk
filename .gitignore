@@ -104,3 +104,6 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+# Github Packages Properties
+github.properties

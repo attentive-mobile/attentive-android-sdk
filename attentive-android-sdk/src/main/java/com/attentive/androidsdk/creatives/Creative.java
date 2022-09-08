@@ -1,4 +1,4 @@
-package com.attentive.mobilesdk.creatives;
+package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -12,7 +12,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
-import com.attentive.mobilesdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveConfig;
 import java.util.Set;
 
 public class Creative {

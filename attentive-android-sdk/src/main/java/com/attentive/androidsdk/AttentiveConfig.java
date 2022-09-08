@@ -1,4 +1,4 @@
-package com.attentive.mobilesdk;
+package com.attentive.androidsdk;
 
 public class AttentiveConfig {
 

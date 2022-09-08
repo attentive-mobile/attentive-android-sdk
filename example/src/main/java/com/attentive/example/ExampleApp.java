@@ -1,16 +1,19 @@
 package com.attentive.example;
 
 import android.app.Application;
-import com.attentive.mobilesdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveConfig;
 
 public class ExampleApp extends Application {
-    private static final String ATTENTIVE_DOMAIN = "games";
+    // Change this to your Attentive Domain to test with your Attentive account
+    private static final String ATTENTIVE_DOMAIN = "YOUR_ATTENTIVE_DOMAIN";
+    // The mode in which to run the Attentive Android SDK
+    private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
+
     public AttentiveConfig attentiveConfig;
 
     @Override
     public void onCreate() {
-        attentiveConfig = new AttentiveConfig(
-                ATTENTIVE_DOMAIN, AttentiveConfig.Mode.PRODUCTION);
+        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE);
         super.onCreate();
     }
 }

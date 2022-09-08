@@ -4,10 +4,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
+import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
-import com.attentive.mobilesdk.AttentiveConfig;
-import com.attentive.mobilesdk.creatives.Creative;
 
 
 public class LoadCreativeActivity extends AppCompatActivity {
@@ -25,6 +25,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // `trigger` on a Creative.
         attentiveConfig.identify("APP_USER_ID");
 
+        // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
         this.creative = new Creative(attentiveConfig, parentView);
     }
@@ -32,12 +33,17 @@ public class LoadCreativeActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Destroy the creative and it's associated WebView. You must call destroy on the
+        // creative when it is no longer in use.
         creative.destroy();
     }
 
     public void displayCreative(View view) {
-        // Clear cookies to avoid creative filtering
+        // Clear cookies to avoid creative filtering during testing. Do not clear cookies
+        // if you want to test Creative fatigue and filtering
         clearCookies();
+
+        // Display the creative
         creative.trigger();
     }
 

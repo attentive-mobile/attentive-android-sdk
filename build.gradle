@@ -31,7 +31,7 @@ task checkExample(type: Checkstyle) {
 task checkSdk(type: Checkstyle) {
     configure checkstyleConfig
     description 'Check code standard for SDK'
-    source 'attentive-mobile-sdk'
+    source 'attentive-android-sdk'
 }
 
 task checkstyle() {
