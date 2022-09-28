@@ -160,7 +160,7 @@ public class Creative {
         Uri.Builder creativeUriBuilder = new Uri.Builder()
                 .scheme("https")
                 .authority("creatives.attn.tv")
-                .path("mobile-gaming/index.html")
+                .path("mobile-apps/index.html")
                 .appendQueryParameter("domain", domain);
 
 
