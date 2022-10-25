@@ -11,12 +11,9 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
-
 import com.attentive.androidsdk.AttentiveConfig;
-
 import java.util.Set;
 
 public class Creative {
