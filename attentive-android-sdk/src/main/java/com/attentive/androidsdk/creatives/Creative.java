@@ -113,7 +113,9 @@ public class Creative {
             Log.e(this.getClass().getName(), "Creative listener cannot be attached!");
         }
 
-        view.setBackgroundColor(Color.TRANSPARENT);
+        if (attentiveConfig.getMode() == AttentiveConfig.Mode.PRODUCTION) {
+            view.setBackgroundColor(Color.TRANSPARENT);
+        }
         return view;
     }
 
