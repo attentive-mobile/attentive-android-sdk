@@ -2,6 +2,7 @@ package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
@@ -10,9 +11,12 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
+
 import com.attentive.androidsdk.AttentiveConfig;
+
 import java.util.Set;
 
 public class Creative {
@@ -112,6 +116,7 @@ public class Creative {
             Log.e(this.getClass().getName(), "Creative listener cannot be attached!");
         }
 
+        view.setBackgroundColor(Color.TRANSPARENT);
         return view;
     }
 
