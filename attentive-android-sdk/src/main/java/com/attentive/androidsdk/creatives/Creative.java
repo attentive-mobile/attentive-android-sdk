@@ -2,6 +2,7 @@ package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
@@ -112,6 +113,9 @@ public class Creative {
             Log.e(this.getClass().getName(), "Creative listener cannot be attached!");
         }
 
+        if (attentiveConfig.getMode() == AttentiveConfig.Mode.PRODUCTION) {
+            view.setBackgroundColor(Color.TRANSPARENT);
+        }
         return view;
     }
 
