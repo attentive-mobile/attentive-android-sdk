@@ -15,8 +15,9 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
-    private UserIdentifiers userIdentifiers;
     private final ApiClass apiClass;
+    private String appUserId;
+    private UserIdentifiers userIdentifiers;
 
     public AttentiveConfig(String domain, Mode mode) {
         this.domain = domain;
@@ -38,7 +39,7 @@ public class AttentiveConfig {
         return domain;
     }
 
-    public String getAppUserId() { return userIdentifiers.getAppUserId(); }
+    public String getAppUserId() { return appUserId; }
 
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
@@ -47,12 +48,10 @@ public class AttentiveConfig {
     public void identify(String appUserId) {
         ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
 
-        identify(new UserIdentifiers.Builder(appUserId).build());
+        identify(appUserId, null);
     }
 
-    public void identify(UserIdentifiers userIdentifiers) {
-        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
-
+    public void identify(String appUserId, UserIdentifiers userIdentifiers) {
         this.userIdentifiers = userIdentifiers;
         callIdentifyApi();
     }
