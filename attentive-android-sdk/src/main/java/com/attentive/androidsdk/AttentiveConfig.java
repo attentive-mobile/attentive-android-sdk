@@ -46,12 +46,13 @@ public class AttentiveConfig {
     }
 
     public void identify(String appUserId) {
-        ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
-
         identify(appUserId, null);
     }
 
     public void identify(String appUserId, UserIdentifiers userIdentifiers) {
+        ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
+
+        this.appUserId = appUserId;
         this.userIdentifiers = userIdentifiers;
         callIdentifyApi();
     }
