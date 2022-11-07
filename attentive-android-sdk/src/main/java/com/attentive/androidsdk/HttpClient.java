@@ -1,4 +1,4 @@
-package com.attentive.androidsdk.creatives;
+package com.attentive.androidsdk;
 
 import java.io.BufferedReader;
 import java.io.IOException;
