@@ -2,9 +2,10 @@ package com.attentive.androidsdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
 
@@ -15,7 +16,7 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
-    private final ApiClass apiClass;
+    private final AttentiveApi attentiveApi;
     private String appUserId;
     private UserIdentifiers userIdentifiers;
 
@@ -24,11 +25,10 @@ public class AttentiveConfig {
         this.mode = mode;
 
         // TODO make this injectable
-        LinkedBlockingQueue<Runnable> blockingQueue = new LinkedBlockingQueue<>();
-        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS, blockingQueue);
-        HttpClient httpClient = new HttpClient();
-        AttentiveApiClient attentiveApiClient = new AttentiveApiClient(httpClient, new ObjectMapper());
-        this.apiClass = new ApiClass(threadPoolExecutor, attentiveApiClient);
+        ObjectMapper objectMapper = new ObjectMapper();
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        OkHttpClient okHttpClient = new OkHttpClient();
+        this.attentiveApi = new AttentiveApi(executorService, okHttpClient, objectMapper);
     }
 
     public Mode getMode() {
@@ -53,11 +53,13 @@ public class AttentiveConfig {
         ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
 
         this.appUserId = appUserId;
-        this.userIdentifiers = userIdentifiers;
-        callIdentifyApi();
-    }
 
-    private void callIdentifyApi() {
-        apiClass.callIdentifyAsync(domain, userIdentifiers);
+        if (userIdentifiers == null) {
+            this.userIdentifiers = new UserIdentifiers.Builder(appUserId).build();
+        } else {
+            this.userIdentifiers = userIdentifiers;
+        }
+
+        attentiveApi.callIdentifyAsync(domain, this.userIdentifiers);
     }
 }

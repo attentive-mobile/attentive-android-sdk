@@ -1,6 +1,9 @@
 package com.attentive.androidsdk;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import android.net.Uri;
 
 import org.junit.Test;
 
@@ -17,5 +20,6 @@ public class AttentiveConfigTest {
         // Assert
         assertEquals(domain, config.getDomain());
         assertEquals(mode, config.getMode());
+
     }
 }
