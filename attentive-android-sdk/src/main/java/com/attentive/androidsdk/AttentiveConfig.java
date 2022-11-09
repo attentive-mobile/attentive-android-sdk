@@ -1,7 +1,11 @@
 package com.attentive.androidsdk;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
 
@@ -12,14 +16,22 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
+    private final AttentiveApi attentiveApi;
     private UserIdentifiers userIdentifiers;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode) {
+        this(domain, mode, ClassFactory.createOkHttpClient());
+    }
+
+    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull OkHttpClient okHttpClient) {
         ParameterValidation.verifyNotEmpty(domain, "domain");
         ParameterValidation.verifyNotNull(mode, "mode");
+        ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient");
 
         this.domain = domain;
         this.mode = mode;
+
+        this.attentiveApi = ClassFactory.createAttentiveApi(okHttpClient, ClassFactory.createObjectMapper());
     }
 
     @NonNull
@@ -67,6 +79,16 @@ public class AttentiveConfig {
     }
 
     private void sendUserIdentifiersCollectedEvent() {
-        // TODO
+        attentiveApi.sendUserIdentifiersCollectedEvent(domain, this.userIdentifiers, new AttentiveApiCallback() {
+            @Override
+            public void onFailure(String message) {
+                Log.e(this.getClass().getName(), message);
+            }
+
+            @Override
+            public void onSuccess() {
+                Log.i(this.getClass().getName(), "Success");
+            }
+        });
     }
 }
