@@ -5,7 +5,11 @@ import androidx.annotation.Nullable;
 
 import java.sql.Array;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class UserIdentifiers {
     private final String appUserId;
@@ -13,7 +17,7 @@ public class UserIdentifiers {
     private String email;
     private String shopifyId;
     private String klaviyoId;
-    private List<CustomIdentifier> customIdentifiers;
+    private Map<String, String> customIdentifiers;
 
     private UserIdentifiers(@NonNull String appUserId) {
         ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
@@ -46,32 +50,9 @@ public class UserIdentifiers {
         return klaviyoId;
     }
 
-    @Nullable
-    public List<CustomIdentifier> getCustomIdentifiers() {
+    @NonNull
+    public Map<String, String> getCustomIdentifiers() {
         return customIdentifiers;
-    }
-
-    public static class CustomIdentifier {
-        private final String name;
-        private final String value;
-
-        public CustomIdentifier(String name, String value) {
-            ParameterValidation.verifyNotEmpty(name, "name");
-            ParameterValidation.verifyNotEmpty(value, "value");
-
-            this.name = name;
-            this.value = value;
-        }
-
-        @NonNull
-        public String getName() {
-            return name;
-        }
-
-        @NonNull
-        public String getValue() {
-            return value;
-        }
     }
 
     public static class Builder {
@@ -80,7 +61,7 @@ public class UserIdentifiers {
         private String email;
         private String shopifyId;
         private String klaviyoId;
-        private List<CustomIdentifier> customIdentifiers;
+        private Map<String, String> customIdentifiers;
 
         public Builder(String appUserId) {
             ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
@@ -112,12 +93,11 @@ public class UserIdentifiers {
             return this;
         }
 
-        public Builder withCustomIdentifiers(List<CustomIdentifier> customIdentifiers) {
+        public Builder withCustomIdentifiers(Map<String, String> customIdentifiers) {
             ParameterValidation.verifyNotNull(customIdentifiers, "customIdentifiers");
-            // Create a new List as a precaution in case the original list changes
-            this.customIdentifiers = new ArrayList<>(customIdentifiers);
+            // Create a new map as a precaution in case other code changes the original map
+            this.customIdentifiers = Collections.unmodifiableMap(customIdentifiers);
             return this;
-
         }
 
         public UserIdentifiers build() {
@@ -126,8 +106,33 @@ public class UserIdentifiers {
             userIdentifiers.email = this.email;
             userIdentifiers.shopifyId = this.shopifyId;
             userIdentifiers.klaviyoId = this.klaviyoId;
-            userIdentifiers.customIdentifiers = this.customIdentifiers;
+            userIdentifiers.customIdentifiers = this.customIdentifiers == null ? Collections.emptyMap() : this.customIdentifiers;
             return userIdentifiers;
+        }
+    }
+
+    static UserIdentifiers merge(UserIdentifiers first, UserIdentifiers second) {
+        Builder builder = new Builder(first.getAppUserId());
+
+        builder.phone = firstNonNull(second.getPhone(), first.getPhone());
+        builder.email = firstNonNull(second.getEmail(), first.getEmail());
+        builder.klaviyoId = firstNonNull(second.getKlaviyoId(), first.getKlaviyoId());
+        builder.shopifyId = firstNonNull(second.getShopifyId(), first.getShopifyId());
+
+        Map<String, String> customIdentifiers = new HashMap<>(first.getCustomIdentifiers());
+        customIdentifiers.putAll(second.getCustomIdentifiers());
+        builder.customIdentifiers = Collections.unmodifiableMap(customIdentifiers);
+
+        return builder.build();
+    }
+
+    private static <T> T firstNonNull(T one, T two) {
+        if (one != null) {
+            return one;
+        } else if (two != null) {
+            return two;
+        } else {
+            return null;
         }
     }
 }

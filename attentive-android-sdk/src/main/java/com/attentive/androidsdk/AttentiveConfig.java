@@ -1,9 +1,9 @@
 package com.attentive.androidsdk;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import android.util.Log;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import okhttp3.OkHttpClient;
 
@@ -17,49 +17,73 @@ public class AttentiveConfig {
     private final Mode mode;
     private final String domain;
     private final AttentiveApi attentiveApi;
-    private String appUserId;
     private UserIdentifiers userIdentifiers;
 
-    public AttentiveConfig(String domain, Mode mode) {
+    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode) {
+        this(domain, mode, ClassBuilder.buildOkHttpClient());
+    }
+
+    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull OkHttpClient okHttpClient) {
+        ParameterValidation.verifyNotEmpty(domain, "domain");
+        ParameterValidation.verifyNotNull(mode, "mode");
+        ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient");
+
         this.domain = domain;
         this.mode = mode;
 
-        // TODO make this injectable
-        ObjectMapper objectMapper = new ObjectMapper();
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        OkHttpClient okHttpClient = new OkHttpClient();
-        this.attentiveApi = new AttentiveApi(executorService, okHttpClient, objectMapper);
+        this.attentiveApi = ClassBuilder.buildAttentiveApi(okHttpClient, ClassBuilder.buildObjectMapper());
     }
 
+    @NonNull
     public Mode getMode() {
         return mode;
     }
 
+    @NonNull
     public String getDomain() {
         return domain;
     }
 
-    public String getAppUserId() { return appUserId; }
+    @Nullable
+    public String getAppUserId() {
+        return userIdentifiers == null ? null : userIdentifiers.getAppUserId();
+    }
 
+    @Nullable
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
     }
 
-    public void identify(String appUserId) {
-        identify(appUserId, null);
-    }
-
-    public void identify(String appUserId, UserIdentifiers userIdentifiers) {
+    public void identify(@NonNull String appUserId) {
         ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
 
-        this.appUserId = appUserId;
+        identify(new UserIdentifiers.Builder(appUserId).build());
+    }
 
-        if (userIdentifiers == null) {
-            this.userIdentifiers = new UserIdentifiers.Builder(appUserId).build();
-        } else {
+    public void identify(@Nullable UserIdentifiers userIdentifiers) {
+        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
+
+        if (this.userIdentifiers == null || !this.userIdentifiers.getAppUserId().equals(userIdentifiers.getAppUserId())) {
             this.userIdentifiers = userIdentifiers;
+        } else {
+            // merge
+            this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
         }
 
-        attentiveApi.callIdentifyAsync(domain, this.userIdentifiers);
+        sendUserIdentifiersCollectedEvent();
+    }
+
+    private void sendUserIdentifiersCollectedEvent() {
+        attentiveApi.sendUserIdentifiersCollectedEvent(domain, this.userIdentifiers, new AttentiveApiCallback() {
+                @Override
+                public void onFailure(String message) {
+                    Log.e(this.getClass().getName(), message);
+                }
+
+                @Override
+                public void onSuccess() {
+                    Log.i(this.getClass().getName(), "Success");
+                }
+            });
     }
 }

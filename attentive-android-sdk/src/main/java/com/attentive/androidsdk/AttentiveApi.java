@@ -7,20 +7,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Executor;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -30,39 +24,70 @@ import okhttp3.ResponseBody;
 // TODO name
 class AttentiveApi {
     private static final String ATTENTIVE_EVENTS_ENDPOINT_HOST = "events.dev.attentivemobile.com";
+    private static final String ATTENTIVE_DTAG_URL = "https://cdn.dev.attn.tv/%s/dtag.js";
 
-    private final Executor executor;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public AttentiveApi(Executor executor, OkHttpClient httpClient, ObjectMapper objectMapper) {
-        this.executor = executor;
+    public AttentiveApi(OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
     }
 
-    public void callIdentifyAsync(String domain, UserIdentifiers userIdentifiers) {
-        executor.execute(() -> callIdentifySynchronously(domain, userIdentifiers));
+    public void sendUserIdentifiersCollectedEvent(String domain, UserIdentifiers userIdentifiers, AttentiveApiCallback callback) {
+        // first get the geo-adjusted domain, and then call the events endpoint
+        final String url = String.format(ATTENTIVE_DTAG_URL, domain);
+        Request request = new Request.Builder().url(url).build();
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                callback.onFailure("Getting geo-adjusted domain failed: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.code() != 200) {
+                    callback.onFailure(String.format("Getting geo-adjusted domain returned invalid code: '%d', message: '%s'", response.code(), response.message()));
+                    return;
+                }
+
+                ResponseBody body = response.body();
+
+                if (body == null) {
+                    callback.onFailure("Getting geo-adjusted domain returned no body");
+                    return;
+                }
+
+                String fullTag = response.body().string();
+                String geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag);
+
+                if (geoAdjustedDomain == null) {
+                    callback.onFailure("Could not parse the domain from the full tag");
+                    return;
+                }
+
+                internalCallIdentifyAsync(geoAdjustedDomain, userIdentifiers, callback);
+            }
+        });
     }
 
-    private void callIdentifySynchronously(String domain, UserIdentifiers userIdentifiers) {
-        String geoAdjustedDomain = getGeoAdjustedDomain(domain);
-
-        if (geoAdjustedDomain == null) {
-            // TODO handle
-            return;
-        }
-
+    private void internalCallIdentifyAsync(String geoAdjustedDomain, UserIdentifiers userIdentifiers, AttentiveApiCallback callback) {
         String externalVendorIdsJson = null;
-        String metadataJson = null;
         try {
             List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
             externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
+        } catch (JsonProcessingException e) {
+            callback.onFailure(String.format("Could not serialize the UserIdentifiers. Message: '%s'", e.getMessage()));
+            return;
+        }
 
+        String metadataJson = null;
+        try {
             Metadata metadata = buildMetadata(userIdentifiers);
             metadataJson = objectMapper.writeValueAsString(metadata);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            callback.onFailure(String.format("Could not serialize metadata. Message: '%s'", e.getMessage()));
+            return;
         }
 
         HttpUrl url = getHttpUrlEventsEndpointBuilder()
@@ -74,12 +99,22 @@ class AttentiveApi {
                 .build();
 
         Request request = new Request.Builder().url(url).build();
-        try {
-            Response response = httpClient.newCall(request).execute();
-            System.out.println(response);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                callback.onFailure(String.format("Error when calling the event endpoint: '%s'", e.getMessage()));
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                if (!response.isSuccessful()) {
+                    callback.onFailure(String.format("Invalid response code when calling the event endpoint: '%d', message: '%s'", response.code(), response.message()));
+                    return;
+                }
+
+                callback.onSuccess();
+            }
+        });
     }
 
     @NonNull
@@ -90,38 +125,12 @@ class AttentiveApi {
                 .addPathSegment("e");
     }
 
-    private String encode(String stringToEncode) throws UnsupportedEncodingException {
-        return URLEncoder.encode(stringToEncode, StandardCharsets.UTF_8.toString());
-    }
-
-    @Nullable
-    private String getGeoAdjustedDomain(String domain) {
-        try {
-            final String url = String.format("https://cdn.dev.attn.tv/%s/dtag.js", domain);
-            Request request = new Request.Builder().url(url).build();
-            Response response = httpClient.newCall(request).execute();
-
-            // We want to check for 200 specifically instead of just "success" because this endpoint can return other success response codes, like 204 if there is no dtag
-            if (response.code() != 200) {
-                return null;
-            }
-
-            String fullTag = response.body().string();
-            return parseAttentiveDomainFromTag(fullTag);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
     @Nullable
     private String parseAttentiveDomainFromTag(String tag) {
         Pattern pattern = Pattern.compile("window.__attentive_domain='(.*?).dev.attn.tv'");
         Matcher matcher = pattern.matcher(tag);
         if (matcher.find()) {
             if (matcher.groupCount() == 1) {
-                // TODO check domain value
                 return matcher.group(1);
             }
         }
@@ -166,14 +175,12 @@ class AttentiveApi {
             }});
         }
 
-        if (userIdentifiers.getCustomIdentifiers() != null) {
-            for (UserIdentifiers.CustomIdentifier customIdentifier : userIdentifiers.getCustomIdentifiers()) {
-                externalVendorIdList.add(new ExternalVendorId() {{
-                    setVendor(VendorIdentifierValue.CUSTOM_USER);
-                    setId(customIdentifier.getValue());
-                    setName(customIdentifier.getName());
-                }});
-            }
+        for (Map.Entry<String, String> customIdentifier : userIdentifiers.getCustomIdentifiers().entrySet()) {
+            externalVendorIdList.add(new ExternalVendorId() {{
+                setVendor(VendorIdentifierValue.CUSTOM_USER);
+                setId(customIdentifier.getKey());
+                setName(customIdentifier.getValue());
+            }});
         }
 
         return externalVendorIdList;
