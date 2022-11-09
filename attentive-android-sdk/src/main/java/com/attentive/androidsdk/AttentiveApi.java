@@ -45,6 +45,7 @@ class AttentiveApi {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                // Check explicitly for 200 (instead of response.isSuccessful()) because the response only has the tag in the body when its code is 200
                 if (response.code() != 200) {
                     callback.onFailure(String.format("Getting geo-adjusted domain returned invalid code: '%d', message: '%s'", response.code(), response.message()));
                     return;
@@ -116,7 +117,6 @@ class AttentiveApi {
         });
     }
 
-    @NonNull
     private HttpUrl.Builder getHttpUrlEventsEndpointBuilder() {
         return new HttpUrl.Builder()
                 .scheme("https")

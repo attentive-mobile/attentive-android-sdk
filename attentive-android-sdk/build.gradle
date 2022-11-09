@@ -38,6 +38,11 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.5.0'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.13.4'
+
+    api("com.squareup.okhttp3:okhttp:4.10.0")
 }
 
 Properties ghProperties = new Properties()
