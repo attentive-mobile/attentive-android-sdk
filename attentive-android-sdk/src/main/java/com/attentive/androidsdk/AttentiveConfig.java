@@ -83,12 +83,12 @@ public class AttentiveConfig {
             private static final String tag = "AttentiveConfig";
             @Override
             public void onFailure(String message) {
-                Log.e(tag, message);
+                Log.e(tag, "Could not send the user identifiers. Error: " + message);
             }
 
             @Override
             public void onSuccess() {
-                Log.i(tag, "Success");
+                Log.i(tag, "Successfully sent the user identifiers");
             }
         });
     }
