@@ -80,14 +80,15 @@ public class AttentiveConfig {
 
     private void sendUserIdentifiersCollectedEvent() {
         attentiveApi.sendUserIdentifiersCollectedEvent(domain, this.userIdentifiers, new AttentiveApiCallback() {
+            private static final String tag = "AttentiveConfig";
             @Override
             public void onFailure(String message) {
-                Log.e(this.getClass().getName(), message);
+                Log.e(tag, message);
             }
 
             @Override
             public void onSuccess() {
-                Log.i(this.getClass().getName(), "Success");
+                Log.i(tag, "Success");
             }
         });
     }
