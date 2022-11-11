@@ -26,14 +26,18 @@ public class Creative {
             "            }\n" +
             "        },\n" +
             "    false);\n" +
+            "    var timeoutHandle = null;\n" +
             "    const interval = setInterval(function() {\n" +
             "        e =document.querySelector('iframe');\n" +
             "        if(e && e.id === 'attentive_creative') {\n" +
             "           clearInterval(interval);\n" +
             "           CREATIVE_LISTENER.postMessage('OPEN');\n" +
+            "           if (timeoutHandle != null) {\n" +
+            "               clearTimeout(timeoutHandle);\n" +
+            "           }\n" +
             "        }\n" +
             "    }, 100);\n" +
-            "    setTimeout(function() {\n" +
+            "    timeoutHandle = setTimeout(function() {\n" +
             "        clearInterval(interval);\n" +
             "        CREATIVE_LISTENER.postMessage('TIMED OUT');\n" +
             "    }, 5000);\n" +
