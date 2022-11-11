@@ -1,8 +1,5 @@
 package com.attentive.androidsdk;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 public class AttentiveConfig {
 
     public enum Mode {
@@ -12,61 +9,22 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
-    private UserIdentifiers userIdentifiers;
+    private String appUserId;
 
-    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode) {
-        ParameterValidation.verifyNotEmpty(domain, "domain");
-        ParameterValidation.verifyNotNull(mode, "mode");
-
+    public AttentiveConfig(String domain, Mode mode) {
         this.domain = domain;
         this.mode = mode;
     }
 
-    @NonNull
     public Mode getMode() {
         return mode;
     }
 
-    @NonNull
     public String getDomain() {
         return domain;
     }
 
-    @Nullable
-    public String getAppUserId() {
-        return userIdentifiers == null ? null : userIdentifiers.getAppUserId();
-    }
+    public String getAppUserId() { return appUserId; }
 
-    @Nullable
-    public UserIdentifiers getUserIdentifiers() {
-        return userIdentifiers;
-    }
-
-    @Deprecated
-    public void identify(@NonNull String appUserId) {
-        ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
-
-        identify(new UserIdentifiers.Builder(appUserId).build());
-    }
-
-    public void identify(@NonNull UserIdentifiers userIdentifiers) {
-        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
-
-        if (this.userIdentifiers == null || !this.userIdentifiers.getAppUserId().equals(userIdentifiers.getAppUserId())) {
-            this.userIdentifiers = userIdentifiers;
-        } else {
-            // merge
-            this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
-        }
-
-        sendUserIdentifiersCollectedEvent();
-    }
-
-    public void clearUser() {
-        this.userIdentifiers = null;
-    }
-
-    private void sendUserIdentifiersCollectedEvent() {
-        // TODO
-    }
+    public void identify(String appUserId) { this.appUserId = appUserId; }
 }
