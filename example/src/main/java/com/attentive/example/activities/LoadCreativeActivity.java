@@ -5,7 +5,6 @@ import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveConfig;
-import com.attentive.androidsdk.UserIdentifiers;
 import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
@@ -24,7 +23,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // Register the current user with the Attentive SDK. Replace "APP_USER_ID"
         // with the current user's ID. You must register a user ID before calling
         // `trigger` on a Creative.
-        attentiveConfig.identify(new UserIdentifiers.Builder("APP_USER_ID").build());
+        attentiveConfig.identify("APP_USER_ID");
 
         // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
