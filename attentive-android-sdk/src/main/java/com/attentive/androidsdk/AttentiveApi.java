@@ -91,7 +91,7 @@ class AttentiveApi {
         }
 
         HttpUrl url = getHttpUrlEventsEndpointBuilder()
-                .addQueryParameter("v", "4.16.10_f0149441bf")
+                .addQueryParameter("v", "mobile-app")
                 .addQueryParameter("c", geoAdjustedDomain)
                 .addQueryParameter("t", "idn")
                 .addQueryParameter("evs", externalVendorIdsJson)
@@ -139,7 +139,6 @@ class AttentiveApi {
 
     private Metadata buildMetadata(UserIdentifiers userIdentifiers) {
         Metadata metadata = new Metadata();
-        metadata.setSource("msdk");
 
         if (userIdentifiers.getPhone() != null) {
             metadata.setPhone(userIdentifiers.getPhone());
