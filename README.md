@@ -31,17 +31,18 @@ for a sample of how the Attentive Android SDK is used.
 
 ### Create the AttentiveConfig
 ```groovy
-// Create an AttentiveConfig with your attentive domain, in production mode
-AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.PRODUCTION);
+// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context
+AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.PRODUCTION, context);
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
-AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.DEBUG);
+AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.DEBUG, context);
 ```
 
 ### Identify the current user
 ```groovy
-// Before loading the creative, you will need to register the User's ID with the attentive config.
-attentiveConfig.identify("APP_USER_ID");
+// Before loading the creative, if you have any user identifiers, they will need to be registered with the attentive config.
+UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withClientUserId("APP_USER_ID").withPhone("+15556667777").build();
+attentiveConfig.identify(userIdentifiers);
 ```
 
 ### Load the Creative
@@ -55,4 +56,31 @@ creative.trigger();
 // Destroy the creative and it's associated WebView. You must call the destroy method when the creative
 // is no longer in use to properly clean up the WebView and it's resources
 creative.destroy();
+```
+
+### Update the current user when new identifiers are available
+
+```java
+// If new identifiers are available for the user, register them with the existing AttentiveConfig instance
+UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withEmail("theusersemail@gmail.com").build();
+attentiveConfig.identify(userIdentifers);
+```
+
+```java
+// Calling `identify` multiple times will combine the identifiers.
+UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withShopifyId("555").build();
+attentiveConfig.identify(userIdentifers);
+userIdentifiers = new UserIdentifiers.Builder().withKlaviyoId("777").build();
+attentiveConfig.identify(userIdentifers);
+
+UserIdentifiers allIdentifiers = attentiveConfig.getUserIdentifiers();
+allIdentifiers.getShopifyId(); // == 555
+allIdentifiers.getKlaviyoId(); // == 777
+```
+
+### Clear the current user
+```java
+// If the user logs out then the current user identifiers should be deleted
+attentiveConfig.clearUser();
+// When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
 ```
