@@ -30,20 +30,25 @@ See the [Example Project](https://github.com/attentive-mobile/attentive-android-
 for a sample of how the Attentive Android SDK is used.
 
 ### Create the AttentiveConfig
-```groovy
-// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context
+```java
+// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
 AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.PRODUCTION, context);
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.DEBUG, context);
 ```
 
+\* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)
+
 ### Identify the current user
-```groovy
-// Before loading the creative, if you have any user identifiers, they will need to be registered with the attentive config.
+```java
+// Before loading the creative, if you have any user identifiers, they will need to be registered with the attentive config. It is okay to skip this step if you have no identifiers about the user yet.
 UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withClientUserId("APP_USER_ID").withPhone("+15556667777").build();
 attentiveConfig.identify(userIdentifiers);
 ```
+
+The more identifiers that are passed to `identify`, the better the SDK will function. See the `UserIdentifiers` object for all identifier types. Here is a subset of identifiers and their descriptions:
+* Client User Id - Your unique identifier for the user. This should be consistent across the user's lifetime. For example, a database id.
 
 ### Load the Creative
 ```java
