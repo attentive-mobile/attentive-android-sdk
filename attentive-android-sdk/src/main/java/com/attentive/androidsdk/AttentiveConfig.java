@@ -36,20 +36,15 @@ public class AttentiveConfig {
     }
 
     @Nullable
-    public String getClientUserId() {
-        return userIdentifiers == null ? null : userIdentifiers.getClientUserId();
-    }
-
-    @Nullable
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
     }
 
     @Deprecated
-    public void identify(@NonNull String appUserId) {
-        ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
+    public void identify(@NonNull String clientUserId) {
+        ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
 
-        identify(new UserIdentifiers.Builder().withClientUserId(appUserId).build());
+        identify(new UserIdentifiers.Builder().withClientUserId(clientUserId).build());
     }
 
     public void identify(@NonNull UserIdentifiers userIdentifiers) {
@@ -61,9 +56,15 @@ public class AttentiveConfig {
             // merge
             this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
         }
+
+        sendUserIdentifiersCollectedEvent();
     }
 
     public void clearUser() {
         this.userIdentifiers = null;
+    }
+
+    private void sendUserIdentifiersCollectedEvent() {
+        // TODO
     }
 }

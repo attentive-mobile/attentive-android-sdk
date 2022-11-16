@@ -62,7 +62,7 @@ public class Creative {
     }
 
     public void trigger() {
-        if (attentiveConfig.getClientUserId() == null) {
+        if (attentiveConfig.getUserIdentifiers() == null) {
             Log.e(this.getClass().getName(), "Cannot call `trigger` without calling `identify` in the AttentiveConfig");
             return;
         }
@@ -71,8 +71,9 @@ public class Creative {
             return;
         }
 
+        // TODO add other identifiers here, and treat client user id as optional
         String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
-                .appendQueryParameter("app_user_id", attentiveConfig.getClientUserId())
+                .appendQueryParameter("app_user_id", attentiveConfig.getUserIdentifiers().getClientUserId())
                 .toString();
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
