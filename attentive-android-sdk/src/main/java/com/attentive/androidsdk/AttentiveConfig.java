@@ -14,6 +14,7 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
+    private final Context context;
     private UserIdentifiers userIdentifiers;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
@@ -23,6 +24,7 @@ public class AttentiveConfig {
 
         this.domain = domain;
         this.mode = mode;
+        this.context = context;
     }
 
     @NonNull

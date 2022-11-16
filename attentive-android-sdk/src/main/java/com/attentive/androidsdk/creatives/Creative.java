@@ -26,13 +26,21 @@ public class Creative {
             "            }\n" +
             "        },\n" +
             "    false);\n" +
-            "\n" +
-            "    setTimeout(function(){\n" +
-            "        e=document.querySelector('iframe');\n" +
-            "        if(e && e.id === 'attentive_creative') {" +
-            "           CREATIVE_LISTENER.postMessage('OPEN')}" +
-            "        },\n" +
-            "    1000);\n" +
+            "    var timeoutHandle = null;\n" +
+            "    const interval = setInterval(function() {\n" +
+            "        e =document.querySelector('iframe');\n" +
+            "        if(e && e.id === 'attentive_creative') {\n" +
+            "           clearInterval(interval);\n" +
+            "           CREATIVE_LISTENER.postMessage('OPEN');\n" +
+            "           if (timeoutHandle != null) {\n" +
+            "               clearTimeout(timeoutHandle);\n" +
+            "           }\n" +
+            "        }\n" +
+            "    }, 100);\n" +
+            "    timeoutHandle = setTimeout(function() {\n" +
+            "        clearInterval(interval);\n" +
+            "        CREATIVE_LISTENER.postMessage('TIMED OUT');\n" +
+            "    }, 5000);\n" +
             "\n" +
             "})()";
 
@@ -127,6 +135,7 @@ public class Creative {
                 super.onPageFinished(view, url);
 
                 if (view.getProgress() == 100) {
+                    Log.i(this.getClass().getName(), "Page finished loading");
                     view.loadUrl(CREATIVE_LISTENER_JS);
                 }
             }
@@ -156,6 +165,8 @@ public class Creative {
                     handler.post(() -> webView.setVisibility(View.INVISIBLE));
                 } else if (messageData.equalsIgnoreCase("OPEN")) {
                     handler.post(() -> webView.setVisibility(View.VISIBLE));
+                } else if (messageData.equalsIgnoreCase("TIMED OUT")) {
+                    Log.e(this.getClass().getName(), "Creative timed out. Not showing WebView.");
                 }
             }
         };

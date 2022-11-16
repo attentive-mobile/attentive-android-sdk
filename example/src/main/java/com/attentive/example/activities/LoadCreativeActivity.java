@@ -5,7 +5,6 @@ import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveConfig;
-import com.attentive.androidsdk.UserIdentifiers;
 import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
@@ -20,6 +19,8 @@ public class LoadCreativeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_load_creative);
 
         AttentiveConfig attentiveConfig = ((ExampleApp) getApplication()).attentiveConfig;
+
+        // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
         this.creative = new Creative(attentiveConfig, parentView);
     }
