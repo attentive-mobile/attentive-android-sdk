@@ -51,7 +51,6 @@ public class PersistentStorageTest {
     public void read_readKeyThatDoesNotExist_returnsNull() {
         // Arrange
         final String key = "someKey";
-        final String value = "someValue";
 
         // Act
         persistentStorage.delete(key);
