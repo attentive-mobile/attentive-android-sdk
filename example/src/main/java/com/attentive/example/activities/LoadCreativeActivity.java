@@ -20,13 +20,6 @@ public class LoadCreativeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_load_creative);
 
         AttentiveConfig attentiveConfig = ((ExampleApp) getApplication()).attentiveConfig;
-
-        // Register the current user with the Attentive SDK. Replace "APP_USER_ID"
-        // with the current user's ID. You must register a user ID before calling
-        // `trigger` on a Creative.
-        attentiveConfig.identify(new UserIdentifiers.Builder("APP_USER_ID").build());
-
-        // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
         this.creative = new Creative(attentiveConfig, parentView);
     }

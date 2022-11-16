@@ -20,9 +20,7 @@ public class ExampleApp extends Application {
         // Replace "APP_USER_ID" with the current user's ID.
         UserIdentifiers userIdentifiers =
             new UserIdentifiers.Builder()
-                .withClientUserId("222")
-                .withEmail("wyatt222@gmail.com")
-                .withPhone("+15415132222")
+                .withClientUserId("APP_USER_ID")
                 .build();
         attentiveConfig.identify(userIdentifiers);
 
