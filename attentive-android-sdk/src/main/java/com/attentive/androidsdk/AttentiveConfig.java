@@ -1,11 +1,9 @@
 package com.attentive.androidsdk;
 
-import android.util.Log;
+import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
 
@@ -16,22 +14,15 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
-    private final AttentiveApi attentiveApi;
     private UserIdentifiers userIdentifiers;
 
-    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode) {
-        this(domain, mode, ClassFactory.createOkHttpClient());
-    }
-
-    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull OkHttpClient okHttpClient) {
+    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
         ParameterValidation.verifyNotEmpty(domain, "domain");
         ParameterValidation.verifyNotNull(mode, "mode");
-        ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient");
+        ParameterValidation.verifyNotNull(context, "context");
 
         this.domain = domain;
         this.mode = mode;
-
-        this.attentiveApi = ClassFactory.createAttentiveApi(okHttpClient, ClassFactory.createObjectMapper());
     }
 
     @NonNull
@@ -45,8 +36,8 @@ public class AttentiveConfig {
     }
 
     @Nullable
-    public String getAppUserId() {
-        return userIdentifiers == null ? null : userIdentifiers.getAppUserId();
+    public String getClientUserId() {
+        return userIdentifiers == null ? null : userIdentifiers.getClientUserId();
     }
 
     @Nullable
@@ -58,38 +49,21 @@ public class AttentiveConfig {
     public void identify(@NonNull String appUserId) {
         ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
 
-        identify(new UserIdentifiers.Builder(appUserId).build());
+        identify(new UserIdentifiers.Builder().withClientUserId(appUserId).build());
     }
 
     public void identify(@NonNull UserIdentifiers userIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
 
-        if (this.userIdentifiers == null || !this.userIdentifiers.getAppUserId().equals(userIdentifiers.getAppUserId())) {
+        if (this.userIdentifiers == null) {
             this.userIdentifiers = userIdentifiers;
         } else {
             // merge
             this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
         }
-
-        sendUserIdentifiersCollectedEvent();
     }
 
     public void clearUser() {
         this.userIdentifiers = null;
-    }
-
-    private void sendUserIdentifiersCollectedEvent() {
-        attentiveApi.sendUserIdentifiersCollectedEvent(domain, this.userIdentifiers, new AttentiveApiCallback() {
-            private static final String tag = "AttentiveConfig";
-            @Override
-            public void onFailure(String message) {
-                Log.e(tag, "Could not send the user identifiers. Error: " + message);
-            }
-
-            @Override
-            public void onSuccess() {
-                Log.i(tag, "Successfully sent the user identifiers");
-            }
-        });
     }
 }

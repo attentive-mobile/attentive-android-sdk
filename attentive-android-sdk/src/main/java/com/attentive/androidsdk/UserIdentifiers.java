@@ -3,31 +3,24 @@ package com.attentive.androidsdk;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.sql.Array;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class UserIdentifiers {
-    private final String appUserId;
+    private String clientUserId;
     private String phone;
     private String email;
     private String shopifyId;
     private String klaviyoId;
     private Map<String, String> customIdentifiers;
 
-    private UserIdentifiers(@NonNull String appUserId) {
-        ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
-
-        this.appUserId = appUserId;
+    private UserIdentifiers() {
     }
 
-    @NonNull
-    public String getAppUserId() {
-        return appUserId;
+    @Nullable
+    public String getClientUserId() {
+        return clientUserId;
     }
 
     @Nullable
@@ -56,17 +49,17 @@ public class UserIdentifiers {
     }
 
     public static class Builder {
-        private final String appUserId;
+        private String clientUserId;
         private String phone;
         private String email;
         private String shopifyId;
         private String klaviyoId;
         private Map<String, String> customIdentifiers;
 
-        public Builder(String appUserId) {
-            ParameterValidation.verifyNotEmpty(appUserId, "appUserId");
-
-            this.appUserId = appUserId;
+        public Builder withClientUserId(String clientUserId) {
+            ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
+            this.clientUserId = clientUserId;
+            return this;
         }
 
         public Builder withPhone(String phone) {
@@ -101,7 +94,8 @@ public class UserIdentifiers {
         }
 
         public UserIdentifiers build() {
-            UserIdentifiers userIdentifiers = new UserIdentifiers(appUserId);
+            UserIdentifiers userIdentifiers = new UserIdentifiers();
+            userIdentifiers.clientUserId = this.clientUserId;
             userIdentifiers.phone = this.phone;
             userIdentifiers.email = this.email;
             userIdentifiers.shopifyId = this.shopifyId;
@@ -112,8 +106,9 @@ public class UserIdentifiers {
     }
 
     static UserIdentifiers merge(UserIdentifiers first, UserIdentifiers second) {
-        Builder builder = new Builder(first.getAppUserId());
+        Builder builder = new Builder();
 
+        builder.clientUserId = firstNonNull(second.getClientUserId(), first.getClientUserId());
         builder.phone = firstNonNull(second.getPhone(), first.getPhone());
         builder.email = firstNonNull(second.getEmail(), first.getEmail());
         builder.klaviyoId = firstNonNull(second.getKlaviyoId(), first.getKlaviyoId());
