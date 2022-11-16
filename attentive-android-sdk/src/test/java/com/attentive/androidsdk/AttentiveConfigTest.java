@@ -12,7 +12,7 @@ public class AttentiveConfigTest {
         final AttentiveConfig.Mode mode = AttentiveConfig.Mode.DEBUG;
 
         // Act
-        AttentiveConfig config = new AttentiveConfig(domain, mode);
+        AttentiveConfig config = new AttentiveConfig(domain, mode, null);
 
         // Assert
         assertEquals(domain, config.getDomain());

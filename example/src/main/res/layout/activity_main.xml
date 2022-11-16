@@ -21,4 +21,17 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="UsingOnClickInXml" />
 
+    <Button
+            android:id="@+id/logoutButton"
+            android:layout_width="300dp"
+            android:layout_height="81dp"
+            android:layout_marginTop="300dp"
+            android:onClick="logoutUser"
+            android:text="@string/push_me_to_logout"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.495"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="UsingOnClickInXml" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
