@@ -23,7 +23,8 @@ public class AttentiveConfig {
 
         this.domain = domain;
         this.mode = mode;
-        this.visitorService = new VisitorService(ClassFactory.buildPersistentStorage(context));
+        this.visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(context));
+        this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(visitorService.getVisitorId()).build();
     }
 
     @NonNull
@@ -36,14 +37,9 @@ public class AttentiveConfig {
         return domain;
     }
 
-    @Nullable
+    @NonNull
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
-    }
-
-    @NonNull
-    public String getVisitorId() {
-        return visitorService.getVisitorId();
     }
 
     @Deprecated
@@ -56,19 +52,14 @@ public class AttentiveConfig {
     public void identify(@NonNull UserIdentifiers userIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
 
-        if (this.userIdentifiers == null) {
-            this.userIdentifiers = userIdentifiers;
-        } else {
-            // merge
-            this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
-        }
+        this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
 
         sendUserIdentifiersCollectedEvent();
     }
 
     public void clearUser() {
-        this.userIdentifiers = null;
-        visitorService.createNewVisitorId();
+        String newVisitorId = visitorService.createNewVisitorId();
+        this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(newVisitorId).build();
     }
 
     private void sendUserIdentifiersCollectedEvent() {

@@ -29,7 +29,7 @@ public class VisitorService {
         return newVisitorId;
     }
 
-    private String generateVisitorId() {
+    private static String generateVisitorId() {
         // This code should produce the same visitor ids as the tag's visitor id creation code
         StringBuilder builder = new StringBuilder();
         Random rand = new Random();
