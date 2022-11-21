@@ -70,17 +70,11 @@ public class Creative {
     }
 
     public void trigger() {
-        if (attentiveConfig.getUserIdentifiers() == null) {
-            Log.e(this.getClass().getName(), "Cannot call `trigger` without calling `identify` in the AttentiveConfig");
-            return;
-        }
         if (webView == null) {
             Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
             return;
         }
 
-        // TODO add other identifiers here, and treat client user id as optional
-        String visitorId = attentiveConfig.getVisitorId();
         String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
                 .appendQueryParameter("app_user_id", attentiveConfig.getUserIdentifiers().getClientUserId())
                 .toString();
