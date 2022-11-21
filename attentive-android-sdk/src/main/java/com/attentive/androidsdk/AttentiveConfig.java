@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class AttentiveConfig {
-
     public enum Mode {
         DEBUG,
         PRODUCTION
@@ -14,7 +13,7 @@ public class AttentiveConfig {
 
     private final Mode mode;
     private final String domain;
-    private final Context context;
+    private final VisitorService visitorService;
     private UserIdentifiers userIdentifiers;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
@@ -24,7 +23,8 @@ public class AttentiveConfig {
 
         this.domain = domain;
         this.mode = mode;
-        this.context = context;
+        this.visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(context));
+        this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(visitorService.getVisitorId()).build();
     }
 
     @NonNull
@@ -37,7 +37,7 @@ public class AttentiveConfig {
         return domain;
     }
 
-    @Nullable
+    @NonNull
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
     }
@@ -52,18 +52,14 @@ public class AttentiveConfig {
     public void identify(@NonNull UserIdentifiers userIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
 
-        if (this.userIdentifiers == null) {
-            this.userIdentifiers = userIdentifiers;
-        } else {
-            // merge
-            this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
-        }
+        this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
 
         sendUserIdentifiersCollectedEvent();
     }
 
     public void clearUser() {
-        this.userIdentifiers = null;
+        String newVisitorId = visitorService.createNewVisitorId();
+        this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(newVisitorId).build();
     }
 
     private void sendUserIdentifiersCollectedEvent() {

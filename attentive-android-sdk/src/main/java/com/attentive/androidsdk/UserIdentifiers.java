@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserIdentifiers {
+    private String visitorId;
     private String clientUserId;
     private String phone;
     private String email;
@@ -16,6 +17,11 @@ public class UserIdentifiers {
     private Map<String, String> customIdentifiers;
 
     private UserIdentifiers() {
+    }
+
+    @Nullable
+    public String getVisitorId() {
+        return visitorId;
     }
 
     @Nullable
@@ -49,12 +55,20 @@ public class UserIdentifiers {
     }
 
     public static class Builder {
+        private String visitorId;
         private String clientUserId;
         private String phone;
         private String email;
         private String shopifyId;
         private String klaviyoId;
         private Map<String, String> customIdentifiers;
+
+        // package-private because we don't want host apps to be able to set this
+        Builder withVisitorId(String visitorId) {
+            ParameterValidation.verifyNotNull(visitorId, "visitorId");
+            this.visitorId = visitorId;
+            return this;
+        }
 
         public Builder withClientUserId(String clientUserId) {
             ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
@@ -95,6 +109,7 @@ public class UserIdentifiers {
 
         public UserIdentifiers build() {
             UserIdentifiers userIdentifiers = new UserIdentifiers();
+            userIdentifiers.visitorId = this.visitorId;
             userIdentifiers.clientUserId = this.clientUserId;
             userIdentifiers.phone = this.phone;
             userIdentifiers.email = this.email;
@@ -108,6 +123,7 @@ public class UserIdentifiers {
     static UserIdentifiers merge(UserIdentifiers first, UserIdentifiers second) {
         Builder builder = new Builder();
 
+        builder.visitorId = firstNonNull(second.getVisitorId(), first.getVisitorId());
         builder.clientUserId = firstNonNull(second.getClientUserId(), first.getClientUserId());
         builder.phone = firstNonNull(second.getPhone(), first.getPhone());
         builder.email = firstNonNull(second.getEmail(), first.getEmail());

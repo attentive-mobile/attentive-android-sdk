@@ -40,6 +40,7 @@ public class PersistentStorageTest {
 
     @After
     public void checkThatCommitIsNeverCalled() {
+        // never call 'commit' because it's not performant since it blocks
         verify(sharedPreferencesEditor, never()).commit();
     }
 
