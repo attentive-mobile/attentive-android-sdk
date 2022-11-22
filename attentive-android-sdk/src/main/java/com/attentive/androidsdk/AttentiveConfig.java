@@ -2,8 +2,12 @@ package com.attentive.androidsdk;
 
 import android.content.Context;
 
+import android.icu.number.FormattedNumber;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import okhttp3.OkHttp;
+import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
     public enum Mode {
@@ -15,15 +19,23 @@ public class AttentiveConfig {
     private final String domain;
     private final VisitorService visitorService;
     private UserIdentifiers userIdentifiers;
+    private AttentiveApi attentiveApi;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
+        this(domain, mode, context, ClassFactory.buildOkHttpClient());
+    }
+
+    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context, @NonNull OkHttpClient okHttpClient) {
         ParameterValidation.verifyNotEmpty(domain, "domain");
         ParameterValidation.verifyNotNull(mode, "mode");
         ParameterValidation.verifyNotNull(context, "context");
+        ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient");
 
         this.domain = domain;
         this.mode = mode;
         this.visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(context));
+        this.attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, ClassFactory.buildObjectMapper());
+
         this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(visitorService.getVisitorId()).build();
     }
 
@@ -63,6 +75,18 @@ public class AttentiveConfig {
     }
 
     private void sendUserIdentifiersCollectedEvent() {
-        // TODO
+        attentiveApi.sendUserIdentifiersCollectedEvent(getDomain(), getUserIdentifiers(), new AttentiveApiCallback() {
+            private static final String tag = "AttentiveConfig";
+
+            @Override
+            public void onFailure(String message) {
+                Log.e(tag, "Could not send the user identifiers. Error: " + message);
+            }
+
+            @Override
+            public void onSuccess() {
+                Log.i(tag, "Successfully sent the user identifiers");
+            }
+        });
     }
 }
