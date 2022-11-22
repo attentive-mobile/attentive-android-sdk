@@ -14,7 +14,15 @@ import android.webkit.WebViewClient;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.ClassFactory;
 import com.attentive.androidsdk.UserIdentifiers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Creative {
@@ -51,6 +59,7 @@ public class Creative {
     private final Handler handler;
     private final WebViewClient webViewClient;
     private final WebViewCompat.WebMessageListener creativeListener;
+    private final ObjectMapper objectMapper;
 
     private WebView webView;
 
@@ -68,6 +77,8 @@ public class Creative {
         webView.setVisibility(View.INVISIBLE);
         ((ViewGroup) parentView).addView(
                 webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
+
+        this.objectMapper = ClassFactory.buildObjectMapper();
     }
 
     public void trigger() {
@@ -118,6 +129,27 @@ public class Creative {
         }
         if (userIdentifiers.getShopifyId() != null) {
             builder.appendQueryParameter("shopify_id", userIdentifiers.getShopifyId());
+        }
+        if (!userIdentifiers.getCustomIdentifiers().isEmpty()) {
+            String customIdentifiersJson = getCustomIdentifiersJson(userIdentifiers);
+            builder.appendQueryParameter("custom_identifiers", customIdentifiersJson);
+        }
+    }
+
+    private String getCustomIdentifiersJson(UserIdentifiers userIdentifiers) {
+        Map<String, String> customIdentifiers = userIdentifiers.getCustomIdentifiers();
+        List<ObjectNode> objectNodes = new ArrayList<>();
+        for (Map.Entry<String, String> customIdentifier : customIdentifiers.entrySet()) {
+            ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.put("name", customIdentifier.getKey());
+            objectNode.put("value", customIdentifier.getValue());
+            objectNodes.add(objectNode);
+        }
+        try {
+            return objectMapper.writeValueAsString(objectNodes);
+        } catch (JsonProcessingException e) {
+            Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
+            return "[]";
         }
     }
 
