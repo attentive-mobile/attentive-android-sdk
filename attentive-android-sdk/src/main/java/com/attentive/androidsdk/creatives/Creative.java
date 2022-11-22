@@ -11,9 +11,11 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.annotation.NonNull;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.UserIdentifiers;
 import java.util.Set;
 
 public class Creative {
@@ -75,16 +77,41 @@ public class Creative {
             return;
         }
 
-        // TODO add other identifiers here, and treat client user id as optional
-        String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
-                .appendQueryParameter("app_user_id", attentiveConfig.getUserIdentifiers().getClientUserId())
-                .toString();
+        String url = buildUrl();
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
         }
 
         webView.loadUrl(url);
+    }
+
+    @NonNull
+    private String buildUrl() {
+        Uri.Builder builder =
+            getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
+
+        UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
+
+        builder.appendQueryParameter("visitor_id", userIdentifiers.getVisitorId());
+
+        if (userIdentifiers.getClientUserId() != null) {
+            builder.appendQueryParameter("client_user_id", userIdentifiers.getClientUserId());
+        }
+        if (userIdentifiers.getPhone() != null) {
+            builder.appendQueryParameter("phone", userIdentifiers.getPhone());
+        }
+        if (userIdentifiers.getEmail() != null) {
+            builder.appendQueryParameter("email", userIdentifiers.getEmail());
+        }
+        if (userIdentifiers.getKlaviyoId() != null) {
+            builder.appendQueryParameter("klaviyo_id", userIdentifiers.getKlaviyoId());
+        }
+        if (userIdentifiers.getShopifyId() != null) {
+            builder.appendQueryParameter("shopify_id", userIdentifiers.getShopifyId());
+        }
+
+        return builder.build().toString();
     }
 
     public void destroy() {
