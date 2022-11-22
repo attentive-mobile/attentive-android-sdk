@@ -131,26 +131,16 @@ public class Creative {
             builder.appendQueryParameter("sid", userIdentifiers.getShopifyId());
         }
         if (!userIdentifiers.getCustomIdentifiers().isEmpty()) {
-            String customIdentifiersJson = getCustomIdentifiersJson(userIdentifiers);
-            builder.appendQueryParameter("cstm", customIdentifiersJson);
+            builder.appendQueryParameter("cstm", getCustomIdentifiersJson(userIdentifiers));
         }
     }
 
     private String getCustomIdentifiersJson(UserIdentifiers userIdentifiers) {
-        Map<String, String> customIdentifiers = userIdentifiers.getCustomIdentifiers();
-        List<ObjectNode> objectNodes = new ArrayList<>();
-        for (Map.Entry<String, String> customIdentifier : customIdentifiers.entrySet()) {
-            ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("n", customIdentifier.getKey());
-            objectNode.put("v", customIdentifier.getValue());
-            objectNodes.add(objectNode);
-        }
-
         try {
-            return objectMapper.writeValueAsString(objectNodes);
+            return objectMapper.writeValueAsString(userIdentifiers.getCustomIdentifiers());
         } catch (JsonProcessingException e) {
             Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
-            return "[]";
+            return "{}";
         }
     }
 
