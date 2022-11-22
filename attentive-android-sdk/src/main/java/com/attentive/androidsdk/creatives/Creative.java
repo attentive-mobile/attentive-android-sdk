@@ -86,7 +86,6 @@ public class Creative {
         webView.loadUrl(url);
     }
 
-    @NonNull
     private String buildUrl() {
         Uri.Builder builder =
             getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
