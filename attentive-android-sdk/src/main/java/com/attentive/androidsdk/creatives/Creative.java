@@ -110,29 +110,29 @@ public class Creative {
     private void addUserIdentifiersAsParameters(Uri.Builder builder,
                                                 UserIdentifiers userIdentifiers) {
         if (userIdentifiers.getVisitorId() != null) {
-            builder.appendQueryParameter("visitor_id", userIdentifiers.getVisitorId());
+            builder.appendQueryParameter("vid", userIdentifiers.getVisitorId());
         } else {
             Log.e(this.getClass().getName(), "No VisitorId found. This should not happen.");
         }
 
         if (userIdentifiers.getClientUserId() != null) {
-            builder.appendQueryParameter("client_user_id", userIdentifiers.getClientUserId());
+            builder.appendQueryParameter("cuid", userIdentifiers.getClientUserId());
         }
         if (userIdentifiers.getPhone() != null) {
-            builder.appendQueryParameter("phone", userIdentifiers.getPhone());
+            builder.appendQueryParameter("p", userIdentifiers.getPhone());
         }
         if (userIdentifiers.getEmail() != null) {
-            builder.appendQueryParameter("email", userIdentifiers.getEmail());
+            builder.appendQueryParameter("e", userIdentifiers.getEmail());
         }
         if (userIdentifiers.getKlaviyoId() != null) {
-            builder.appendQueryParameter("klaviyo_id", userIdentifiers.getKlaviyoId());
+            builder.appendQueryParameter("kid", userIdentifiers.getKlaviyoId());
         }
         if (userIdentifiers.getShopifyId() != null) {
-            builder.appendQueryParameter("shopify_id", userIdentifiers.getShopifyId());
+            builder.appendQueryParameter("sid", userIdentifiers.getShopifyId());
         }
         if (!userIdentifiers.getCustomIdentifiers().isEmpty()) {
             String customIdentifiersJson = getCustomIdentifiersJson(userIdentifiers);
-            builder.appendQueryParameter("custom_identifiers", customIdentifiersJson);
+            builder.appendQueryParameter("cstm", customIdentifiersJson);
         }
     }
 
@@ -141,10 +141,11 @@ public class Creative {
         List<ObjectNode> objectNodes = new ArrayList<>();
         for (Map.Entry<String, String> customIdentifier : customIdentifiers.entrySet()) {
             ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("name", customIdentifier.getKey());
-            objectNode.put("value", customIdentifier.getValue());
+            objectNode.put("n", customIdentifier.getKey());
+            objectNode.put("v", customIdentifier.getValue());
             objectNodes.add(objectNode);
         }
+
         try {
             return objectMapper.writeValueAsString(objectNodes);
         } catch (JsonProcessingException e) {
