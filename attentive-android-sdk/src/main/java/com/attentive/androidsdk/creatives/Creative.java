@@ -86,14 +86,14 @@ public class Creative {
     }
 
     private String buildCompanyCreativeUrl() {
-        Uri.Builder builder =
+        Uri.Builder uriBuilder =
             getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
 
         UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
 
-        addUserIdentifiersAsParameters(builder, userIdentifiers);
+        addUserIdentifiersAsParameters(uriBuilder, userIdentifiers);
 
-        return builder.build().toString();
+        return uriBuilder.build().toString();
     }
 
     private void addUserIdentifiersAsParameters(Uri.Builder builder,
