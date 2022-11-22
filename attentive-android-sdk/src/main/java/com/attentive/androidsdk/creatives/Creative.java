@@ -11,7 +11,6 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import androidx.annotation.NonNull;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
@@ -77,7 +76,7 @@ public class Creative {
             return;
         }
 
-        String url = buildUrl();
+        String url = buildCompanyCreativeUrl();
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
@@ -86,13 +85,24 @@ public class Creative {
         webView.loadUrl(url);
     }
 
-    private String buildUrl() {
+    private String buildCompanyCreativeUrl() {
         Uri.Builder builder =
             getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
 
         UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
 
-        builder.appendQueryParameter("visitor_id", userIdentifiers.getVisitorId());
+        addUserIdentifiersAsParameters(builder, userIdentifiers);
+
+        return builder.build().toString();
+    }
+
+    private void addUserIdentifiersAsParameters(Uri.Builder builder,
+                                                UserIdentifiers userIdentifiers) {
+        if (userIdentifiers.getVisitorId() != null) {
+            builder.appendQueryParameter("visitor_id", userIdentifiers.getVisitorId());
+        } else {
+            Log.e(this.getClass().getName(), "No VisitorId found. This should not happen.");
+        }
 
         if (userIdentifiers.getClientUserId() != null) {
             builder.appendQueryParameter("client_user_id", userIdentifiers.getClientUserId());
@@ -109,8 +119,6 @@ public class Creative {
         if (userIdentifiers.getShopifyId() != null) {
             builder.appendQueryParameter("shopify_id", userIdentifiers.getShopifyId());
         }
-
-        return builder.build().toString();
     }
 
     public void destroy() {
