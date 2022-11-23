@@ -57,6 +57,10 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.5.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
 
+    // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
+    // so we want to expose the okhttp object
+    api 'com.squareup.okhttp3:okhttp:4.10.0'
+
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.9.0'
 
