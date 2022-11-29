@@ -96,7 +96,7 @@ class AttentiveApi {
             .addQueryParameter("t", "idn")
             .addQueryParameter("evs", externalVendorIdsJson)
             .addQueryParameter("m", metadataJson)
-            .addQueryParameter("lt", "0)");
+            .addQueryParameter("lt", "0");
 
         if (userIdentifiers.getVisitorId() != null) {
             urlBuilder.addQueryParameter("u", userIdentifiers.getVisitorId());
