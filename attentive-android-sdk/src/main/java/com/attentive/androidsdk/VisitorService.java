@@ -44,7 +44,10 @@ public class VisitorService {
 
             long r = (long) ((d + rand.nextDouble() * 16) % 16);
             d = d / 16;
-            builder.append(Long.toHexString((c == 'x' ? r : (r & 0x3)) | 0x8));
+            builder.append(Long.toHexString(c == 'x'
+                    ? r
+                    : (r & 0x3) | 0x8
+            ));
         }
         return builder.toString();
     }
