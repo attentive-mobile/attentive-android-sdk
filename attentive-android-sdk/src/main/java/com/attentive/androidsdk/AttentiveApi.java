@@ -184,8 +184,8 @@ class AttentiveApi {
         for (Map.Entry<String, String> customIdentifier : userIdentifiers.getCustomIdentifiers().entrySet()) {
             externalVendorIdList.add(new ExternalVendorId() {{
                 setVendor(Vendor.CUSTOM_USER);
-                setId(customIdentifier.getKey());
-                setName(customIdentifier.getValue());
+                setId(customIdentifier.getValue());
+                setName(customIdentifier.getKey());
             }});
         }
 
