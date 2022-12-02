@@ -14,6 +14,15 @@ import android.webkit.WebViewClient;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.ClassFactory;
+import com.attentive.androidsdk.UserIdentifiers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Creative {
@@ -50,6 +59,7 @@ public class Creative {
     private final Handler handler;
     private final WebViewClient webViewClient;
     private final WebViewCompat.WebMessageListener creativeListener;
+    private final ObjectMapper objectMapper;
 
     private WebView webView;
 
@@ -67,27 +77,71 @@ public class Creative {
         webView.setVisibility(View.INVISIBLE);
         ((ViewGroup) parentView).addView(
                 webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
+
+        this.objectMapper = ClassFactory.buildObjectMapper();
     }
 
     public void trigger() {
-        if (attentiveConfig.getAppUserId() == null) {
-            Log.e(this.getClass().getName(), "Cannot call `trigger` without calling `identify` in the AttentiveConfig");
-            return;
-        }
         if (webView == null) {
             Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
             return;
         }
 
-        String url = getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode())
-                .appendQueryParameter("app_user_id", attentiveConfig.getAppUserId())
-                .toString();
+        String url = buildCompanyCreativeUrl();
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
         }
 
         webView.loadUrl(url);
+    }
+
+    private String buildCompanyCreativeUrl() {
+        Uri.Builder uriBuilder =
+            getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
+
+        UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
+
+        addUserIdentifiersAsParameters(uriBuilder, userIdentifiers);
+
+        return uriBuilder.build().toString();
+    }
+
+    private void addUserIdentifiersAsParameters(Uri.Builder builder,
+                                                UserIdentifiers userIdentifiers) {
+        if (userIdentifiers.getVisitorId() != null) {
+            builder.appendQueryParameter("vid", userIdentifiers.getVisitorId());
+        } else {
+            Log.e(this.getClass().getName(), "No VisitorId found. This should not happen.");
+        }
+
+        if (userIdentifiers.getClientUserId() != null) {
+            builder.appendQueryParameter("cuid", userIdentifiers.getClientUserId());
+        }
+        if (userIdentifiers.getPhone() != null) {
+            builder.appendQueryParameter("p", userIdentifiers.getPhone());
+        }
+        if (userIdentifiers.getEmail() != null) {
+            builder.appendQueryParameter("e", userIdentifiers.getEmail());
+        }
+        if (userIdentifiers.getKlaviyoId() != null) {
+            builder.appendQueryParameter("kid", userIdentifiers.getKlaviyoId());
+        }
+        if (userIdentifiers.getShopifyId() != null) {
+            builder.appendQueryParameter("sid", userIdentifiers.getShopifyId());
+        }
+        if (!userIdentifiers.getCustomIdentifiers().isEmpty()) {
+            builder.appendQueryParameter("cstm", getCustomIdentifiersJson(userIdentifiers));
+        }
+    }
+
+    private String getCustomIdentifiersJson(UserIdentifiers userIdentifiers) {
+        try {
+            return objectMapper.writeValueAsString(userIdentifiers.getCustomIdentifiers());
+        } catch (JsonProcessingException e) {
+            Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
+            return "{}";
+        }
     }
 
     public void destroy() {
