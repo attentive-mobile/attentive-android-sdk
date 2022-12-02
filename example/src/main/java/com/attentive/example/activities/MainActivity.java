@@ -28,4 +28,8 @@ public class MainActivity extends AppCompatActivity {
         // Clear all Attentive identifiers
         ((ExampleApp)this.getApplication()).attentiveConfig.clearUser();
     }
+
+    public void identifyUser(View view) {
+        ((ExampleApp)this.getApplication()).attentiveConfig.identify(ExampleApp.buildUserIdentifiers());
+    }
 }

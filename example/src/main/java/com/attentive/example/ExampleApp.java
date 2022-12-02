@@ -18,12 +18,14 @@ public class ExampleApp extends Application {
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
         // Replace "APP_USER_ID" with the current user's ID.
-        UserIdentifiers userIdentifiers =
-            new UserIdentifiers.Builder()
-                .withClientUserId("APP_USER_ID")
-                .build();
-        attentiveConfig.identify(userIdentifiers);
+        attentiveConfig.identify(buildUserIdentifiers());
 
         super.onCreate();
+    }
+
+    public static UserIdentifiers buildUserIdentifiers() {
+            return new UserIdentifiers.Builder()
+                .withClientUserId("myClientUserId")
+                .build();
     }
 }
