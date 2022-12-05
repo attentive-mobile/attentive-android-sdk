@@ -25,7 +25,7 @@ public class ExampleApp extends Application {
 
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
-                .withClientUserId("myClientUserId")
+                .withClientUserId("CLIENT_USER_ID")
                 .build();
     }
 }
