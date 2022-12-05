@@ -34,4 +34,17 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="UsingOnClickInXml" />
 
+    <Button
+            android:id="@+id/identifyButton"
+            android:layout_width="300dp"
+            android:layout_height="81dp"
+            android:layout_marginTop="404dp"
+            android:onClick="identifyUser"
+            android:text="@string/push_me_to_identify"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.477"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="UsingOnClickInXml" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
