@@ -7,7 +7,7 @@ import com.attentive.androidsdk.UserIdentifiers;
 
 public class ExampleApp extends Application {
     // Change this to your Attentive Domain to test with your Attentive account
-    private static final String ATTENTIVE_DOMAIN = "YOUR_ATTENTIVE_DOMAIN";
+    private static final String ATTENTIVE_DOMAIN = "eekca";
     // The mode in which to run the Attentive Android SDK
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
@@ -17,8 +17,6 @@ public class ExampleApp extends Application {
     public void onCreate() {
         this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, this);
 
-        AttentiveAnalytics.initialize(attentiveConfig);
-
         // Register the current user with the Attentive SDK. This should be done as early as possible.
         // Replace "APP_USER_ID" with the current user's ID.
         attentiveConfig.identify(buildUserIdentifiers());
@@ -26,15 +24,9 @@ public class ExampleApp extends Application {
         super.onCreate();
     }
 
-    /*
-existing class or new class?
-singleton or non-singleton?
-method for each event or generic method with event parameters?
-     */
-
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
-                .withClientUserId("CLIENT_USER_ID")
+                .withPhone("+15038932126")
                 .build();
     }
 }
