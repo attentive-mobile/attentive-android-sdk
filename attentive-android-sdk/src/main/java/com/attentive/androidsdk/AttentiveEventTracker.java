@@ -26,5 +26,6 @@ public class AttentiveEventTracker {
     }
 
     public void recordEvent(Event event) {
+        this.config.getAttentiveApi().sendEvent(event, config.getUserIdentifiers(), config.getDomain());
     }
 }

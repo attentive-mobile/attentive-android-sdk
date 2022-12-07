@@ -5,9 +5,12 @@ import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveEventTracker;
+import com.attentive.androidsdk.CustomEvent;
 import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
+import java.util.Map;
 
 
 public class LoadCreativeActivity extends AppCompatActivity {
@@ -37,6 +40,12 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // Clear cookies to avoid creative filtering during testing. Do not clear cookies
         // if you want to test Creative fatigue and filtering
         clearCookies();
+
+        // Record Custom Event
+        CustomEvent creativeCustomEvent = new CustomEvent();
+        creativeCustomEvent.setName("Creative Triggered");
+        creativeCustomEvent.setProperties(Map.of("time", String.valueOf(System.currentTimeMillis())));
+        AttentiveEventTracker.getInstance().recordEvent(creativeCustomEvent);
 
         // Display the creative
         creative.trigger();
