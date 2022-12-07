@@ -26,6 +26,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintHorizontal_bias="0.501"
-            android:onClick="sendPurchaseEvent"
+            android:onClick="purchaseButtonClicked"
             tools:ignore="UsingOnClickInXml" />
 </androidx.constraintlayout.widget.ConstraintLayout>
