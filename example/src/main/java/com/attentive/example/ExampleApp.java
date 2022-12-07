@@ -1,8 +1,8 @@
 package com.attentive.example;
 
 import android.app.Application;
-import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.UserIdentifiers;
 
 public class ExampleApp extends Application {
