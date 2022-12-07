@@ -26,7 +26,7 @@ public class ExampleApp extends Application {
 
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
-                .withPhone("+15038932126")
+                .withClientUserId("someClientUserId")
                 .build();
     }
 }
