@@ -8,32 +8,40 @@ public class AttentiveEventTracker {
     public static AttentiveEventTracker getInstance() {
         synchronized (AttentiveEventTracker.class) {
             if (INSTANCE == null) {
-                throw new IllegalStateException("AttentiveEventTrack is not initialized");
+                INSTANCE = new AttentiveEventTracker();
             }
 
             return INSTANCE;
         }
     }
 
-    public static void initialize(AttentiveConfig config) {
+    private AttentiveConfig config;
+
+    private AttentiveEventTracker() {
+    }
+
+    public void initialize(AttentiveConfig config) {
         synchronized (AttentiveEventTracker.class) {
-            if (INSTANCE != null) {
-                throw new IllegalStateException("AttentiveEventTracker is not initialized");
+            if (this.config != null) {
+                throw new IllegalStateException("AttentiveEventTracker cannot be initialized again");
             }
 
-            INSTANCE = new AttentiveEventTracker(config);
+            this.config = config;
         }
     }
 
-    private final AttentiveConfig config;
+    public void recordEvent(Event event) {
+        ParameterValidation.verifyNotNull(event, "event");
+        verifyInitialized();
 
-    private AttentiveEventTracker(AttentiveConfig config) {
-        ParameterValidation.verifyNotNull(config, "config");
-
-        this.config = config;
+        this.config.getAttentiveApi().sendEvent(event, config.getUserIdentifiers(), config.getDomain());
     }
 
-    public void recordEvent(Event event) {
-        this.config.getAttentiveApi().sendEvent(event, config.getUserIdentifiers(), config.getDomain());
+    private void verifyInitialized() {
+        synchronized (AttentiveEventTracker.class) {
+            if (INSTANCE == null) {
+                throw new IllegalStateException("AttentiveEventTracker must be initialized before use.");
+            }
+        }
     }
 }
