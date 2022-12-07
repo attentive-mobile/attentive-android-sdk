@@ -22,6 +22,11 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    public void startProductPageActivity(View view) {
+        Intent intent = new Intent(this, ProductPageActivity.class);
+        startActivity(intent);
+    }
+
     public void logoutUser(View view) {
         // Perform app's normal logout functionality
 
