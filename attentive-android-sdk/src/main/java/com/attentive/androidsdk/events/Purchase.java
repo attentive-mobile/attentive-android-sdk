@@ -1,14 +1,14 @@
 package com.attentive.androidsdk.events;
 
 public class Purchase extends Event {
-    private double amount;
+    private String amount;
     private String productId;
 
-    public double getAmount() {
+    public String getAmount() {
         return amount;
     }
 
-    public void setAmount(double amount) {
+    public void setAmount(String amount) {
         this.amount = amount;
     }
 
