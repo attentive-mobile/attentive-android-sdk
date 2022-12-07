@@ -6,7 +6,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.events.Purchase;
-import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
 public class ProductPageActivity extends AppCompatActivity {
