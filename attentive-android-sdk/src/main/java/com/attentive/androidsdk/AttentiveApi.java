@@ -3,6 +3,7 @@ package com.attentive.androidsdk;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.attentive.androidsdk.events.Event;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -191,5 +192,9 @@ class AttentiveApi {
         }
 
         return externalVendorIdList;
+    }
+
+    public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain) {
+        // TODO
     }
 }

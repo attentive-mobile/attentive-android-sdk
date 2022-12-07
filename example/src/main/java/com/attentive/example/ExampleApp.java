@@ -2,6 +2,7 @@ package com.attentive.example;
 
 import android.app.Application;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.UserIdentifiers;
 
 public class ExampleApp extends Application {
@@ -11,10 +12,12 @@ public class ExampleApp extends Application {
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
     public AttentiveConfig attentiveConfig;
+    public AttentiveEventTracker attentiveEventTracker;
 
     @Override
     public void onCreate() {
-        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, this);
+        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, getApplicationContext());
+        this.attentiveEventTracker = new AttentiveEventTracker(attentiveConfig);
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
         // Replace "APP_USER_ID" with the current user's ID.

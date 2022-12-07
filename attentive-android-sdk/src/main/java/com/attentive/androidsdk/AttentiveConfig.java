@@ -54,6 +54,11 @@ public class AttentiveConfig {
         return userIdentifiers;
     }
 
+    @NonNull
+    AttentiveApi getAttentiveApi() {
+        return this.attentiveApi;
+    }
+
     @Deprecated
     public void identify(@NonNull String clientUserId) {
         ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");

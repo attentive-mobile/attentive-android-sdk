@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.attentive.androidsdk.events.Purchase;
+import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
 public class ProductPageActivity extends AppCompatActivity {
@@ -15,6 +17,12 @@ public class ProductPageActivity extends AppCompatActivity {
     }
 
     public void purchaseButtonClicked(View view) {
-        // TODO
+        // Send "Purchase" Event
+        Purchase purchase = new Purchase() {{
+            setAmount(20.0);
+            setProductId("11111");
+            // TODO add more properties
+        }};
+        ((ExampleApp)getApplication()).attentiveEventTracker.recordEvent(purchase);
     }
 }
