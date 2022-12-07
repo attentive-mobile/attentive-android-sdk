@@ -4,8 +4,6 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.attentive.androidsdk.Product;
-import com.attentive.androidsdk.ProductView;
 import com.attentive.example.R;
 
 public class ProductPageActivity extends AppCompatActivity {

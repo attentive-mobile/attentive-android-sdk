@@ -1,6 +1,6 @@
 package com.attentive.androidsdk;
 
-public class Purchase {
+public class Purchase extends Event {
     private double amount;
     private String productId;
 
