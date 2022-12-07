@@ -193,7 +193,7 @@ class AttentiveApi {
         return externalVendorIdList;
     }
 
-    public void recordEvent(Event event, UserIdentifiers userIdentifiers, String domain) {
+    public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain) {
         // TODO
     }
 }
