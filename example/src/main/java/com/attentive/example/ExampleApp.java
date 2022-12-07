@@ -15,8 +15,7 @@ public class ExampleApp extends Application {
 
     @Override
     public void onCreate() {
-        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, this);
-
+        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, getApplicationContext());
         AttentiveEventTracker.initialize(attentiveConfig);
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
