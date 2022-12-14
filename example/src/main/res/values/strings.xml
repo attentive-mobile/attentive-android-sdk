@@ -5,6 +5,6 @@
     <string name="push_me_to_logout">Push Me To Logout</string>
     <string name="push_me_to_identify">Push Me To Identify</string>
     <string name="add_to_cart">Add to Cart</string>
-    <string name="purchase">Purchase</string>
+    <string name="purchaseEvent">Purchase</string>
     <string name="push_me_for_product_page">Push Me For Product Page</string>
 </resources>

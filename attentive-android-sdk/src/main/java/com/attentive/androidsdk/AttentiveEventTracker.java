@@ -21,6 +21,8 @@ public class AttentiveEventTracker {
     }
 
     public void initialize(AttentiveConfig config) {
+        ParameterValidation.verifyNotNull(config, "config");
+
         synchronized (AttentiveEventTracker.class) {
             if (this.config != null) {
                 throw new IllegalStateException("AttentiveEventTracker cannot be initialized again");
