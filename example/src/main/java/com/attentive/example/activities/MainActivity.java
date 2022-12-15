@@ -1,9 +1,9 @@
 package com.attentive.example.activities;
 
-import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
@@ -15,6 +15,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        TextView domainValueTextView = (TextView) findViewById(R.id.domainValue);
+        domainValueTextView.setText(((ExampleApp)this.getApplication()).attentiveConfig.getDomain());
     }
 
     public void startLoadCreativeActivity(View view) {

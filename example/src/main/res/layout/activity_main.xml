@@ -60,4 +60,28 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="UsingOnClickInXml" />
 
+    <TextView
+            android:text="Domain: "
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/domainLabel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.476"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="100dp"
+            tools:layout_editor_absoluteX="179dp" />
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/domainValue"
+            tools:layout_editor_absoluteX="205dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.476"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="150dp"
+            />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
