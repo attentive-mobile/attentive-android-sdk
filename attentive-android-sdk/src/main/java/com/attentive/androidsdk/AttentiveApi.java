@@ -63,7 +63,6 @@ class AttentiveApi {
     }
 
     public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
-        // get geo-located domain
         getGeoAdjustedDomainAsync(domain, new GetGeoAdjustedDomainCallback() {
             @Override
             public void onFailure(String reason) {
