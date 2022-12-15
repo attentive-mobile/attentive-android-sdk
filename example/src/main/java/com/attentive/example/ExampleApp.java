@@ -7,7 +7,7 @@ import com.attentive.androidsdk.UserIdentifiers;
 
 public class ExampleApp extends Application {
     // Change this to your Attentive Domain to test with your Attentive account
-    private static final String ATTENTIVE_DOMAIN = "games";
+    private static final String ATTENTIVE_DOMAIN = "YOUR_ATTENTIVE_DOMAIN";
     // The mode in which to run the Attentive Android SDK
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
@@ -29,7 +29,7 @@ public class ExampleApp extends Application {
 
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
-                .withPhone("+15038932126")
+                .withClientUserId("CLIENT_USER_ID")
                 .build();
     }
 }

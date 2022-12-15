@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import com.attentive.androidsdk.ParameterValidation;
 
 public class Order {
-    @NonNull
     private final String orderId;
 
     private Order(Builder builder) {
