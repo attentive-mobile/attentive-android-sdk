@@ -332,11 +332,19 @@ class AttentiveApi {
         Metadata metadata = eventRequest.getMetadata();
         metadata.enrichWithIdentifiers(userIdentifiers);
 
+        String externalVendorIdsJson = null;
+        try {
+            List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
+            externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
+        } catch (JsonProcessingException e) {
+            externalVendorIdsJson = "[]";
+        }
+
         HttpUrl.Builder urlBuilder = getHttpUrlEventsEndpointBuilder()
             .addQueryParameter("v", "mobile-app")
             .addQueryParameter("lt", "0")
             .addQueryParameter("tag", "modern")
-            // TODO: should "evs" (externalVendorIds) be added to non-USER_IDENTIFIER_COLLECTED events?
+            .addQueryParameter("evs", externalVendorIdsJson)
             .addQueryParameter("c", domain)
             .addQueryParameter("t", eventRequest.getType().getAbbreviation())
             .addQueryParameter("u", userIdentifiers.getVisitorId())
