@@ -1,12 +1,23 @@
 package com.attentive.androidsdk;
 
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import androidx.annotation.VisibleForTesting;
+import com.attentive.androidsdk.events.Event;
+import com.attentive.androidsdk.events.Item;
+import com.attentive.androidsdk.events.PurchaseEvent;
+import com.attentive.androidsdk.internal.network.Metadata;
+import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
+import com.attentive.androidsdk.internal.network.ProductDto;
+import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,8 +44,54 @@ class AttentiveApi {
         this.objectMapper = objectMapper;
     }
 
+    // TODO refactor to use the 'sendEvent' method
     public void sendUserIdentifiersCollectedEvent(String domain, UserIdentifiers userIdentifiers, AttentiveApiCallback callback) {
         // first get the geo-adjusted domain, and then call the events endpoint
+        getGeoAdjustedDomainAsync(domain, new GetGeoAdjustedDomainCallback() {
+            @Override
+            public void onFailure(String reason) {
+                callback.onFailure(reason);
+            }
+
+            @Override
+            public void onSuccess(String geoAdjustedDomain) {
+                internalSendUserIdentifiersCollectedEventAsync(geoAdjustedDomain, userIdentifiers, callback);
+            }
+        });
+    }
+
+    public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain) {
+        sendEvent(event, userIdentifiers, domain, null);
+    }
+
+    public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
+        getGeoAdjustedDomainAsync(domain, new GetGeoAdjustedDomainCallback() {
+            @Override
+            public void onFailure(String reason) {
+                Log.w(this.getClass().getName(), "Could not get geo-adjusted domain. Trying to use the original domain.");
+                sendEvent(event, userIdentifiers, domain);
+            }
+
+            @Override
+            public void onSuccess(String geoAdjustedDomain) {
+                sendEvent(event, userIdentifiers, geoAdjustedDomain);
+            }
+
+            private void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain) {
+                sendEventInternalAsync(getEventRequestsFromEvent(event), userIdentifiers, domain, callback);
+            }
+        });
+    }
+
+    @VisibleForTesting
+    interface GetGeoAdjustedDomainCallback {
+        void onFailure(String reason);
+        void onSuccess(String geoAdjustedDomain);
+    }
+
+    @VisibleForTesting
+    void getGeoAdjustedDomainAsync(String domain, GetGeoAdjustedDomainCallback callback) {
+        // TODO cache geo-adjusted domain
         final String url = String.format(ATTENTIVE_DTAG_URL, domain);
         Request request = new Request.Builder().url(url).build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -66,11 +123,12 @@ class AttentiveApi {
                     return;
                 }
 
-                internalSendUserIdentifiersCollectedEventAsync(geoAdjustedDomain, userIdentifiers, callback);
+                callback.onSuccess(geoAdjustedDomain);
             }
         });
     }
 
+    // TODO replace with the generic 'sendEvent' code
     private void internalSendUserIdentifiersCollectedEventAsync(String geoAdjustedDomain, UserIdentifiers userIdentifiers, AttentiveApiCallback callback) {
         String externalVendorIdsJson = null;
         try {
@@ -191,5 +249,173 @@ class AttentiveApi {
         }
 
         return externalVendorIdList;
+    }
+
+    private static class EventRequest {
+        private enum Type {
+            PURCHASE("p"),
+            USER_IDENTIFIER_COLLECTED("idn"),
+            ORDER_CONFIRMED("oc");
+
+            private final String abbreviation;
+
+            Type(String abbreviation) {
+                this.abbreviation = abbreviation;
+            }
+
+            public String getAbbreviation() {
+                return abbreviation;
+            }
+        }
+
+        private final Metadata metadata;
+        private final Type type;
+
+        public EventRequest(Metadata metadata, Type type) {
+            this.metadata = metadata;
+            this.type = type;
+        }
+
+        public Metadata getMetadata() {
+            return metadata;
+        }
+
+        public Type getType() {
+            return type;
+        }
+    }
+
+    // One event can produce multiple requests (e.g. one PurchaseEvent with multiple items should be broken into separate Purchase requests)
+    private List<EventRequest> getEventRequestsFromEvent(Event event) {
+        List<EventRequest> eventRequests = new ArrayList<>();
+        if (event instanceof PurchaseEvent) {
+            PurchaseEvent purchaseEvent = (PurchaseEvent) event;
+
+            if (purchaseEvent.getItems().isEmpty()) {
+                Log.w(this.getClass().getName(), "Purchase event has no items. Skipping.");
+                return List.of();
+            }
+
+            BigDecimal cartTotal = BigDecimal.ZERO;
+            for (Item item : purchaseEvent.getItems()) {
+                cartTotal = cartTotal.add(item.getPrice().getPrice());
+            }
+            final String cartTotalString = cartTotal.setScale(2, RoundingMode.DOWN).toPlainString();
+
+            // Create Purchase requests
+            for (Item item : purchaseEvent.getItems()) {
+                PurchaseMetadataDto purchaseMetadataDto = new PurchaseMetadataDto();
+                purchaseMetadataDto.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+                purchaseMetadataDto.setPrice(item.getPrice().getPrice().toPlainString());
+                purchaseMetadataDto.setName(item.getName());
+                purchaseMetadataDto.setImage(item.getProductImage());
+                purchaseMetadataDto.setProductId(item.getProductId());
+                purchaseMetadataDto.setSubProductId(item.getProductVariantId());
+                purchaseMetadataDto.setCategory(item.getCategory());
+                purchaseMetadataDto.setQuantity(String.valueOf(item.getQuantity()));
+                purchaseMetadataDto.setOrderId(purchaseEvent.getOrder().getOrderId());
+                purchaseMetadataDto.setCartTotal(cartTotalString);
+                if (purchaseEvent.getCart() != null) {
+                    purchaseMetadataDto.setCartId(purchaseEvent.getCart().getCartId());
+                    purchaseMetadataDto.setCartCoupon(purchaseEvent.getCart().getCartCoupon());
+                }
+                eventRequests.add(new EventRequest(purchaseMetadataDto, EventRequest.Type.PURCHASE));
+            }
+
+            // Create OrderConfirmed request
+            OrderConfirmedMetadataDto ocMetadata = new OrderConfirmedMetadataDto();
+            ocMetadata.setOrderId(purchaseEvent.getOrder().getOrderId());
+            ocMetadata.setCurrency(purchaseEvent.getItems().get(0).getPrice().getCurrency().getCurrencyCode());
+            ocMetadata.setCartTotal(cartTotalString);
+            List<ProductDto> products = new ArrayList<>();
+            for (Item item : purchaseEvent.getItems()) {
+                ProductDto product = new ProductDto();
+                product.setProductId(item.getProductId());
+                product.setSubProductId(item.getProductVariantId());
+                product.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+                product.setCategory(item.getCategory());
+                product.setQuantity(String.valueOf(item.getQuantity()));
+                product.setName(item.getName());
+                product.setPrice(item.getPrice().getPrice().toPlainString());
+                product.setImage(item.getProductImage());
+                products.add(product);
+            }
+            ocMetadata.setProducts(products);
+            eventRequests.add(new EventRequest(ocMetadata, EventRequest.Type.ORDER_CONFIRMED));
+        } else {
+            final String error = "Unknown Event type: " + event.getClass().getName();
+            Log.e(this.getClass().getName(), error);
+            throw new RuntimeException(error);
+        }
+
+        return eventRequests;
+    }
+
+    private void sendEventInternalAsync(List<EventRequest> eventRequests, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
+        for (EventRequest eventRequest: eventRequests) {
+            sendEventInternalAsync(eventRequest, userIdentifiers, domain, callback);
+        }
+    }
+
+    private void sendEventInternalAsync(EventRequest eventRequest, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
+        Metadata metadata = eventRequest.getMetadata();
+        metadata.enrichWithIdentifiers(userIdentifiers);
+
+        String externalVendorIdsJson = null;
+        try {
+            List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
+            externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
+        } catch (JsonProcessingException e) {
+            Log.w(this.getClass().getName(), "Could not serialize external vendor ids. Using empty array. Error: " + e.getMessage());
+            externalVendorIdsJson = "[]";
+        }
+
+        HttpUrl.Builder urlBuilder = getHttpUrlEventsEndpointBuilder()
+            .addQueryParameter("v", "mobile-app")
+            .addQueryParameter("lt", "0")
+            .addQueryParameter("tag", "modern")
+            .addQueryParameter("evs", externalVendorIdsJson)
+            .addQueryParameter("c", domain)
+            .addQueryParameter("t", eventRequest.getType().getAbbreviation())
+            .addQueryParameter("u", userIdentifiers.getVisitorId())
+            .addQueryParameter("m", serialize(metadata));
+
+        HttpUrl url = urlBuilder.build();
+
+        Request request = new Request.Builder().url(url).build();
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                final String error = "Could not send the request. Error: " + e.getMessage();
+                Log.e(this.getClass().getName(), error);
+                if (callback != null) {
+                    callback.onFailure(error);
+                }
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                if (!response.isSuccessful()) {
+                    String error = "Could not send the request. Invalid response code: " + response.code() + ", message: "
+                                 + response.message();
+                    Log.e(this.getClass().getName(), error);
+                    if (callback != null) {
+                        callback.onFailure(error);
+                    }
+                    return;
+                }
+
+                Log.d(this.getClass().getName(), "Sent the '" + eventRequest.getType() + "' request successfully.");
+            }
+        });
+    }
+
+    @Nullable
+    private <T> String serialize(T object) {
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Could not serialize. Error: " + e.getMessage(), e);
+        }
     }
 }

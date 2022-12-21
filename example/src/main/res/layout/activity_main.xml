@@ -22,10 +22,23 @@
         tools:ignore="UsingOnClickInXml" />
 
     <Button
+            android:id="@+id/identifyButton"
+            android:layout_width="300dp"
+            android:layout_height="81dp"
+            android:layout_marginTop="500dp"
+            android:onClick="identifyUser"
+            android:text="@string/push_me_to_identify"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.477"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="UsingOnClickInXml" />
+
+    <Button
             android:id="@+id/logoutButton"
             android:layout_width="300dp"
             android:layout_height="81dp"
-            android:layout_marginTop="300dp"
+            android:layout_marginTop="400dp"
             android:onClick="logoutUser"
             android:text="@string/push_me_to_logout"
             app:layout_constraintEnd_toEndOf="parent"
@@ -35,16 +48,40 @@
             tools:ignore="UsingOnClickInXml" />
 
     <Button
-            android:id="@+id/identifyButton"
+            android:id="@+id/productPageButton"
             android:layout_width="300dp"
             android:layout_height="81dp"
-            android:layout_marginTop="404dp"
-            android:onClick="identifyUser"
-            android:text="@string/push_me_to_identify"
+            android:layout_marginTop="300dp"
+            android:onClick="startProductPageActivity"
+            android:text="@string/push_me_for_product_page"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.477"
+            app:layout_constraintHorizontal_bias="0.495"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="UsingOnClickInXml" />
+
+    <TextView
+            android:text="Domain: "
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/domainLabel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.476"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="100dp"
+            tools:layout_editor_absoluteX="179dp" />
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/domainValue"
+            tools:layout_editor_absoluteX="205dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.476"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="150dp"
+            />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
