@@ -63,6 +63,26 @@ creative.trigger();
 creative.destroy();
 ```
 
+### Record user events
+
+```java
+// Construct one or more "Item"s, which represents the product(s) purchased
+Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
+Item item = new Item.Builder("11111", "222", price).quantity(1).build();
+
+// Construct an "Order", which represents the order for the purchase
+Order order = new Order.Builder("23456").build();
+
+// (Optional) Construct a "Cart", which represents the cart this Purchase was made from
+Cart cart = new Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build();
+
+// Construct a PurchaseEvent, which ties together the preceding objects
+PurchaseEvent purchaseEvent = new PurchaseEvent.Builder(List.of(item), order).cart(cart).build();
+
+// Record the PurchaseEvent
+AttentiveEventTracker.getInstance().recordEvent(purchaseEvent);
+```
+
 ### Update the current user when new identifiers are available
 
 ```java
