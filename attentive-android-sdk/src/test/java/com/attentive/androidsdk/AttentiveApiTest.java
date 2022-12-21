@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.attentive.androidsdk.events.Cart;
@@ -14,12 +15,30 @@ import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.PurchaseEvent;
+import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
+import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.util.StdConverter;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Currency;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
@@ -63,8 +82,10 @@ public class AttentiveApiTest {
 
         // Assert
         ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(okHttpClient).newCall(requestArgumentCaptor.capture());
-        HttpUrl url = requestArgumentCaptor.getValue().url();
+        verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> purchaseRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=p")).findFirst();
+        assertTrue(purchaseRequest.isPresent());
+        HttpUrl url = purchaseRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
         assertEquals("mobile-app", url.queryParameter("v"));
@@ -94,8 +115,10 @@ public class AttentiveApiTest {
 
         // Assert
         ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(okHttpClient).newCall(requestArgumentCaptor.capture());
-        HttpUrl url = requestArgumentCaptor.getValue().url();
+        verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> purchaseRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=p")).findFirst();
+        assertTrue(purchaseRequest.isPresent());
+        HttpUrl url = purchaseRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
         assertEquals("mobile-app", url.queryParameter("v"));
@@ -120,8 +143,88 @@ public class AttentiveApiTest {
         assertEquals(purchaseEvent.getOrder().getOrderId(), m.getOrderId());
     }
 
+    @Test
+    public void sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() throws JsonProcessingException {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        PurchaseEvent purchaseEvent = buildPurchaseEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> orderConfirmedRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=oc")).findFirst();
+        assertTrue(orderConfirmedRequest.isPresent());
+        HttpUrl url = orderConfirmedRequest.get().url();
+
+        assertEquals("modern", url.queryParameter("tag"));
+        assertEquals("mobile-app", url.queryParameter("v"));
+        assertEquals("0", url.queryParameter("lt"));
+        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
+        assertEquals("oc", url.queryParameter("t"));
+        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+
+        String metadataString = url.queryParameter("m");
+        Map<String, Object> metadata = objectMapper.readValue(metadataString, Map.class);
+        assertEquals(purchaseEvent.getOrder().getOrderId(), metadata.get("orderId"));
+        Item expectedItem = purchaseEvent.getItems().get(0);
+        assertEquals(expectedItem.getPrice().getPrice().toString(), metadata.get("cartTotal"));
+        assertEquals(expectedItem.getPrice().getCurrency().getCurrencyCode(), metadata.get("currency"));
+
+        List<ProductDto> products = Arrays.asList((ProductDto[])objectMapper.readValue((String)metadata.get("products"), ProductDto[].class));
+        assertEquals(1, products.size());
+        assertEquals(expectedItem.getPrice().getPrice().toString(), products.get(0).getPrice());
+        assertEquals(expectedItem.getProductId(), products.get(0).getProductId());
+        assertEquals(expectedItem.getProductVariantId(), products.get(0).getSubProductId());
+        assertEquals(expectedItem.getCategory(), products.get(0).getCategory());
+        assertEquals(expectedItem.getProductImage(), products.get(0).getImage());
+    }
+
+    @Test
+    public void sendEvent_purchaseEventWithTwoProducts_callsEventsEndpointTwiceForPurchasesAndOnceForOrderConfirmed() {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        PurchaseEvent purchaseEvent = buildPurchaseEventWithTwoItems();
+
+        // Act
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(3)).newCall(requestArgumentCaptor.capture());
+        List<Request> allValues = new ArrayList<Request>(requestArgumentCaptor.getAllValues());
+        assertEquals(3, allValues.size());
+
+        int purchaseCount = 0;
+        int orderConfirmedCount= 0;
+        for (Request request : allValues) {
+            final String urlString = request.url().toString();
+            if (urlString.contains("t=p")) {
+                purchaseCount++;
+            } else if (urlString.contains("t=oc")) {
+                orderConfirmedCount++;
+            } else {
+                fail("Unknown event type was sent to the server");
+            }
+        }
+        assertEquals(2, purchaseCount);
+        assertEquals(1, orderConfirmedCount);
+    }
+
     private PurchaseEvent buildPurchaseEventWithRequiredFields() {
         return new PurchaseEvent.Builder(List.of(new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).build()), new Order.Builder("5555").build()).build();
+    }
+
+    private PurchaseEvent buildPurchaseEventWithTwoItems() {
+        return new PurchaseEvent.Builder(
+            List.of(
+                new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).build(),
+                new Item.Builder("77", "99", new Price.Builder(new BigDecimal("20.00"), Currency.getInstance("USD")).build()).build()),
+            new Order.Builder("5555").build()).build();
     }
 
     private PurchaseEvent buildPurchaseEventWithAllFields() {

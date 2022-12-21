@@ -9,6 +9,8 @@ import com.attentive.androidsdk.events.Event;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.network.Metadata;
+import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
+import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -252,7 +254,8 @@ class AttentiveApi {
     private static class EventRequest {
         private enum Type {
             PURCHASE("p"),
-            USER_IDENTIFIER_COLLECTED("idn");
+            USER_IDENTIFIER_COLLECTED("idn"),
+            ORDER_CONFIRMED("oc");
 
             private final String abbreviation;
 
@@ -288,15 +291,20 @@ class AttentiveApi {
         if (event instanceof PurchaseEvent) {
             PurchaseEvent purchaseEvent = (PurchaseEvent) event;
 
+            if (purchaseEvent.getItems().isEmpty()) {
+                Log.w(this.getClass().getName(), "Purchase event has no items. Skipping.");
+                return List.of();
+            }
+
             BigDecimal cartTotal = BigDecimal.ZERO;
             for (Item item : purchaseEvent.getItems()) {
                 cartTotal = cartTotal.add(item.getPrice().getPrice());
             }
-            cartTotal = cartTotal.setScale(2, RoundingMode.DOWN);
+            final String cartTotalString = cartTotal.setScale(2, RoundingMode.DOWN).toPlainString();
 
+            // Create Purchase requests
             for (Item item : purchaseEvent.getItems()) {
                 PurchaseMetadataDto purchaseMetadataDto = new PurchaseMetadataDto();
-                // TODO what about SKU?
                 purchaseMetadataDto.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
                 purchaseMetadataDto.setPrice(item.getPrice().getPrice().toPlainString());
                 purchaseMetadataDto.setName(item.getName());
@@ -306,13 +314,34 @@ class AttentiveApi {
                 purchaseMetadataDto.setCategory(item.getCategory());
                 purchaseMetadataDto.setQuantity(String.valueOf(item.getQuantity()));
                 purchaseMetadataDto.setOrderId(purchaseEvent.getOrder().getOrderId());
-                purchaseMetadataDto.setCartTotal(cartTotal.toPlainString());
+                purchaseMetadataDto.setCartTotal(cartTotalString);
                 if (purchaseEvent.getCart() != null) {
                     purchaseMetadataDto.setCartId(purchaseEvent.getCart().getCartId());
                     purchaseMetadataDto.setCartCoupon(purchaseEvent.getCart().getCartCoupon());
                 }
                 eventRequests.add(new EventRequest(purchaseMetadataDto, EventRequest.Type.PURCHASE));
             }
+
+            // Create OrderConfirmed request
+            OrderConfirmedMetadataDto ocMetadata = new OrderConfirmedMetadataDto();
+            ocMetadata.setOrderId(purchaseEvent.getOrder().getOrderId());
+            ocMetadata.setCurrency(purchaseEvent.getItems().get(0).getPrice().getCurrency().getCurrencyCode());
+            ocMetadata.setCartTotal(cartTotalString);
+            List<ProductDto> products = new ArrayList<>();
+            for (Item item : purchaseEvent.getItems()) {
+                ProductDto product = new ProductDto();
+                product.setProductId(item.getProductId());
+                product.setSubProductId(item.getProductVariantId());
+                product.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+                product.setCategory(item.getCategory());
+                product.setQuantity(String.valueOf(item.getQuantity()));
+                product.setName(item.getName());
+                product.setPrice(item.getPrice().getPrice().toPlainString());
+                product.setImage(item.getProductImage());
+                products.add(product);
+            }
+            ocMetadata.setProducts(products);
+            eventRequests.add(new EventRequest(ocMetadata, EventRequest.Type.ORDER_CONFIRMED));
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);
@@ -337,6 +366,7 @@ class AttentiveApi {
             List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
             externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
         } catch (JsonProcessingException e) {
+            Log.w(this.getClass().getName(), "Could not serialize external vendor ids. Using empty array. Error: " + e.getMessage());
             externalVendorIdsJson = "[]";
         }
 
