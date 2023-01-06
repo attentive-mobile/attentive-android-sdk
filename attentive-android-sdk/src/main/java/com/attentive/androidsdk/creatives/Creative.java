@@ -215,9 +215,25 @@ public class Creative {
             String messageData = message.getData();
             if (messageData != null) {
                 if (messageData.equalsIgnoreCase("CLOSE")) {
-                    handler.post(() -> webView.setVisibility(View.INVISIBLE));
+                    handler.post(() -> {
+                        if (webView != null) {
+                            webView.setVisibility(View.INVISIBLE);
+                        } else {
+                            Log.w(this.getClass().getName(), "The user closed the creative but the webview is null. Ignoring.");
+                        }
+                    });
                 } else if (messageData.equalsIgnoreCase("OPEN")) {
-                    handler.post(() -> webView.setVisibility(View.VISIBLE));
+                    handler.post(() -> {
+                        // Host apps have reported webView NPEs here. The current thinking is that destroy gets
+                        // called just before this callback is executed. If destroy was previously called then it's
+                        // okay to ignore these callbacks since the host app has told us the creative should no longer
+                        // be displayed.
+                        if (webView != null) {
+                            webView.setVisibility(View.VISIBLE);
+                        } else {
+                            Log.w(this.getClass().getName(), "The creative loaded but the webview is null. Ignoring.");
+                        }
+                    });
                 } else if (messageData.equalsIgnoreCase("TIMED OUT")) {
                     Log.e(this.getClass().getName(), "Creative timed out. Not showing WebView.");
                 }
