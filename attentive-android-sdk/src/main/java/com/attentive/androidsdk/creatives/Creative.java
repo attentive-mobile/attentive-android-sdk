@@ -195,17 +195,16 @@ public class Creative {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if (url.startsWith("sms://")) {
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        view.getContext().startActivity(intent);
-                        return true;
-                    } catch (Exception e) {
-                        return true;
-                    }
+                try {
+                    // This tells Android to open the URL in an app that is relevant for the URL.
+                    // i.e. for "sms://" it will open the messaging app and for "https://" it will
+                    // open the browser
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    view.getContext().startActivity(intent);
+                    return true;
+                } catch (Exception e) {
+                    return true;
                 }
-
-                return false;
             }
         };
     }
