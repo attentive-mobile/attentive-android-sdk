@@ -148,9 +148,13 @@ public class Creative {
         if (parentView != null && webView != null) {
             ((ViewGroup) parentView).removeView(webView);
         }
+        // TODO: better thread-safety when destroying. Lock?
         if (webView != null) {
-            webView.destroy();
+            // set the webView member variable to null BEFORE we destroy it so other code on other threads that check if
+            // webView isn't null doesn't try to use it after it is destroyed
+            WebView webViewToDestroy = webView;
             webView = null;
+            webViewToDestroy.destroy();
         }
     }
 
