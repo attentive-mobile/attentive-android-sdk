@@ -1,7 +1,6 @@
 package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -18,13 +17,7 @@ import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.ClassFactory;
 import com.attentive.androidsdk.UserIdentifiers;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 public class Creative {
