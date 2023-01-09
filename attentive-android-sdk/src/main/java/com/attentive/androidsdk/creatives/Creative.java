@@ -209,7 +209,7 @@ public class Creative {
                         Log.e(this.getClass().getName(), String.format("Error opening the URI '%s' from the webview. Error message: '%s'", uri, e.getMessage()));
                     }
 
-                    // Don't render the URI in the webview since the above code tells Android to open the URL in a new app
+                    // Don't render the URI in the webview since the above code tells Android to open the URI in a new app
                     return true;
                 }
 
