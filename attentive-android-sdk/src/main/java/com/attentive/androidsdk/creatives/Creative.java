@@ -1,6 +1,7 @@
 package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -22,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -194,17 +196,24 @@ public class Creative {
             }
 
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                try {
-                    // This tells Android to open the URL in an app that is relevant for the URL.
-                    // i.e. for "sms://" it will open the messaging app and for "https://" it will
-                    // open the browser
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    view.getContext().startActivity(intent);
-                    return true;
-                } catch (Exception e) {
+            public boolean shouldOverrideUrlLoading(WebView view, String uri) {
+                final String lowercaseUri = uri.toLowerCase();
+                if (lowercaseUri.startsWith("sms://") || lowercaseUri.startsWith("http://") || lowercaseUri.startsWith("https://")) {
+                    try {
+                        // This tells Android to open the URI in an app that is relevant for the URI.
+                        // i.e. for "sms://" it will open the messaging app and for "http://" it will
+                        // open the browser
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                        view.getContext().startActivity(intent);
+                    } catch (Exception e) {
+                        Log.e(this.getClass().getName(), String.format("Error opening the URI '%s' from the webview. Error message: '%s'", uri, e.getMessage()));
+                    }
+
+                    // Don't render the URI in the webview since the above code tells Android to open the URL in a new app
                     return true;
                 }
+
+                return false;
             }
         };
     }
