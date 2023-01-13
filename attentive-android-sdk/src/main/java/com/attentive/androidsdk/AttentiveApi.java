@@ -5,12 +5,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import androidx.annotation.VisibleForTesting;
+import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Event;
 import com.attentive.androidsdk.events.Item;
+import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
+import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
 import com.attentive.androidsdk.internal.network.Metadata;
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
 import com.attentive.androidsdk.internal.network.ProductDto;
+import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -255,7 +259,9 @@ class AttentiveApi {
         private enum Type {
             PURCHASE("p"),
             USER_IDENTIFIER_COLLECTED("idn"),
-            ORDER_CONFIRMED("oc");
+            ORDER_CONFIRMED("oc"),
+            PRODUCT_VIEW("d"),
+            ADD_TO_CART("c");
 
             private final String abbreviation;
 
@@ -342,10 +348,48 @@ class AttentiveApi {
             }
             ocMetadata.setProducts(products);
             eventRequests.add(new EventRequest(ocMetadata, EventRequest.Type.ORDER_CONFIRMED));
+        } else if (event instanceof ProductViewEvent) {
+            ProductViewEvent productViewEvent = (ProductViewEvent) event;
+
+            if (productViewEvent.getItems().isEmpty()) {
+                Log.w(this.getClass().getName(), "Product View event has no items. Skipping.");
+                return List.of();
+            }
+
+            for (Item item : productViewEvent.getItems()) {
+                ProductViewMetadataDto productViewMetadata = new ProductViewMetadataDto();
+                productViewMetadata.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+                productViewMetadata.setPrice(item.getPrice().getPrice().toPlainString());
+                productViewMetadata.setName(item.getName());
+                productViewMetadata.setImage(item.getProductImage());
+                productViewMetadata.setProductId(item.getProductId());
+                productViewMetadata.setSubProductId(item.getProductVariantId());
+                productViewMetadata.setCategory(item.getCategory());
+                eventRequests.add(new EventRequest(productViewMetadata, EventRequest.Type.PRODUCT_VIEW));
+            }
+        } else if (event instanceof AddToCartEvent) {
+            AddToCartEvent addToCartEvent = (AddToCartEvent) event;
+
+            if (addToCartEvent.getItems().isEmpty()) {
+                Log.w(this.getClass().getName(), "Add to Cart event has no items. Skipping.");
+                return List.of();
+            }
+
+            for (Item item : addToCartEvent.getItems()) {
+                AddToCartMetadataDto addToCartMetadataDto = new AddToCartMetadataDto();
+                addToCartMetadataDto.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+                addToCartMetadataDto.setPrice(item.getPrice().getPrice().toPlainString());
+                addToCartMetadataDto.setName(item.getName());
+                addToCartMetadataDto.setImage(item.getProductImage());
+                addToCartMetadataDto.setProductId(item.getProductId());
+                addToCartMetadataDto.setSubProductId(item.getProductVariantId());
+                addToCartMetadataDto.setCategory(item.getCategory());
+                eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.PRODUCT_VIEW));
+            }
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);
-            throw new RuntimeException(error);
+            throw new IllegalStateException(error);
         }
 
         return eventRequests;

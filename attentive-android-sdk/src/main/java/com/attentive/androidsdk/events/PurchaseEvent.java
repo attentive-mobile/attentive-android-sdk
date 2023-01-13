@@ -5,7 +5,7 @@ import androidx.annotation.Nullable;
 import com.attentive.androidsdk.ParameterValidation;
 import java.util.List;
 
-public class PurchaseEvent extends Event {
+public final class PurchaseEvent extends Event {
     private final List<Item> items;
     private final Order order;
     private final Cart cart;
