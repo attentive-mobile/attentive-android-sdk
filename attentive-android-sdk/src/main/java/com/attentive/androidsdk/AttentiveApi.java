@@ -384,7 +384,7 @@ class AttentiveApi {
                 addToCartMetadataDto.setProductId(item.getProductId());
                 addToCartMetadataDto.setSubProductId(item.getProductVariantId());
                 addToCartMetadataDto.setCategory(item.getCategory());
-                eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.PRODUCT_VIEW));
+                eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.ADD_TO_CART));
             }
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
