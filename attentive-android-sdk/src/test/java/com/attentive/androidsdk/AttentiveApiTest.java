@@ -10,13 +10,17 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
+import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
+import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
 import com.attentive.androidsdk.internal.network.ProductDto;
+import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JacksonException;
@@ -215,6 +219,77 @@ public class AttentiveApiTest {
         assertEquals(1, orderConfirmedCount);
     }
 
+    @Test
+    public void sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        AddToCartEvent addToCartEvent = buildAddToCartEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=c")).findFirst();
+        assertTrue(addToCartRequest.isPresent());
+        HttpUrl url = addToCartRequest.get().url();
+
+        assertEquals("modern", url.queryParameter("tag"));
+        assertEquals("mobile-app", url.queryParameter("v"));
+        assertEquals("0", url.queryParameter("lt"));
+        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
+        assertEquals("c", url.queryParameter("t"));
+        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+
+        AddToCartMetadataDto m = objectMapper.readValue(url.queryParameter("m"), AddToCartMetadataDto.class);
+        assertEquals("USD", m.getCurrency());
+        Item addToCartItem = addToCartEvent.getItems().get(0);
+        assertEquals(addToCartItem.getPrice().getPrice().toString(), m.getPrice());
+        assertEquals(addToCartItem.getProductId(), m.getProductId());
+        assertEquals(addToCartItem.getProductImage(), m.getImage());
+        assertEquals(addToCartItem.getName(), m.getName());
+        assertEquals(String.valueOf(addToCartItem.getQuantity()), m.getQuantity());
+        assertEquals(addToCartItem.getCategory(), m.getCategory());
+        assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
+    }
+
+    @Test
+    public void sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        ProductViewEvent productViewEvent = buildProductViewEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=d")).findFirst();
+        assertTrue(addToCartRequest.isPresent());
+        HttpUrl url = addToCartRequest.get().url();
+
+        assertEquals("modern", url.queryParameter("tag"));
+        assertEquals("mobile-app", url.queryParameter("v"));
+        assertEquals("0", url.queryParameter("lt"));
+        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
+        assertEquals("d", url.queryParameter("t"));
+        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+
+        ProductViewMetadataDto m = objectMapper.readValue(url.queryParameter("m"), ProductViewMetadataDto.class);
+        assertEquals("USD", m.getCurrency());
+        Item addToCartItem = productViewEvent.getItems().get(0);
+        assertEquals(addToCartItem.getPrice().getPrice().toString(), m.getPrice());
+        assertEquals(addToCartItem.getProductId(), m.getProductId());
+        assertEquals(addToCartItem.getProductImage(), m.getImage());
+        assertEquals(addToCartItem.getName(), m.getName());
+        assertEquals(addToCartItem.getCategory(), m.getCategory());
+        assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
+    }
+
     private PurchaseEvent buildPurchaseEventWithRequiredFields() {
         return new PurchaseEvent.Builder(List.of(new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).build()), new Order.Builder("5555").build()).build();
     }
@@ -228,7 +303,18 @@ public class AttentiveApiTest {
     }
 
     private PurchaseEvent buildPurchaseEventWithAllFields() {
-        return new PurchaseEvent.Builder(List.of(new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).category("categoryValue").name("nameValue").productImage("imageUrl").build()), new Order.Builder("5555").build()).cart(new Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build()).build();
+        return new PurchaseEvent.Builder(List.of(buildItemWithAllFields()), new Order.Builder("5555").build()).cart(new Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build()).build();
+    }
+
+    private AddToCartEvent buildAddToCartEventWithAllFields() {
+        return new AddToCartEvent.Builder(List.of(buildItemWithAllFields())).build();
+    }
+    private ProductViewEvent buildProductViewEventWithAllFields() {
+        return new ProductViewEvent.Builder(List.of(buildItemWithAllFields())).build();
+    }
+
+    private Item buildItemWithAllFields() {
+        return new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).category("categoryValue").name("nameValue").productImage("imageUrl").build();
     }
 
     private static UserIdentifiers buildAllUserIdentifiers() {

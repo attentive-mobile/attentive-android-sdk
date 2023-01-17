@@ -384,6 +384,7 @@ class AttentiveApi {
                 addToCartMetadataDto.setProductId(item.getProductId());
                 addToCartMetadataDto.setSubProductId(item.getProductVariantId());
                 addToCartMetadataDto.setCategory(item.getCategory());
+                addToCartMetadataDto.setQuantity(String.valueOf(item.getQuantity()));
                 eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.ADD_TO_CART));
             }
         } else {
