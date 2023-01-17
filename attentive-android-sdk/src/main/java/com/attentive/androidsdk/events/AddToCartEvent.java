@@ -3,7 +3,7 @@ package com.attentive.androidsdk.events;
 import com.attentive.androidsdk.ParameterValidation;
 import java.util.List;
 
-public class AddToCartEvent extends Event {
+public final class AddToCartEvent extends Event {
     private final List<Item> items;
 
     public AddToCartEvent(List<Item> items) {
