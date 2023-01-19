@@ -12,6 +12,12 @@ public class OrderConfirmedMetadataDto extends Metadata {
     private String cartTotal;
     private String currency;
 
+    /**
+     * We expect this list of products to be a string containing a valid json list rather than a List object
+     * For example:
+     *      Instead of this: {"products": [ {"name": "T-shirt"}, {"name": "Shorts"} ]}
+     *      We want this: {"products": "[ {\"name\": \"T-shirt\"}, {\"name\": \"Shorts\"} ]"}
+     **/
     @JsonSerialize(converter = ObjectToRawJsonStringConverter.class)
     private List<ProductDto> products;
 
