@@ -37,11 +37,12 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 class AttentiveApi {
-    private static final String ATTENTIVE_EVENTS_ENDPOINT_HOST = "events.attentivemobile.com";
-    private static final String ATTENTIVE_DTAG_URL = "https://cdn.attn.tv/%s/dtag.js";
+    static final String ATTENTIVE_EVENTS_ENDPOINT_HOST = "events.attentivemobile.com";
+    static final String ATTENTIVE_DTAG_URL = "https://cdn.attn.tv/%s/dtag.js";
 
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private String cachedGeoAdjustedDomain;
 
     public AttentiveApi(OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.httpClient = httpClient;
@@ -95,7 +96,11 @@ class AttentiveApi {
 
     @VisibleForTesting
     void getGeoAdjustedDomainAsync(String domain, GetGeoAdjustedDomainCallback callback) {
-        // TODO cache geo-adjusted domain
+        if (cachedGeoAdjustedDomain != null) {
+            callback.onSuccess(cachedGeoAdjustedDomain);
+            return;
+        }
+
         final String url = String.format(ATTENTIVE_DTAG_URL, domain);
         Request request = new Request.Builder().url(url).build();
         httpClient.newCall(request).enqueue(new Callback() {
@@ -127,6 +132,7 @@ class AttentiveApi {
                     return;
                 }
 
+                cachedGeoAdjustedDomain = geoAdjustedDomain;
                 callback.onSuccess(geoAdjustedDomain);
             }
         });
@@ -462,5 +468,10 @@ class AttentiveApi {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Could not serialize. Error: " + e.getMessage(), e);
         }
+    }
+
+    @VisibleForTesting
+    String getCachedGeoAdjustedDomain() {
+        return cachedGeoAdjustedDomain;
     }
 }

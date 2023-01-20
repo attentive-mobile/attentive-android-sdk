@@ -2,6 +2,7 @@ package com.attentive.androidsdk;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -18,24 +19,11 @@ import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
-import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
 import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.util.StdConverter;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,16 +37,16 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.internal.matchers.Or;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class AttentiveApiTest {
     private static final String DOMAIN = "adj";
     private static final String GEO_ADJUSTED_DOMAIN = "domainAdj";
+    private static final String DTAG_URL = String.format(AttentiveApi.ATTENTIVE_DTAG_URL, DOMAIN);
     private static final UserIdentifiers ALL_USER_IDENTIFIERS = buildAllUserIdentifiers();
 
     private AttentiveApi attentiveApi;
@@ -290,6 +278,56 @@ public class AttentiveApiTest {
         assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
     }
 
+    @Test
+    public void sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() throws JsonProcessingException {
+        // Arrange
+        givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        ProductViewEvent productViewEvent = buildProductViewEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(3)).newCall(requestArgumentCaptor.capture());
+
+        long eventsSentCount =
+            requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=d"))
+                .count();
+        assertEquals(2, eventsSentCount);
+
+        long geoAdjustedDomainCallsSent =
+            requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().equals(DTAG_URL))
+                .count();
+        assertEquals(1, geoAdjustedDomainCallsSent);
+    }
+
+    @Test
+    public void sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() throws JsonProcessingException {
+        // Arrange
+        givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        ProductViewEvent productViewEvent = buildProductViewEventWithAllFields();
+
+        assertNull(attentiveApi.getCachedGeoAdjustedDomain());
+
+        // Act
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
+
+        assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.getCachedGeoAdjustedDomain());
+    }
+
+    @Test
+    public void testGeoAdjustedDomain_() {
+
+    }
+
     private PurchaseEvent buildPurchaseEventWithRequiredFields() {
         return new PurchaseEvent.Builder(List.of(new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).build()), new Order.Builder("5555").build()).build();
     }
@@ -323,18 +361,29 @@ public class AttentiveApiTest {
 
     private void givenOkHttpClientReturnsSuccessFromEventsEndpoint() {
         Call call = mock(Call.class);
-        doReturn(call).when(okHttpClient).newCall(any());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
-                Callback argument = invocation.getArgument(0, Callback.class);
-                argument.onResponse(call, buildSuccessfulResponse());
-                return null;
-            }
+        doReturn(call).when(okHttpClient).newCall(argThat(request -> request.url().host().equals("events.attentivemobile.com")));
+        doAnswer((Answer<Void>) invocation -> {
+            Callback argument = invocation.getArgument(0, Callback.class);
+            argument.onResponse(call, buildSuccessfulResponseMock());
+            return null;
         }).when(call).enqueue(any());
     }
 
-    private Response buildSuccessfulResponse() {
+    private void givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint() {
+        Call call = mock(Call.class);
+        doReturn(call).when(okHttpClient).newCall(argThat(request -> request.url().host().equals("cdn.attn.tv")));
+        doAnswer((Answer<Void>) invocation -> {
+            Callback argument = invocation.getArgument(0, Callback.class);
+            ResponseBody responseBody =
+                ResponseBody.create(String.format("window.__attentive_domain='%s.attn.tv'", GEO_ADJUSTED_DOMAIN), null);
+            Response dtagResponse = buildSuccessfulResponseMock();
+            doReturn(responseBody).when(dtagResponse).body();
+            argument.onResponse(call, dtagResponse);
+            return null;
+        }).when(call).enqueue(any());
+    }
+
+    private Response buildSuccessfulResponseMock() {
         Response mock = mock(Response.class);
         doReturn(true).when(mock).isSuccessful();
         doReturn(200).when(mock).code();
