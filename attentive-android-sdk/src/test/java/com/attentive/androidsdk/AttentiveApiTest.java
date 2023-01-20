@@ -323,11 +323,6 @@ public class AttentiveApiTest {
         assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.getCachedGeoAdjustedDomain());
     }
 
-    @Test
-    public void testGeoAdjustedDomain_() {
-
-    }
-
     private PurchaseEvent buildPurchaseEventWithRequiredFields() {
         return new PurchaseEvent.Builder(List.of(new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).build()), new Order.Builder("5555").build()).build();
     }
