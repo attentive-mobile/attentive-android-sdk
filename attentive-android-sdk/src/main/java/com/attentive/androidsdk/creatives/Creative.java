@@ -91,6 +91,20 @@ public class Creative {
         webView.loadUrl(url);
     }
 
+    public void destroy() {
+        if (parentView != null && webView != null) {
+            ((ViewGroup) parentView).removeView(webView);
+        }
+        // TODO: better thread-safety when destroying. Lock?
+        if (webView != null) {
+            // set the webView member variable to null BEFORE we destroy it so other code on other threads that check if
+            // webView isn't null doesn't try to use it after it is destroyed
+            WebView webViewToDestroy = webView;
+            webView = null;
+            webViewToDestroy.destroy();
+        }
+    }
+
     private String buildCompanyCreativeUrl() {
         Uri.Builder uriBuilder =
             getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
@@ -136,20 +150,6 @@ public class Creative {
         } catch (JsonProcessingException e) {
             Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
             return "{}";
-        }
-    }
-
-    public void destroy() {
-        if (parentView != null && webView != null) {
-            ((ViewGroup) parentView).removeView(webView);
-        }
-        // TODO: better thread-safety when destroying. Lock?
-        if (webView != null) {
-            // set the webView member variable to null BEFORE we destroy it so other code on other threads that check if
-            // webView isn't null doesn't try to use it after it is destroyed
-            WebView webViewToDestroy = webView;
-            webView = null;
-            webViewToDestroy.destroy();
         }
     }
 
