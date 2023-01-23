@@ -65,6 +65,8 @@ creative.destroy();
 
 ### Record user events
 
+The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, and `ProductViewEvent`.
+
 ```java
 // Construct one or more "Item"s, which represents the product(s) purchased
 Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
