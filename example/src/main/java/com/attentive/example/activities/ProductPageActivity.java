@@ -2,13 +2,17 @@ package com.attentive.example.activities;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.attentive.androidsdk.AttentiveEventTracker;
+import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
+import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.example.R;
 import java.math.BigDecimal;
@@ -21,17 +25,27 @@ public class ProductPageActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product_page);
-        // TODO send Product View event here
+
+        // Send "Product View" Event
+        final Item item = createItem();
+        final ProductViewEvent productViewEvent = new ProductViewEvent.Builder(List.of(item)).build();
+        AttentiveEventTracker.getInstance().recordEvent(productViewEvent);
+        showToastMessageForEvent("Product View");
+    }
+
+    public void addToCartButtonClicked(View view) {
+        // Send "Add to Cart" Event
+        final Item item = createItem();
+        final AddToCartEvent addToCartEvent=  new AddToCartEvent.Builder(List.of(item)).build();
+        AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
+        showToastMessageForEvent("Add to Cart");
     }
 
     public void purchaseButtonClicked(View view) {
         // Send "Purchase" Event
 
         // Construct one or more "Item"s, which represents the product(s) purchased
-        final String productId = "11111";
-        final String productVariantId = "222";
-        final Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
-        final Item item = new Item.Builder(productId, productVariantId, price).quantity(1).build();
+        final Item item = createItem();
 
         // Construct an "Order", which represents the order for the purchase
         final String orderId = "23456";
@@ -45,5 +59,18 @@ public class ProductPageActivity extends AppCompatActivity {
 
         // Record the PurchaseEvent
         AttentiveEventTracker.getInstance().recordEvent(purchaseEvent);
+        showToastMessageForEvent("Purchase");
+    }
+
+    @NonNull
+    private Item createItem() {
+        final String productId = "11111";
+        final String productVariantId = "222";
+        final Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
+        return new Item.Builder(productId, productVariantId, price).quantity(1).build();
+    }
+
+    private void showToastMessageForEvent(String eventName) {
+        Toast.makeText(this, "Sent event of type: " + eventName, Toast.LENGTH_SHORT).show();
     }
 }
