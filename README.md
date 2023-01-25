@@ -13,8 +13,8 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
         credentials {
-            username = "YOUR_GITHUB_USERNAME"
-            password = "THE_PERSONAL_ACCESS_TOKEN_YOU_CREATED"
+            username = "REPLACE_WITH_YOUR_GITHUB_USERNAME"
+            password = "REPLACE_WITH_THE_PERSONAL_ACCESS_TOKEN_YOU_CREATED"
         }
     }
 }
