@@ -13,8 +13,8 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
         credentials {
-            username = properties.findProperty("gpr.user") ?: System.getenv("USERNAME")
-            password = properties.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            username = "YOUR_GITHUB_USERNAME"
+            password = "THE_PERSONAL_ACCESS_TOKEN_YOU_CREATED"
         }
     }
 }
