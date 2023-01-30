@@ -25,6 +25,7 @@ class ExampleKotlinApp : Application() {
     override fun onCreate() {
         super.onCreate()
         attentiveConfig = AttentiveConfig("games", AttentiveConfig.Mode.PRODUCTION, this)
+        // "initialize" must be called before any other methods on the AttentiveEventTracker instance
         AttentiveEventTracker.getInstance().initialize(attentiveConfig)
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
