@@ -24,7 +24,7 @@ class ExampleKotlinApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        attentiveConfig = AttentiveConfig("games", AttentiveConfig.Mode.PRODUCTION, this)
+        attentiveConfig = AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.PRODUCTION, this)
         // "initialize" must be called before any other methods on the AttentiveEventTracker instance
         AttentiveEventTracker.getInstance().initialize(attentiveConfig)
 
