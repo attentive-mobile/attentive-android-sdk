@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        TextView domainValueTextView = (TextView) findViewById(R.id.domainValue);
+        TextView domainValueTextView = findViewById(R.id.domainValue);
         domainValueTextView.setText(((ExampleApp)this.getApplication()).attentiveConfig.getDomain());
     }
 
