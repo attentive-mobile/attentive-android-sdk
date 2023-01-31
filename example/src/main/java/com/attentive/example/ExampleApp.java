@@ -13,14 +13,16 @@ public class ExampleApp extends Application {
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
     public AttentiveConfig attentiveConfig;
-    public AttentiveEventTracker attentiveEventTracker;
 
     @Override
     public void onCreate() {
         super.onCreate();
 
+        // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, getApplicationContext());
-        // "initialize" must be called before any other methods on the AttentiveEventTracker instance
+
+        // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can be used to send
+        // events. The method "initialize" only needs to be called once.
         AttentiveEventTracker.getInstance().initialize(attentiveConfig);
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
@@ -28,7 +30,8 @@ public class ExampleApp extends Application {
     }
 
     public static UserIdentifiers buildUserIdentifiers() {
-        // Add all the identifiers that you have for the current user
+        // Add all the identifiers that you have for the current user. All identifiers are
+        // optional, but the more you add the better the Attentive SDK will function.
         return new UserIdentifiers.Builder()
             .withPhone("+15556667777")
             .withEmail("some_email@gmailfake.com")
