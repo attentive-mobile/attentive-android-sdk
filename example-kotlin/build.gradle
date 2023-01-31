@@ -38,7 +38,12 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // Use the attentive-android-sdk package from your local attentive-android-sdk folder
     implementation project(path: ':attentive-android-sdk')
+    // Use the published version of the attentive-android-sdk
+    // implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
+
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
