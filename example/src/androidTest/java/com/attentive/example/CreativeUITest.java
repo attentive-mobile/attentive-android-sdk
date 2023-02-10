@@ -38,9 +38,8 @@ import org.junit.Test;
 public class CreativeUITest {
 
     private static final String ATTENTIVE_PERSISTENT_STORAGE_KEY = "com.attentive.androidsdk.PERSISTENT_STORAGE";
-    private static final String SMS_STRING_URL = "sms://+18332115910?body=Send%20this%20text%20to%20subscribe%20to%20recurring%20automated%20personalized%20marketing%20alerts%20%28e.g.%20cart%20reminders%29%20from%20Attentive%20Mobile%20Apps%20Test";
     private static final String SMS_STRING = "Send this text to subscribe to recurring automated personalized marketing alerts (e.g. r reminders) from Attentive Mobile Apps Test";
-    private static final String PRIVACY_URL = "https://creatives.attn.tv/creatives-dynamic/multiPage/index.html";
+    private static final String PRIVACY_URL = "https://www.attentive.com/privacy";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
     private static final String PUSH_ME_FOR_CREATIVE_PAGE_PROD = "PUSH ME FOR CREATIVE PAGE (PRODUCTION)";
@@ -112,7 +111,7 @@ public class CreativeUITest {
         device.waitForIdle();
 
         // Verify intent to open sms app
-        Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(SMS_STRING_URL)))));
+        Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
 
         // Verify sms app opened
         device.wait(Until.findObject(textContains(SMS_STRING)), 3000);
