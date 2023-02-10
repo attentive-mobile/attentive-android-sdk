@@ -4,6 +4,7 @@ import static android.content.Intent.ACTION_VIEW;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasData;
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
+import static androidx.test.uiautomator.By.text;
 import static androidx.test.uiautomator.By.textContains;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasToString;
@@ -33,18 +34,20 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.regex.Pattern;
+
 
 @LargeTest
 public class CreativeUITest {
 
     private static final String ATTENTIVE_PERSISTENT_STORAGE_KEY = "com.attentive.androidsdk.PERSISTENT_STORAGE";
-    private static final String SMS_STRING = "Send this text to subscribe to recurring automated personalized marketing alerts (e.g. r reminders) from Attentive Mobile Apps Test";
+    private static final String SMS_STRING = "Send this text to subscribe to recurring automated personalized marketing alerts (e.g. cart reminders) from Attentive Mobile Apps Test";
     private static final String PRIVACY_URL = "https://www.attentive.com/privacy";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
     private static final String PUSH_ME_FOR_CREATIVE_PAGE_PROD = "PUSH ME FOR CREATIVE PAGE (PRODUCTION)";
     private static final String PUSH_ME_FOR_CREATIVE_PAGE_DEBUG = "PUSH ME FOR CREATIVE PAGE (DEBUG)";
-    private static final String DEBUG_OUTPUT_SUCCESS = "Your creative (ID: 372725) should be displayed correctly!";
+    private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Your creative \\(ID: \\d+\\) should be displayed correctly!";
     private static final String DEBUG_OUTPUT_JSON = "Debug output JSON:";
 
     private UiDevice device;
@@ -114,7 +117,7 @@ public class CreativeUITest {
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
 
         // Verify sms app opened
-        device.wait(Until.findObject(textContains(SMS_STRING)), 3000);
+        assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
     }
 
     @Test
@@ -131,15 +134,15 @@ public class CreativeUITest {
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(PRIVACY_URL)))));
 
         // Verify that the privacy page is visible in the external browser
-        device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 3000);
+        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 3000));
     }
 
     @Test
     public void loadCreative_inDebugMode_showsDebugMessage() throws UiObjectNotFoundException {
         loadCreative(AttentiveConfig.Mode.DEBUG);
 
-        device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_SUCCESS)), 3000);
-        device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_JSON)), 3000);
+        assertTrue(device.wait(Until.hasObject(text(Pattern.compile(DEBUG_OUTPUT_SUCCESS_REGEX_STRING))), 3000));
+        assertTrue(device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_JSON)), 3000));
     }
 
     private static void clearSharedPreferences() {
@@ -173,7 +176,6 @@ public class CreativeUITest {
 
     private void checkIfCreativeClosed() {
         // Check if we're redirected back to the "Push me for creative!" page
-        boolean creativeButtonShown = device.wait(Until.hasObject(textContains(PUSH_ME_FOR_CREATIVE)), 3000);
-        assertTrue(creativeButtonShown);
+        assertTrue(device.wait(Until.hasObject(textContains(PUSH_ME_FOR_CREATIVE)), 3000));
     }
 }
