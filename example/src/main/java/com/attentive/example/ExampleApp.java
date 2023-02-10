@@ -27,6 +27,10 @@ public class ExampleApp extends Application {
         super.onCreate();
     }
 
+    public void updateMode(AttentiveConfig.Mode mode){
+        attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, mode, getApplicationContext());
+    }
+
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
                 .withClientUserId("CLIENT_USER_ID")

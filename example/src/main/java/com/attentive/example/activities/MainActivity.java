@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
@@ -20,7 +22,16 @@ public class MainActivity extends AppCompatActivity {
         domainValueTextView.setText(((ExampleApp)this.getApplication()).attentiveConfig.getDomain());
     }
 
-    public void startLoadCreativeActivity(View view) {
+    public void startLoadCreativeActivityProd(View view) {
+        ((ExampleApp)this.getApplication()).updateMode(AttentiveConfig.Mode.PRODUCTION);
+
+        Intent intent = new Intent(this, LoadCreativeActivity.class);
+        startActivity(intent);
+    }
+
+    public void startLoadCreativeActivityDebug(View view) {
+        ((ExampleApp)this.getApplication()).updateMode(AttentiveConfig.Mode.DEBUG);
+
         Intent intent = new Intent(this, LoadCreativeActivity.class);
         startActivity(intent);
     }

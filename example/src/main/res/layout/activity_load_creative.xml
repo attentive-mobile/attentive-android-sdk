@@ -9,7 +9,7 @@
     tools:context=".activities.LoadCreativeActivity">
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/creativeButton"
         android:layout_width="300dp"
         android:layout_height="80dp"
         android:layout_marginTop="200dp"
