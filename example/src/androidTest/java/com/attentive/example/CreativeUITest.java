@@ -35,7 +35,7 @@ import org.junit.Test;
 
 
 @LargeTest
-public class CreativeTest {
+public class CreativeUITest {
 
     private static final String ATTENTIVE_PERSISTENT_STORAGE_KEY = "com.attentive.androidsdk.PERSISTENT_STORAGE";
     private static final String SMS_STRING_URL = "sms://+18332115910?body=Send%20this%20text%20to%20subscribe%20to%20recurring%20automated%20personalized%20marketing%20alerts%20%28e.g.%20cart%20reminders%29%20from%20Attentive%20Mobile%20Apps%20Test";
