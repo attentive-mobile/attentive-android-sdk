@@ -77,7 +77,7 @@ public class CreativeUITest {
     }
 
     @AfterClass
-    public static void classSetup() {
+    public static void classTeardown() {
         clearSharedPreferences();
         clearCookies();
     }
