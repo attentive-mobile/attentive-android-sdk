@@ -9,12 +9,12 @@
     tools:context=".activities.MainActivity">
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/buttonProd"
         android:layout_width="300dp"
         android:layout_height="81dp"
         android:layout_marginTop="200dp"
-        android:onClick="startLoadCreativeActivity"
-        android:text="@string/push_me_for_next_activity"
+        android:onClick="startLoadCreativeActivityProd"
+        android:text="@string/push_for_creative_page_prod"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.476"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,43 +22,56 @@
         tools:ignore="UsingOnClickInXml" />
 
     <Button
-            android:id="@+id/identifyButton"
-            android:layout_width="300dp"
-            android:layout_height="81dp"
-            android:layout_marginTop="500dp"
-            android:onClick="identifyUser"
-            android:text="@string/push_me_to_identify"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.477"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="UsingOnClickInXml" />
+        android:id="@+id/buttonDebug"
+        android:layout_width="300dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="288dp"
+        android:onClick="startLoadCreativeActivityDebug"
+        android:text="@string/push_for_creative_page_debug"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.477"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="UsingOnClickInXml" />
 
     <Button
-            android:id="@+id/logoutButton"
-            android:layout_width="300dp"
-            android:layout_height="81dp"
-            android:layout_marginTop="400dp"
-            android:onClick="logoutUser"
-            android:text="@string/push_me_to_logout"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.495"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="UsingOnClickInXml" />
+        android:id="@+id/identifyButton"
+        android:layout_width="300dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="572dp"
+        android:onClick="identifyUser"
+        android:text="@string/push_me_to_identify"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="UsingOnClickInXml" />
 
     <Button
-            android:id="@+id/productPageButton"
-            android:layout_width="300dp"
-            android:layout_height="81dp"
-            android:layout_marginTop="300dp"
-            android:onClick="startProductPageActivity"
-            android:text="@string/push_me_for_product_page"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.495"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="UsingOnClickInXml" />
+        android:id="@+id/logoutButton"
+        android:layout_width="300dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="488dp"
+        android:onClick="logoutUser"
+        android:text="@string/push_me_to_logout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="UsingOnClickInXml" />
+
+    <Button
+        android:id="@+id/productPageButton"
+        android:layout_width="300dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="404dp"
+        android:onClick="startProductPageActivity"
+        android:text="@string/push_me_for_product_page"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="UsingOnClickInXml" />
 
     <TextView
             android:text="Domain: "

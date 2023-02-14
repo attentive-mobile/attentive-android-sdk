@@ -27,6 +27,13 @@ public class ExampleApp extends Application {
         super.onCreate();
     }
 
+    public void updateMode(AttentiveConfig.Mode mode){
+        // In a production setting, the AttentiveConfig should only be created once per application
+        // lifecycle. This method provides functionality for recreating the AttentiveConfig for easy
+        // debugging & testing purposes.
+        attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, mode, getApplicationContext());
+    }
+
     public static UserIdentifiers buildUserIdentifiers() {
             return new UserIdentifiers.Builder()
                 .withClientUserId("CLIENT_USER_ID")
