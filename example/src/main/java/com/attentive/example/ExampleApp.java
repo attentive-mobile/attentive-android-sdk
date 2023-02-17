@@ -11,7 +11,7 @@ public class ExampleApp extends Application {
     // The mode in which to run the Attentive Android SDK
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
-    public AttentiveConfig attentiveConfig;
+    private AttentiveConfig attentiveConfig;
     public AttentiveEventTracker attentiveEventTracker;
 
     @Override
@@ -27,11 +27,15 @@ public class ExampleApp extends Application {
         super.onCreate();
     }
 
-    public void updateMode(AttentiveConfig.Mode mode){
+    public AttentiveConfig getAttentiveConfig() {
+        return attentiveConfig;
+    }
+
+    public void setAttentiveConfig(AttentiveConfig newConfig){
         // In a production setting, the AttentiveConfig should only be created once per application
         // lifecycle. This method provides functionality for recreating the AttentiveConfig for easy
         // debugging & testing purposes.
-        attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, mode, getApplicationContext());
+        attentiveConfig = newConfig;
     }
 
     public static UserIdentifiers buildUserIdentifiers() {

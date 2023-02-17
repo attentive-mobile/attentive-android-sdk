@@ -9,27 +9,14 @@
     tools:context=".activities.MainActivity">
 
     <Button
-        android:id="@+id/buttonProd"
+        android:id="@+id/startLoadCreativeActivityButton"
         android:layout_width="300dp"
         android:layout_height="81dp"
         android:layout_marginTop="200dp"
-        android:onClick="startLoadCreativeActivityProd"
-        android:text="@string/push_for_creative_page_prod"
+        android:onClick="startLoadCreativeActivity"
+        android:text="@string/push_for_creative_page"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.476"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="UsingOnClickInXml" />
-
-    <Button
-        android:id="@+id/buttonDebug"
-        android:layout_width="300dp"
-        android:layout_height="81dp"
-        android:layout_marginTop="288dp"
-        android:onClick="startLoadCreativeActivityDebug"
-        android:text="@string/push_for_creative_page_debug"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.477"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="UsingOnClickInXml" />
@@ -64,11 +51,11 @@
         android:id="@+id/productPageButton"
         android:layout_width="300dp"
         android:layout_height="81dp"
-        android:layout_marginTop="404dp"
+        android:layout_marginTop="280dp"
         android:onClick="startProductPageActivity"
         android:text="@string/push_me_for_product_page"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintHorizontal_bias="0.477"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="UsingOnClickInXml" />
