@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
@@ -19,19 +18,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         TextView domainValueTextView = (TextView) findViewById(R.id.domainValue);
-        domainValueTextView.setText(((ExampleApp)this.getApplication()).attentiveConfig.getDomain());
+        domainValueTextView.setText(((ExampleApp)this.getApplication()).getAttentiveConfig().getDomain());
     }
 
-    public void startLoadCreativeActivityProd(View view) {
-        ((ExampleApp)this.getApplication()).updateMode(AttentiveConfig.Mode.PRODUCTION);
-
-        Intent intent = new Intent(this, LoadCreativeActivity.class);
-        startActivity(intent);
-    }
-
-    public void startLoadCreativeActivityDebug(View view) {
-        ((ExampleApp)this.getApplication()).updateMode(AttentiveConfig.Mode.DEBUG);
-
+    public void startLoadCreativeActivity(View view) {
         Intent intent = new Intent(this, LoadCreativeActivity.class);
         startActivity(intent);
     }
@@ -45,10 +35,10 @@ public class MainActivity extends AppCompatActivity {
         // Perform app's normal logout functionality
 
         // Clear all Attentive identifiers
-        ((ExampleApp)this.getApplication()).attentiveConfig.clearUser();
+        ((ExampleApp)this.getApplication()).getAttentiveConfig().clearUser();
     }
 
     public void identifyUser(View view) {
-        ((ExampleApp)this.getApplication()).attentiveConfig.identify(ExampleApp.buildUserIdentifiers());
+        ((ExampleApp)this.getApplication()).getAttentiveConfig().identify(ExampleApp.buildUserIdentifiers());
     }
 }

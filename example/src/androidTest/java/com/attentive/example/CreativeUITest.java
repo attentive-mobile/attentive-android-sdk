@@ -12,11 +12,13 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.webkit.CookieManager;
 
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.intent.Intents;
-import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
@@ -26,12 +28,11 @@ import androidx.test.uiautomator.UiSelector;
 import androidx.test.uiautomator.Until;
 
 import com.attentive.androidsdk.AttentiveConfig;
-import com.attentive.example.activities.MainActivity;
+import com.attentive.example.activities.LoadCreativeActivity;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.regex.Pattern;
@@ -45,18 +46,11 @@ public class CreativeUITest {
     private static final String PRIVACY_URL = "https://www.attentive.com/privacy";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
-    private static final String PUSH_ME_FOR_CREATIVE_PAGE_PROD = "PUSH ME FOR CREATIVE PAGE (PRODUCTION)";
-    private static final String PUSH_ME_FOR_CREATIVE_PAGE_DEBUG = "PUSH ME FOR CREATIVE PAGE (DEBUG)";
     private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Your creative \\(ID: \\d+\\) should be displayed correctly!";
     private static final String DEBUG_OUTPUT_JSON = "Debug output JSON:";
 
     private UiDevice device;
     private UiSelector selector;
-
-
-    @Rule
-    public ActivityScenarioRule<MainActivity> activityRule =
-            new ActivityScenarioRule<>(MainActivity.class);
 
     @Before
     public void setup() {
@@ -160,12 +154,10 @@ public class CreativeUITest {
     }
 
     private void loadCreative(AttentiveConfig.Mode mode) throws UiObjectNotFoundException {
-        String launchPageButtonString = mode == AttentiveConfig.Mode.PRODUCTION
-                ? PUSH_ME_FOR_CREATIVE_PAGE_PROD
-                : PUSH_ME_FOR_CREATIVE_PAGE_DEBUG;
-
-        UiObject launchPageButton = device.findObject(selector.textContains(launchPageButtonString));
-        launchPageButton.click();
+        Intent intent = new Intent(ApplicationProvider.getApplicationContext(), LoadCreativeActivity.class);
+        intent.putExtra("DOMAIN", "mobileapps");
+        intent.putExtra("MODE", mode.toString());
+        ActivityScenario.launch(intent);
 
         device.waitForIdle();
 
