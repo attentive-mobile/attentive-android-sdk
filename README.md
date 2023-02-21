@@ -2,9 +2,6 @@
 The Attentive Android SDK provides the functionality to render Attentive creative units in Android mobile applications.
 
 ## Installation
-Follow the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package)
-on using a GitHub Package to set up your Personal Access Token.
-
 Add the Attentive Android SDK GitHub Package maven repository to your `build.gradle` `buildscript` or
 `settings.gradle` `dependencyResolutionManagement`:
 ```groovy
@@ -12,10 +9,6 @@ repositories {
     // ...
     maven {
         url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
-        credentials {
-            username = properties.findProperty("gpr.user") ?: System.getenv("USERNAME")
-            password = properties.findProperty("gpr.key") ?: System.getenv("TOKEN")
-        }
     }
 }
 ```
