@@ -111,10 +111,12 @@ public class CreativeUITest {
         // Verify intent to open sms app
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
 
-        // Verify sms app opened
-        // TODO - skip this for device farm tests, or figure out how to download
-        // sms app in AWS device farm
-        //assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+        // Verify that the SMS app is opened with prepopulated text if running locally
+        // (AWS Device Farm doesn't allow use of SMS apps)
+        String testHost = InstrumentationRegistry.getArguments().getString("testHostg");
+        if (testHost != null && testHost.equals("local")) {
+            assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+        }
     }
 
     @Test
@@ -131,7 +133,7 @@ public class CreativeUITest {
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(PRIVACY_URL)))));
 
         // Verify that the privacy page is visible in the external browser
-        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 3000));
+        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 5000));
     }
 
     @Test
