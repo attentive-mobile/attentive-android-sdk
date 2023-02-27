@@ -113,7 +113,7 @@ public class CreativeUITest {
 
         // Verify that the SMS app is opened with prepopulated text if running locally
         // (AWS Device Farm doesn't allow use of SMS apps)
-        String testHost = InstrumentationRegistry.getArguments().getString("testHostg");
+        String testHost = InstrumentationRegistry.getArguments().getString("testHost");
         if (testHost != null && testHost.equals("local")) {
             assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
         }
