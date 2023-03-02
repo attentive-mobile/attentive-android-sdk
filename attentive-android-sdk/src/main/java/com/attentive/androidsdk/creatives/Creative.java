@@ -15,9 +15,8 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.ClassFactory;
-import com.attentive.androidsdk.UserIdentifiers;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.attentive.androidsdk.internal.util.CreativeUrlFormatter;
+
 import java.util.Set;
 
 public class Creative {
@@ -49,12 +48,13 @@ public class Creative {
             "})()";
 
     private final AttentiveConfig attentiveConfig;
+    private final CreativeUrlFormatter creativeUrlFormatter;
+
     private final View parentView;
 
     private final Handler handler;
     private final WebViewClient webViewClient;
     private final WebViewCompat.WebMessageListener creativeListener;
-    private final ObjectMapper objectMapper;
 
     private WebView webView;
 
@@ -73,7 +73,7 @@ public class Creative {
         ((ViewGroup) parentView).addView(
                 webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
 
-        this.objectMapper = ClassFactory.buildObjectMapper();
+        this.creativeUrlFormatter = new CreativeUrlFormatter(ClassFactory.buildObjectMapper());
     }
 
     public void trigger() {
@@ -82,7 +82,7 @@ public class Creative {
             return;
         }
 
-        String url = buildCompanyCreativeUrl();
+        String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig);
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
@@ -102,54 +102,6 @@ public class Creative {
             WebView webViewToDestroy = webView;
             webView = null;
             webViewToDestroy.destroy();
-        }
-    }
-
-    private String buildCompanyCreativeUrl() {
-        Uri.Builder uriBuilder =
-            getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
-
-        UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
-
-        addUserIdentifiersAsParameters(uriBuilder, userIdentifiers);
-
-        return uriBuilder.build().toString();
-    }
-
-    private void addUserIdentifiersAsParameters(Uri.Builder builder,
-                                                UserIdentifiers userIdentifiers) {
-        if (userIdentifiers.getVisitorId() != null) {
-            builder.appendQueryParameter("vid", userIdentifiers.getVisitorId());
-        } else {
-            Log.e(this.getClass().getName(), "No VisitorId found. This should not happen.");
-        }
-
-        if (userIdentifiers.getClientUserId() != null) {
-            builder.appendQueryParameter("cuid", userIdentifiers.getClientUserId());
-        }
-        if (userIdentifiers.getPhone() != null) {
-            builder.appendQueryParameter("p", userIdentifiers.getPhone());
-        }
-        if (userIdentifiers.getEmail() != null) {
-            builder.appendQueryParameter("e", userIdentifiers.getEmail());
-        }
-        if (userIdentifiers.getKlaviyoId() != null) {
-            builder.appendQueryParameter("kid", userIdentifiers.getKlaviyoId());
-        }
-        if (userIdentifiers.getShopifyId() != null) {
-            builder.appendQueryParameter("sid", userIdentifiers.getShopifyId());
-        }
-        if (!userIdentifiers.getCustomIdentifiers().isEmpty()) {
-            builder.appendQueryParameter("cstm", getCustomIdentifiersJson(userIdentifiers));
-        }
-    }
-
-    private String getCustomIdentifiersJson(UserIdentifiers userIdentifiers) {
-        try {
-            return objectMapper.writeValueAsString(userIdentifiers.getCustomIdentifiers());
-        } catch (JsonProcessingException e) {
-            Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
-            return "{}";
         }
     }
 
@@ -244,20 +196,5 @@ public class Creative {
                 }
             }
         };
-    }
-
-    private Uri.Builder getCompanyCreativeUriBuilder(String domain, AttentiveConfig.Mode mode) {
-        Uri.Builder creativeUriBuilder = new Uri.Builder()
-                .scheme("https")
-                .authority("creatives.attn.tv")
-                .path("mobile-apps/index.html")
-                .appendQueryParameter("domain", domain);
-
-
-        if (mode == AttentiveConfig.Mode.DEBUG) {
-            creativeUriBuilder.appendQueryParameter("debug", "matter-trip-grass-symbol");
-        }
-
-        return creativeUriBuilder;
     }
 }
