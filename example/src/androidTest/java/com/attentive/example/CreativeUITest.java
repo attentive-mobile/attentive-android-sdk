@@ -96,22 +96,27 @@ public class CreativeUITest {
         UiObject emailInput = device.findObject(selector.resourceId("input0input"));
         emailInput.setText("testmail@attentivemobile.com");
         device.pressEnter();
+        device.waitForIdle();
 
         // submit email
         UiObject emailSubmitButton = device.findObject(selector.resourceId("ctabutton1"));
         emailSubmitButton.click();
+        device.waitForIdle();
 
         // click subscribe button
         UiObject subscribeButton = device.findObject(selector.textContains("GET 10% OFF NOW"));
         subscribeButton.click();
-
         device.waitForIdle();
 
         // Verify intent to open sms app
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
 
-        // Verify sms app opened
-        assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+        // Verify that the SMS app is opened with prepopulated text if running locally
+        // (AWS Device Farm doesn't allow use of SMS apps)
+        String testHost = InstrumentationRegistry.getArguments().getString("testHost");
+        if (testHost != null && testHost.equals("local")) {
+            assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+        }
     }
 
     @Test
@@ -128,7 +133,7 @@ public class CreativeUITest {
         Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(PRIVACY_URL)))));
 
         // Verify that the privacy page is visible in the external browser
-        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 3000));
+        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 5000));
     }
 
     @Test
