@@ -77,9 +77,9 @@ public class AttentiveApiTestIT {
     public void sendUserIdentifiersCollectedEvent_userIdentifierCollectedWithAllParams_sendsCorrectUserIdentifierCollectedEvent() throws InterruptedException, JsonProcessingException {
         // Act
         attentiveApi.sendUserIdentifiersCollectedEvent(DOMAIN, ALL_USER_IDENTIFIERS, attentiveApiCallback);
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Assert
-        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
         Optional<Request> uicRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=idn")).findFirst();
         assertTrue(uicRequest.isPresent());
@@ -98,9 +98,9 @@ public class AttentiveApiTestIT {
 
         // Act
         attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN, attentiveApiCallback);
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Assert
-        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(okHttpClient, times(3)).newCall(requestArgumentCaptor.capture());
 
 
@@ -162,9 +162,9 @@ public class AttentiveApiTestIT {
 
         // Act
         attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Assert
-        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
 
         Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=d")).findFirst();
@@ -191,9 +191,9 @@ public class AttentiveApiTestIT {
 
         // Act
         attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
         // Assert
-        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
         Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=c")).findFirst();
         assertTrue(addToCartRequest.isPresent());
