@@ -1,5 +1,7 @@
 package com.attentive.androidsdk.creatives;
 
+import static com.attentive.androidsdk.internal.util.VersionValidator.isBuildVersionSupported;
+
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.graphics.Color;
@@ -60,48 +62,61 @@ public class Creative {
 
 
     public Creative(AttentiveConfig attentiveConfig, View parentView) {
-        this.attentiveConfig = attentiveConfig;
-        this.parentView = parentView;
+        if(isBuildVersionSupported()) {
+            this.attentiveConfig = attentiveConfig;
+            this.parentView = parentView;
 
-        this.handler = new Handler();
-        this.webViewClient = createWebViewClient();
-        this.creativeListener = createCreativeListener();
+            this.handler = new Handler();
+            this.webViewClient = createWebViewClient();
+            this.creativeListener = createCreativeListener();
 
-        this.webView = createWebView(parentView);
+            this.webView = createWebView(parentView);
 
-        webView.setVisibility(View.INVISIBLE);
-        ((ViewGroup) parentView).addView(
-                webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
+            webView.setVisibility(View.INVISIBLE);
+            ((ViewGroup) parentView).addView(
+                    webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
 
-        this.objectMapper = ClassFactory.buildObjectMapper();
+            this.objectMapper = ClassFactory.buildObjectMapper();
+        } else {
+            this.attentiveConfig = null;
+            this.parentView = null;
+            this.handler = null;
+            this.webViewClient = null;
+            this.creativeListener = null;
+            this.objectMapper = null;
+        }
     }
 
     public void trigger() {
-        if (webView == null) {
-            Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
-            return;
+        if(isBuildVersionSupported()) {
+            if (webView == null) {
+                Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
+                return;
+            }
+
+            String url = buildCompanyCreativeUrl();
+
+            if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
+                webView.setVisibility(View.VISIBLE);
+            }
+
+            webView.loadUrl(url);
         }
-
-        String url = buildCompanyCreativeUrl();
-
-        if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
-            webView.setVisibility(View.VISIBLE);
-        }
-
-        webView.loadUrl(url);
     }
 
     public void destroy() {
-        if (parentView != null && webView != null) {
-            ((ViewGroup) parentView).removeView(webView);
-        }
-        // TODO: better thread-safety when destroying. Lock?
-        if (webView != null) {
-            // set the webView member variable to null BEFORE we destroy it so other code on other threads that check if
-            // webView isn't null doesn't try to use it after it is destroyed
-            WebView webViewToDestroy = webView;
-            webView = null;
-            webViewToDestroy.destroy();
+        if(isBuildVersionSupported()) {
+            if (parentView != null && webView != null) {
+                ((ViewGroup) parentView).removeView(webView);
+            }
+            // TODO: better thread-safety when destroying. Lock?
+            if (webView != null) {
+                // set the webView member variable to null BEFORE we destroy it so other code on other threads that check if
+                // webView isn't null doesn't try to use it after it is destroyed
+                WebView webViewToDestroy = webView;
+                webView = null;
+                webViewToDestroy.destroy();
+            }
         }
     }
 

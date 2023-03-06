@@ -1,12 +1,12 @@
 package com.attentive.androidsdk;
 
+import static com.attentive.androidsdk.internal.util.VersionValidator.isBuildVersionSupported;
+
 import android.content.Context;
 
-import android.icu.number.FormattedNumber;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import okhttp3.OkHttp;
+
 import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
@@ -61,22 +61,29 @@ public class AttentiveConfig {
 
     @Deprecated
     public void identify(@NonNull String clientUserId) {
-        ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
+        if(isBuildVersionSupported()) {
+            ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
 
-        identify(new UserIdentifiers.Builder().withClientUserId(clientUserId).build());
+            identify(new UserIdentifiers.Builder().withClientUserId(clientUserId).build());
+        }
     }
 
     public void identify(@NonNull UserIdentifiers userIdentifiers) {
-        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
+        if(isBuildVersionSupported()) {
+            ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
 
-        this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
+            this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers);
 
-        sendUserIdentifiersCollectedEvent();
+            sendUserIdentifiersCollectedEvent();
+        }
     }
 
     public void clearUser() {
-        String newVisitorId = visitorService.createNewVisitorId();
-        this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(newVisitorId).build();
+        if(isBuildVersionSupported()) {
+
+            String newVisitorId = visitorService.createNewVisitorId();
+            this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(newVisitorId).build();
+        }
     }
 
     private void sendUserIdentifiersCollectedEvent() {

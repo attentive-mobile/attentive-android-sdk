@@ -1,5 +1,7 @@
 package com.attentive.androidsdk;
 
+import static com.attentive.androidsdk.internal.util.VersionValidator.isBuildVersionSupported;
+
 import com.attentive.androidsdk.events.Event;
 
 public class AttentiveEventTracker {
@@ -21,22 +23,26 @@ public class AttentiveEventTracker {
     }
 
     public void initialize(AttentiveConfig config) {
-        ParameterValidation.verifyNotNull(config, "config");
+        if(isBuildVersionSupported()) {
+            ParameterValidation.verifyNotNull(config, "config");
 
-        synchronized (AttentiveEventTracker.class) {
-            if (this.config != null) {
-                throw new IllegalStateException("AttentiveEventTracker cannot be initialized again");
+            synchronized (AttentiveEventTracker.class) {
+                if (this.config != null) {
+                    throw new IllegalStateException("AttentiveEventTracker cannot be initialized again");
+                }
+
+                this.config = config;
             }
-
-            this.config = config;
         }
     }
 
     public void recordEvent(Event event) {
-        ParameterValidation.verifyNotNull(event, "event");
-        verifyInitialized();
+        if(isBuildVersionSupported()) {
+            ParameterValidation.verifyNotNull(event, "event");
+            verifyInitialized();
 
-        this.config.getAttentiveApi().sendEvent(event, config.getUserIdentifiers(), config.getDomain());
+            this.config.getAttentiveApi().sendEvent(event, config.getUserIdentifiers(), config.getDomain());
+        }
     }
 
     private void verifyInitialized() {
