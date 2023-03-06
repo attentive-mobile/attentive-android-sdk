@@ -43,7 +43,7 @@ import okhttp3.Request;
 public class AttentiveApiTestIT {
     private static final String DOMAIN = "mobileapps";
     // Update this accordingly when running on VPN
-    private static final String GEO_ADJUSTED_DOMAIN = "mobileapps-ca";
+    private static final String GEO_ADJUSTED_DOMAIN = "mobileapps";
     private static final int EVENT_SEND_TIMEOUT_MS = 5000;
     private static final UserIdentifiers ALL_USER_IDENTIFIERS = buildAllUserIdentifiers();
 
