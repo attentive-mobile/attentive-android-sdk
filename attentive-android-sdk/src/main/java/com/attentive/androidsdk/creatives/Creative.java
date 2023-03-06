@@ -153,6 +153,10 @@ public class Creative {
                         // i.e. for "sms://" it will open the messaging app and for "http://" it will
                         // open the browser
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                        // Usually, our Creative will be rendered inside of an Activity. However, this is not required,
+                        // and some clients may choose not to do so (for example they can be rendered directly in the
+                        // DecorView). Adding this flag allows Intents to work both from inside and outside an Activity.
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         view.getContext().startActivity(intent);
                     } catch (Exception e) {
                         Log.e(this.getClass().getName(), String.format("Error opening the URI '%s' from the webview. Error message: '%s'", uri, e.getMessage()));
