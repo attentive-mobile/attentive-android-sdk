@@ -2,11 +2,9 @@ package com.attentive.androidsdk;
 
 import android.content.Context;
 
-import android.icu.number.FormattedNumber;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import okhttp3.OkHttp;
+import com.attentive.androidsdk.internal.util.UserAgentBuilder;
 import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
@@ -22,7 +20,7 @@ public class AttentiveConfig {
     private AttentiveApi attentiveApi;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
-        this(domain, mode, context, ClassFactory.buildOkHttpClient());
+        this(domain, mode, context, ClassFactory.buildOkHttpClient(context));
     }
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context, @NonNull OkHttpClient okHttpClient) {

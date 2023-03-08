@@ -41,7 +41,7 @@ public class FactoryMocks implements AutoCloseable {
         classFactoryMockedStatic.when(ClassFactory::buildObjectMapper).thenReturn(objectMapper);
 
         OkHttpClient okHttpClient = Mockito.mock(OkHttpClient.class);
-        classFactoryMockedStatic.when(ClassFactory::buildOkHttpClient).thenReturn(okHttpClient);
+        classFactoryMockedStatic.when(() -> ClassFactory.buildOkHttpClient(any())).thenReturn(okHttpClient);
 
         AttentiveApi attentiveApi = Mockito.mock(AttentiveApi.class);
         classFactoryMockedStatic.when(() -> ClassFactory.buildAttentiveApi(any(), any())).thenReturn(attentiveApi);
