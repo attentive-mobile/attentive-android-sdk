@@ -4,7 +4,6 @@ import android.content.Context;
 
 import android.util.Log;
 import androidx.annotation.NonNull;
-import com.attentive.androidsdk.internal.util.UserAgentBuilder;
 import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
