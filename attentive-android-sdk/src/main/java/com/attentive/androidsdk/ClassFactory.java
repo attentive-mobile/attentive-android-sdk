@@ -1,7 +1,7 @@
 package com.attentive.androidsdk;
 
 import android.content.Context;
-import com.attentive.androidsdk.internal.UserAgentInterceptor;
+import com.attentive.androidsdk.internal.network.UserAgentInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
