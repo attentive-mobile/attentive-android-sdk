@@ -19,7 +19,7 @@ public class AttentiveConfig {
     private AttentiveApi attentiveApi;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
-        this(domain, mode, context, ClassFactory.buildOkHttpClient(context));
+        this(domain, mode, context, ClassFactory.buildOkHttpClient(ClassFactory.buildUserAgentInterceptor(context)));
     }
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context, @NonNull OkHttpClient okHttpClient) {

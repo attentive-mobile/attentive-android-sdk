@@ -19,8 +19,8 @@ public class ClassFactory {
         return new ObjectMapper();
     }
 
-    public static OkHttpClient buildOkHttpClient(Context context) {
-        return new OkHttpClient.Builder().addInterceptor(buildUserAgentInterceptor(context)).build();
+    public static OkHttpClient buildOkHttpClient(Interceptor interceptor) {
+        return new OkHttpClient.Builder().addInterceptor(interceptor).build();
     }
 
     public static Interceptor buildUserAgentInterceptor(Context context) {

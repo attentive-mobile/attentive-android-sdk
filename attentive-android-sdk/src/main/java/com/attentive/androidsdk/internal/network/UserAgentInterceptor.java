@@ -18,6 +18,7 @@ public class UserAgentInterceptor implements Interceptor {
         this.context = context;
     }
 
+    // This adds the user agent header to every request that the OkHttpClient makes
     @NonNull
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
