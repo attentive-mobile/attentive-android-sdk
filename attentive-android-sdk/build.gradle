@@ -3,6 +3,8 @@ plugins {
     id 'maven-publish'
 }
 
+def versionName = properties["VERSION_NAME"]
+
 android {
     namespace = 'com.attentive.androidsdk'
 
@@ -11,6 +13,8 @@ android {
     defaultConfig {
         minSdk 21
         targetSdk 32
+
+        buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -80,7 +84,7 @@ afterEvaluate {
 
                 groupId 'com.attentive'
                 artifactId 'attentive-android-sdk'
-                version '0.3.3'
+                version "$versionName"
             }
         }
 
