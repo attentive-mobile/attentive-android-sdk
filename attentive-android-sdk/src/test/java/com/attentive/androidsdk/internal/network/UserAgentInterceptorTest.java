@@ -22,7 +22,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 public class UserAgentInterceptorTest {
-    private static final String APP_NAME = "appNameValue";
+    private static final String APP_NAME = "appName Value";
     private static final String APP_VERSION = "appVersionValue";
     private static final String APP_PACKAGE_NAME = "com.what.exampleapp";
     private static final String ANDROID_VERSION = "androidVersion";
@@ -65,7 +65,7 @@ public class UserAgentInterceptorTest {
             appInfoMockedStatic.when(AppInfo::getAttentiveSDKVersion).thenReturn(ATTENTIVE_SDK_VERSION);
 
             String userAgent = userAgentInterceptor.getUserAgent();
-            assertEquals(APP_NAME + "/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") attentive-android-sdk/" + ATTENTIVE_SDK_VERSION, userAgent);
+            assertEquals("appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") attentive-android-sdk/" + ATTENTIVE_SDK_VERSION, userAgent);
         }
     }
 
