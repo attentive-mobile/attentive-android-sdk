@@ -13,7 +13,6 @@ public class ExampleApp extends Application {
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
     private AttentiveConfig attentiveConfig;
-    public AttentiveEventTracker attentiveEventTracker;
 
     @Override
     public void onCreate() {
