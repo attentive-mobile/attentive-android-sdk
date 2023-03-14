@@ -1,5 +1,6 @@
 package com.attentive.example.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -18,11 +19,12 @@ public class LoadCreativeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_load_creative);
 
-        AttentiveConfig attentiveConfig = ((ExampleApp) getApplication()).attentiveConfig;
+        // Configuration for testing
+        runTestSetup();
 
         // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
-        this.creative = new Creative(attentiveConfig, parentView);
+        this.creative = new Creative(((ExampleApp) getApplication()).getAttentiveConfig(), parentView);
     }
 
     @Override
@@ -45,5 +47,17 @@ public class LoadCreativeActivity extends AppCompatActivity {
     private void clearCookies() {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
+    }
+
+    // Method for setting up UI Tests. Only used for testing purposes
+    private void runTestSetup() {
+        Intent intent = getIntent();
+        String domain = intent.getStringExtra("DOMAIN");
+        String mode = intent.getStringExtra("MODE");
+
+        if(domain != null && mode != null) {
+            ((ExampleApp) getApplication()).setAttentiveConfig(new AttentiveConfig(
+                    domain, AttentiveConfig.Mode.valueOf(mode), getApplicationContext()));
+        }
     }
 }

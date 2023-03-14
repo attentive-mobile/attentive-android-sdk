@@ -4,9 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import android.content.Context;
 import org.junit.After;
@@ -109,6 +112,21 @@ public class AttentiveConfigTest {
         assertEquals(
                 Map.of("key1", "newValue1", "key2", "value2", "extraKey", "extraValue"),
                 config.getUserIdentifiers().getCustomIdentifiers());
+    }
+
+    @Test
+    public void identify_withIdentifiers_sendsUserIdentifierCollectedEvent() {
+        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        UserIdentifiers userIdentifiers = buildUserIdentifiers();
+        config.identify(userIdentifiers);
+
+        verify(
+                factoryMocks.getAttentiveApi(),
+                times(1)
+        ).sendUserIdentifiersCollectedEvent(
+                eq(DOMAIN),
+                eq(config.getUserIdentifiers()),
+                any(AttentiveApiCallback.class));
     }
 
     private UserIdentifiers buildUserIdentifiers() {
