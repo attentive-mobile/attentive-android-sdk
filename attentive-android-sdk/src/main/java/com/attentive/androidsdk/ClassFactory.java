@@ -1,7 +1,9 @@
 package com.attentive.androidsdk;
 
 import android.content.Context;
+import com.attentive.androidsdk.internal.network.UserAgentInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 
 public class ClassFactory {
@@ -17,8 +19,12 @@ public class ClassFactory {
         return new ObjectMapper();
     }
 
-    public static OkHttpClient buildOkHttpClient() {
-        return new OkHttpClient.Builder().build();
+    public static OkHttpClient buildOkHttpClient(Interceptor interceptor) {
+        return new OkHttpClient.Builder().addInterceptor(interceptor).build();
+    }
+
+    public static Interceptor buildUserAgentInterceptor(Context context) {
+        return new UserAgentInterceptor(context);
     }
 
     public static AttentiveApi buildAttentiveApi(OkHttpClient okHttpClient, ObjectMapper objectMapper) {
