@@ -65,7 +65,7 @@ public class UserAgentInterceptorTest {
             appInfoMockedStatic.when(AppInfo::getAttentiveSDKVersion).thenReturn(ATTENTIVE_SDK_VERSION);
 
             String userAgent = userAgentInterceptor.getUserAgent();
-            assertEquals("attentive-android-sdk/" + ATTENTIVE_SDK_VERSION + " (Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + APP_NAME + "/" + APP_VERSION + " (" + APP_PACKAGE_NAME + ")", userAgent);
+            assertEquals(APP_NAME + "/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") attentive-android-sdk/" + ATTENTIVE_SDK_VERSION, userAgent);
         }
     }
 
