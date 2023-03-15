@@ -29,6 +29,14 @@ public class UserAgentInterceptor implements Interceptor {
 
     @VisibleForTesting
     String getUserAgent() {
-        return String.format("attentive-android-sdk/%s (Android %s; Android API Level %s) %s/%s (%s)", AppInfo.getAttentiveSDKVersion(), AppInfo.getAndroidVersion(), AppInfo.getAndroidLevel(), AppInfo.getApplicationName(context), AppInfo.getApplicationVersion(context), AppInfo.getApplicationPackageName(context));
+        final String appNameWithDashes =
+            AppInfo.getApplicationName(context) == null ? null : AppInfo.getApplicationName(context).replace(" ", "-");
+        return String.format("%s/%s (%s; Android %s; Android API Level %s) attentive-android-sdk/%s",
+            appNameWithDashes,
+            AppInfo.getApplicationVersion(context),
+            AppInfo.getApplicationPackageName(context),
+            AppInfo.getAndroidVersion(),
+            AppInfo.getAndroidLevel(),
+            AppInfo.getAttentiveSDKVersion());
     }
 }
