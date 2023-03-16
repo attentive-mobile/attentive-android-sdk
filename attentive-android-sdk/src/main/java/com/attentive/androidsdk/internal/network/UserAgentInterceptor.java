@@ -31,12 +31,13 @@ public class UserAgentInterceptor implements Interceptor {
     String getUserAgent() {
         final String appNameWithDashes =
             AppInfo.getApplicationName(context) == null ? null : AppInfo.getApplicationName(context).replace(" ", "-");
-        return String.format("%s/%s (%s; Android %s; Android API Level %s) attentive-android-sdk/%s",
+        return String.format("%s/%s (%s; Android %s; Android API Level %s) %s/%s",
             appNameWithDashes,
             AppInfo.getApplicationVersion(context),
             AppInfo.getApplicationPackageName(context),
             AppInfo.getAndroidVersion(),
             AppInfo.getAndroidLevel(),
+            AppInfo.getAttentiveSDKName(),
             AppInfo.getAttentiveSDKVersion());
     }
 }
