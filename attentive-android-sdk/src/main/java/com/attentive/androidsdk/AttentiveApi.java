@@ -10,6 +10,7 @@ import com.attentive.androidsdk.events.Event;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
+import com.attentive.androidsdk.internal.events.InfoEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
 import com.attentive.androidsdk.internal.network.Metadata;
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
@@ -269,7 +270,8 @@ class AttentiveApi {
             USER_IDENTIFIER_COLLECTED("idn"),
             ORDER_CONFIRMED("oc"),
             PRODUCT_VIEW("d"),
-            ADD_TO_CART("c");
+            ADD_TO_CART("c"),
+            INFO("i");
 
             private final String abbreviation;
 
@@ -395,6 +397,8 @@ class AttentiveApi {
                 addToCartMetadataDto.setQuantity(String.valueOf(item.getQuantity()));
                 eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.ADD_TO_CART));
             }
+        } else if (event instanceof InfoEvent) {
+            eventRequests.add(new EventRequest(new Metadata(), EventRequest.Type.INFO));
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);
