@@ -33,6 +33,7 @@ import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
@@ -173,7 +174,7 @@ class AttentiveApi {
 
         HttpUrl url = urlBuilder.build();
 
-        Request request = new Request.Builder().url(url).build();
+        Request request = new Request.Builder().url(url).post(buildEmptyRequest()).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -434,7 +435,7 @@ class AttentiveApi {
 
         HttpUrl url = urlBuilder.build();
 
-        Request request = new Request.Builder().url(url).build();
+        Request request = new Request.Builder().url(url).post(buildEmptyRequest()).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -474,5 +475,9 @@ class AttentiveApi {
     @VisibleForTesting
     String getCachedGeoAdjustedDomain() {
         return cachedGeoAdjustedDomain;
+    }
+
+    private RequestBody buildEmptyRequest() {
+        return RequestBody.create("", null);
     }
 }
