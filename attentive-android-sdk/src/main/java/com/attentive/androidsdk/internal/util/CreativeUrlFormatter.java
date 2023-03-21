@@ -39,6 +39,9 @@ public class CreativeUrlFormatter {
             creativeUriBuilder.appendQueryParameter("debug", "matter-trip-grass-symbol");
         }
 
+        creativeUriBuilder.appendQueryParameter("sdkVersion", AppInfo.getAttentiveSDKVersion());
+        creativeUriBuilder.appendQueryParameter("sdkName", AppInfo.getAttentiveSDKVersion());
+
         return creativeUriBuilder;
     }
 

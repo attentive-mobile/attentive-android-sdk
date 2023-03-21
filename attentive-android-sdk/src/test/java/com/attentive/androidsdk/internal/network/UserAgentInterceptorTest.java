@@ -27,7 +27,8 @@ public class UserAgentInterceptorTest {
     private static final String APP_PACKAGE_NAME = "com.what.exampleapp";
     private static final String ANDROID_VERSION = "androidVersion";
     private static final String ANDROID_LEVEL = "androidLevel";
-    private static final String ATTENTIVE_SDK_VERSION = "attentiveSdkValue";
+    private static final String ATTENTIVE_SDK_VERSION = "attentiveSdkVersionValue";
+    private static final String ATTENTIVE_SDK_NAME = "attentiveSdkNameValue";
 
     private UserAgentInterceptor userAgentInterceptor;
 
@@ -63,9 +64,10 @@ public class UserAgentInterceptorTest {
             appInfoMockedStatic.when(AppInfo::getAndroidLevel).thenReturn(ANDROID_LEVEL);
             appInfoMockedStatic.when(AppInfo::getAndroidVersion).thenReturn(ANDROID_VERSION);
             appInfoMockedStatic.when(AppInfo::getAttentiveSDKVersion).thenReturn(ATTENTIVE_SDK_VERSION);
+            appInfoMockedStatic.when(AppInfo::getAttentiveSDKName).thenReturn(ATTENTIVE_SDK_NAME);
 
             String userAgent = userAgentInterceptor.getUserAgent();
-            assertEquals("appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") attentive-android-sdk/" + ATTENTIVE_SDK_VERSION, userAgent);
+            assertEquals("appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + ATTENTIVE_SDK_NAME + "/" + ATTENTIVE_SDK_VERSION, userAgent);
         }
     }
 

@@ -64,4 +64,11 @@ public class AppInfo {
     public static String getAttentiveSDKVersion() {
         return BuildConfig.VERSION_NAME;
     }
+
+    /**
+     * @return the Attentive SDK's name e.g. 'attentive-android-sdk'
+     */
+    public static String getAttentiveSDKName() {
+        return "attentive-android-sdk";
+    }
 }
