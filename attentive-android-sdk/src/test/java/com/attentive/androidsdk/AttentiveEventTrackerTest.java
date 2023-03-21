@@ -66,7 +66,7 @@ public class AttentiveEventTrackerTest {
     @Test
     public void recordEvent_nullEvent_throws() {
         AttentiveEventTracker.getInstance().initialize(config);
-        assertThrows(InvalidParameterException.class, () -> AttentiveEventTracker.getInstance().recordEvent(null));
+        assertThrows(IllegalArgumentException.class, () -> AttentiveEventTracker.getInstance().recordEvent(null));
     }
 
     @Test
