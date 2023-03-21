@@ -6,14 +6,12 @@ import androidx.annotation.Nullable;
 
 import androidx.annotation.VisibleForTesting;
 import com.attentive.androidsdk.events.AddToCartEvent;
-import com.attentive.androidsdk.events.CustomEvent;
 import com.attentive.androidsdk.events.Event;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.events.InfoEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
-import com.attentive.androidsdk.internal.network.CustomEventMetadataDto;
 import com.attentive.androidsdk.internal.network.Metadata;
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
 import com.attentive.androidsdk.internal.network.ProductDto;
@@ -273,8 +271,7 @@ class AttentiveApi {
             ORDER_CONFIRMED("oc"),
             PRODUCT_VIEW("d"),
             ADD_TO_CART("c"),
-            INFO("i"),
-            CUSTOM_EVENT("ce");
+            INFO("i");
 
             private final String abbreviation;
 
@@ -402,14 +399,6 @@ class AttentiveApi {
             }
         } else if (event instanceof InfoEvent) {
             eventRequests.add(new EventRequest(new Metadata(), EventRequest.Type.INFO));
-        } else if (event instanceof CustomEvent) {
-            CustomEvent customEvent = (CustomEvent) event;
-
-            CustomEventMetadataDto metadataDto = new CustomEventMetadataDto();
-            metadataDto.setType(customEvent.getType());
-            metadataDto.setProperties(customEvent.getProperties());
-
-            eventRequests.add(new EventRequest(metadataDto, EventRequest.Type.CUSTOM_EVENT));
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);

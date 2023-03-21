@@ -15,14 +15,12 @@ import android.util.Log;
 
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
-import com.attentive.androidsdk.events.CustomEvent;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
-import com.attentive.androidsdk.internal.network.CustomEventMetadataDto;
 import com.attentive.androidsdk.internal.network.Metadata;
 import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
@@ -350,38 +348,6 @@ public class AttentiveApiTest {
     }
 
     @Test
-    public void sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
-        // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
-        CustomEvent customEvent = buildCustomEventWithAllFields();
-
-        // Act
-        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN);
-
-        // Assert
-        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
-        Optional<Request> customEventRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=ce")).findFirst();
-        assertTrue(customEventRequest.isPresent());
-        assertRequestMethodIsPost(customEventRequest.get());
-        HttpUrl url = customEventRequest.get().url();
-
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("ce", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-
-        String metadataString = url.queryParameter("m");
-        Map<String, Object> metadata = (Map<String, Object>) objectMapper.readValue(metadataString, Map.class);
-        Map<String, String> actualProperties = ((Map<String, String>)objectMapper.readValue((String)metadata.get("properties"), Map.class));
-        assertEquals(customEvent.getType(), metadata.get("type"));
-        assertEquals(customEvent.getProperties(), actualProperties);
-    }
-
-    @Test
     public void sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() throws JsonProcessingException {
         // Arrange
         givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint();
@@ -447,10 +413,6 @@ public class AttentiveApiTest {
     }
     private ProductViewEvent buildProductViewEventWithAllFields() {
         return new ProductViewEvent.Builder(List.of(buildItemWithAllFields())).build();
-    }
-
-    private CustomEvent buildCustomEventWithAllFields() {
-        return new CustomEvent.Builder("High Fived Friend", Map.of("friendGivenTheHighFive", "Warthog234")).build();
     }
 
     private Item buildItemWithAllFields() {
