@@ -159,6 +159,7 @@ class AttentiveApi {
         }
 
         HttpUrl.Builder urlBuilder = getHttpUrlEventsEndpointBuilder()
+            .addQueryParameter("tag", "modern")
             .addQueryParameter("v", "mobile-app")
             .addQueryParameter("c", geoAdjustedDomain)
             .addQueryParameter("t", "idn")

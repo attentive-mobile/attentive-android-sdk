@@ -11,6 +11,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.util.Log;
+
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
 import com.attentive.androidsdk.events.Item;
@@ -19,6 +21,7 @@ import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
+import com.attentive.androidsdk.internal.network.Metadata;
 import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
@@ -60,6 +63,47 @@ public class AttentiveApiTest {
         objectMapper = new ObjectMapper();
 
         attentiveApi = spy(new AttentiveApi(okHttpClient, objectMapper));
+    }
+
+    @Test
+    public void sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+
+        // Act
+        attentiveApi.sendUserIdentifiersCollectedEvent(DOMAIN, ALL_USER_IDENTIFIERS, new AttentiveApiCallback() {
+            private static final String tag = "AttentiveApiTest";
+
+            @Override
+            public void onFailure(String message) {
+                Log.e(tag, "Could not send the user identifiers. Error: " + message);
+            }
+
+            @Override
+            public void onSuccess() {
+                Log.i(tag, "Successfully sent the user identifiers");
+            }
+        });
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> userIdentifiersRequest = requestArgumentCaptor.getAllValues().stream().findFirst();
+        assertTrue(userIdentifiersRequest.isPresent());
+        HttpUrl url = userIdentifiersRequest.get().url();
+
+        assertEquals("mobile-app", url.queryParameter("v"));
+        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
+        assertEquals("0", url.queryParameter("lt"));
+        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+        assertEquals("idn", url.queryParameter("t"));
+        assertEquals("[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]", url.queryParameter("evs"));
+
+        Metadata m = objectMapper.readValue(url.queryParameter("m"), Metadata.class);
+        assertEquals(ALL_USER_IDENTIFIERS.getPhone(), m.getPhone());
+        assertEquals(ALL_USER_IDENTIFIERS.getEmail(), m.getEmail());
+        assertEquals("msdk", m.getSource());
     }
 
     @Test

@@ -36,4 +36,10 @@ dependencies {
     implementation project(path: ':attentive-android-sdk')
     // Use the published version of the attentive-android-sdk
     // implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
+
+    testImplementation("org.assertj:assertj-core")
+
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.5.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 }

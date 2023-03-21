@@ -12,7 +12,7 @@ public class ExampleApp extends Application {
     // The mode in which to run the Attentive Android SDK
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
-    public AttentiveConfig attentiveConfig;
+    private AttentiveConfig attentiveConfig;
 
     @Override
     public void onCreate() {
@@ -27,6 +27,17 @@ public class ExampleApp extends Application {
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
         attentiveConfig.identify(buildUserIdentifiers());
+    }
+
+    public AttentiveConfig getAttentiveConfig() {
+        return attentiveConfig;
+    }
+
+    public void setAttentiveConfig(AttentiveConfig newConfig){
+        // In a production setting, the AttentiveConfig should only be created once per application
+        // lifecycle. This method provides functionality for recreating the AttentiveConfig for easy
+        // debugging & testing purposes.
+        attentiveConfig = newConfig;
     }
 
     public static UserIdentifiers buildUserIdentifiers() {

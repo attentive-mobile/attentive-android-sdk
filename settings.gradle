@@ -16,6 +16,10 @@ dependencyResolutionManagement {
         mavenCentral()
         maven {
             url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
+            credentials {
+                username = ghProperties.getProperty('gpr.user', System.getenv("GH_USERNAME"))
+                password = ghProperties.getProperty('gpr.key', System.getenv("GH_TOKEN"))
+            }
         }
     }
 }
