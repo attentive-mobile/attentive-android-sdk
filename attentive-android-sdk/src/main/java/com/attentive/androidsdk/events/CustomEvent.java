@@ -28,7 +28,6 @@ public class CustomEvent extends Event {
             ParameterValidation.verifyNotNull(type, "type");
             ParameterValidation.verifyNotNull(properties, "properties");
 
-            // the type cannot have certain characters
             this.type = type;
             this.properties = new HashMap<>(properties);
         }
