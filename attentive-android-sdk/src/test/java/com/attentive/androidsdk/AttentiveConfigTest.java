@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import android.content.Context;
+import com.attentive.androidsdk.internal.events.InfoEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,6 +53,8 @@ public class AttentiveConfigTest {
         assertEquals(MODE, config.getMode());
         assertFalse(config.getUserIdentifiers().getVisitorId().isEmpty());
         assertTrue(config.getAttentiveApi() instanceof AttentiveApi);
+
+        verify(factoryMocks.getAttentiveApi()).sendEvent(argThat(arg -> arg instanceof InfoEvent), eq(config.getUserIdentifiers()), eq(DOMAIN));
     }
 
     @Test
