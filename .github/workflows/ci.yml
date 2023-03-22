@@ -23,8 +23,29 @@ jobs:
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          OLIVIA_TEST: ${{ secrets.OLIVIA_TEST }}
 
       - name: Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
         if: ${{ always() }} # IMPORTANT: run Test Report 
+
+  android-test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        api-level: [26, 33]
+        target: [default, google_apis]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: Android Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          profile: Nexus 6
+          script: ./gradlew connectedDebugAndroidTest
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
