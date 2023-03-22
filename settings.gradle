@@ -7,7 +7,14 @@ pluginManagement {
 }
 
 Properties ghProperties = new Properties()
-ghProperties.load(file("github.properties").newDataInputStream())
+File ghPropertiesFile = file("github.properties")
+if (ghPropertiesFile.exists()) {
+    ghProperties.load(ghPropertiesFile.newDataInputStream())
+}
+else {
+    ghProperties.setProperty('gpr.user', System.getenv("GH_USERNAME"))
+    ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
+}
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -17,8 +24,8 @@ dependencyResolutionManagement {
         maven {
             url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
             credentials {
-                username = ghProperties.getProperty('gpr.user', System.getenv("GH_USERNAME"))
-                password = ghProperties.getProperty('gpr.key', System.getenv("GH_TOKEN"))
+                username = ghProperties.getProperty('gpr.user')
+                password = ghProperties.getProperty('gpr.key')
             }
         }
     }
