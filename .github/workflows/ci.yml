@@ -10,8 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: set up JDK 1.8
-        uses: actions/setup-java@v3
+      - uses: actions/setup-java@v3
         with:
           java-version: '11'
           distribution: 'temurin'
@@ -19,7 +18,7 @@ jobs:
       
       # Execute unit tests
       - name: Unit Test
-        run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace
+        run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace --no-daemon
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
