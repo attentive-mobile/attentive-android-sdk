@@ -3,8 +3,6 @@ name: Android CI
 on:
   push:
     branches: [ "main", "feature/*" ]
-  pull_request:
-    branches: [ "main", "feature/*" ]
 
 jobs:
   test:
@@ -18,13 +16,14 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: gradle
-        env:
-          GH_USERNAME: ${{ secrets.GH_USERNAME }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       # Execute unit tests
       - name: Unit Test
         run: ./gradlew testDebugUnitTest
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          OLIVIA_TEST: ${{ secrets.OLIVIA_TEST }}
 
       - name: Test Report
         uses: asadmansr/android-test-report-action@v1.2.0

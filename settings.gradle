@@ -6,6 +6,9 @@ pluginManagement {
     }
 }
 
+def oliviaTest=System.getenv("OLIVIA_TEST")
+println("OLIVIA_TEST is: ${oliviaTest}")
+
 Properties ghProperties = new Properties()
 File ghPropertiesFile = file("github.properties")
 if (ghPropertiesFile.exists()) {
