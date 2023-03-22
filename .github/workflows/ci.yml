@@ -19,7 +19,7 @@ jobs:
 
       # Execute unit tests
       - name: Unit Test
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -52,7 +52,7 @@ jobs:
           target: ${{ matrix.target }}
           arch: x86_64
           profile: Nexus 6
-          script: ./gradlew connectedDebugAndroidTest
+          script: ./gradlew :attentive-android-sdk:connectedDebugAndroidTest --stacktrace
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
