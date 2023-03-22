@@ -107,6 +107,26 @@ public class AttentiveApiTest {
     }
 
     @Test
+    public void sendEvent_validEvent_httpMethodIsPost() {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        // Which event we send for this test doesn't matter - choosing AddToCart randomly
+        AddToCartEvent addToCartEvent = buildAddToCartEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=c")).findFirst();
+        assertTrue(addToCartRequest.isPresent());
+        Request request = addToCartRequest.get();
+        assertEquals("POST", request.method().toUpperCase());
+    }
+
+    @Test
     public void sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
@@ -121,6 +141,7 @@ public class AttentiveApiTest {
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
         Optional<Request> purchaseRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=p")).findFirst();
         assertTrue(purchaseRequest.isPresent());
+        assertRequestMethodIsPost(purchaseRequest.get());
         HttpUrl url = purchaseRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
@@ -154,6 +175,7 @@ public class AttentiveApiTest {
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
         Optional<Request> purchaseRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=p")).findFirst();
         assertTrue(purchaseRequest.isPresent());
+        assertRequestMethodIsPost(purchaseRequest.get());
         HttpUrl url = purchaseRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
@@ -194,6 +216,7 @@ public class AttentiveApiTest {
         verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
         Optional<Request> orderConfirmedRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=oc")).findFirst();
         assertTrue(orderConfirmedRequest.isPresent());
+        assertRequestMethodIsPost(orderConfirmedRequest.get());
         HttpUrl url = orderConfirmedRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
@@ -266,6 +289,7 @@ public class AttentiveApiTest {
         verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
         Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=c")).findFirst();
         assertTrue(addToCartRequest.isPresent());
+        assertRequestMethodIsPost(addToCartRequest.get());
         HttpUrl url = addToCartRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
@@ -302,6 +326,7 @@ public class AttentiveApiTest {
         verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
         Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=d")).findFirst();
         assertTrue(addToCartRequest.isPresent());
+        assertRequestMethodIsPost(addToCartRequest.get());
         HttpUrl url = addToCartRequest.get().url();
 
         assertEquals("modern", url.queryParameter("tag"));
@@ -436,5 +461,9 @@ public class AttentiveApiTest {
             argument.onSuccess(GEO_ADJUSTED_DOMAIN);
             return null;
         }).when(attentiveApi).getGeoAdjustedDomainAsync(eq(DOMAIN), any());
+    }
+
+    private void assertRequestMethodIsPost(Request request) {
+        assertEquals("POST", request.method().toUpperCase());
     }
 }

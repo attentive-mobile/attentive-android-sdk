@@ -2,11 +2,9 @@ package com.attentive.androidsdk;
 
 import android.content.Context;
 
-import android.icu.number.FormattedNumber;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import okhttp3.OkHttp;
+import com.attentive.androidsdk.internal.events.InfoEvent;
 import okhttp3.OkHttpClient;
 
 public class AttentiveConfig {
@@ -22,7 +20,7 @@ public class AttentiveConfig {
     private AttentiveApi attentiveApi;
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
-        this(domain, mode, context, ClassFactory.buildOkHttpClient());
+        this(domain, mode, context, ClassFactory.buildOkHttpClient(ClassFactory.buildUserAgentInterceptor(context)));
     }
 
     public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context, @NonNull OkHttpClient okHttpClient) {
@@ -37,6 +35,8 @@ public class AttentiveConfig {
         this.attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, ClassFactory.buildObjectMapper());
 
         this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(visitorService.getVisitorId()).build();
+
+        sendInfoEvent();
     }
 
     @NonNull
@@ -93,5 +93,10 @@ public class AttentiveConfig {
                 Log.i(tag, "Successfully sent the user identifiers");
             }
         });
+    }
+
+    // Send an Info event to collect some telemetry/analytics
+    private void sendInfoEvent() {
+        attentiveApi.sendEvent(new InfoEvent(), getUserIdentifiers(), getDomain());
     }
 }
