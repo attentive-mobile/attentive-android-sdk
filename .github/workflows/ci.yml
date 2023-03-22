@@ -72,7 +72,7 @@ jobs:
           arch: x86_64
           profile: Nexus 6
 #          force-avd-creation: false
-          disk-size: 2048M
+#          disk-size: 2048M
 #          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
 #          disable-animations: true
           script: ./gradlew :attentive-android-sdk:connectedDebugAndroidTest --stacktrace --no-daemon
