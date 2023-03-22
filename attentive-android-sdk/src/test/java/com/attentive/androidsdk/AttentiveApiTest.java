@@ -15,17 +15,21 @@ import android.util.Log;
 
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
+import com.attentive.androidsdk.events.CustomEvent;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto;
+import com.attentive.androidsdk.internal.network.CustomEventMetadataDto;
 import com.attentive.androidsdk.internal.network.Metadata;
+import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto;
 import com.attentive.androidsdk.internal.network.ProductDto;
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -93,17 +97,11 @@ public class AttentiveApiTest {
         assertTrue(userIdentifiersRequest.isPresent());
         HttpUrl url = userIdentifiersRequest.get().url();
 
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-        assertEquals("idn", url.queryParameter("t"));
-        assertEquals("[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]", url.queryParameter("evs"));
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        verifyCommonEventFields(url, "idn",  objectMapper.readValue(url.queryParameter("m"), Metadata.class));
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
-        Metadata m = objectMapper.readValue(url.queryParameter("m"), Metadata.class);
-        assertEquals(ALL_USER_IDENTIFIERS.getPhone(), m.getPhone());
-        assertEquals(ALL_USER_IDENTIFIERS.getEmail(), m.getEmail());
-        assertEquals("msdk", m.getSource());
+        assertEquals("[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]", url.queryParameter("evs"));
     }
 
     @Test
@@ -144,14 +142,8 @@ public class AttentiveApiTest {
         assertRequestMethodIsPost(purchaseRequest.get());
         HttpUrl url = purchaseRequest.get().url();
 
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("p", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-
         PurchaseMetadataDto m = objectMapper.readValue(url.queryParameter("m"), PurchaseMetadataDto.class);
+        verifyCommonEventFields(url, "p", m);
         assertEquals("USD", m.getCurrency());
         Item purchasedItem = purchaseEvent.getItems().get(0);
         assertEquals(purchasedItem.getPrice().getPrice().toString(), m.getPrice());
@@ -177,15 +169,9 @@ public class AttentiveApiTest {
         assertTrue(purchaseRequest.isPresent());
         assertRequestMethodIsPost(purchaseRequest.get());
         HttpUrl url = purchaseRequest.get().url();
-
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("p", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-
         PurchaseMetadataDto m = objectMapper.readValue(url.queryParameter("m"), PurchaseMetadataDto.class);
+        verifyCommonEventFields(url, "p", m);
+
         assertEquals("USD", m.getCurrency());
         Item purchasedItem = purchaseEvent.getItems().get(0);
         assertEquals(purchasedItem.getPrice().getPrice().toString(), m.getPrice());
@@ -219,12 +205,9 @@ public class AttentiveApiTest {
         assertRequestMethodIsPost(orderConfirmedRequest.get());
         HttpUrl url = orderConfirmedRequest.get().url();
 
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("oc", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        verifyCommonEventFields(url, "oc", objectMapper.readValue(url.queryParameter("m"), Metadata.class));
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         String metadataString = url.queryParameter("m");
         Map<String, Object> metadata = objectMapper.readValue(metadataString, Map.class);
@@ -292,14 +275,8 @@ public class AttentiveApiTest {
         assertRequestMethodIsPost(addToCartRequest.get());
         HttpUrl url = addToCartRequest.get().url();
 
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("c", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-
         AddToCartMetadataDto m = objectMapper.readValue(url.queryParameter("m"), AddToCartMetadataDto.class);
+        verifyCommonEventFields(url, "c", m);
         assertEquals("USD", m.getCurrency());
         Item addToCartItem = addToCartEvent.getItems().get(0);
         assertEquals(addToCartItem.getPrice().getPrice().toString(), m.getPrice());
@@ -329,14 +306,8 @@ public class AttentiveApiTest {
         assertRequestMethodIsPost(addToCartRequest.get());
         HttpUrl url = addToCartRequest.get().url();
 
-        assertEquals("modern", url.queryParameter("tag"));
-        assertEquals("mobile-app", url.queryParameter("v"));
-        assertEquals("0", url.queryParameter("lt"));
-        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
-        assertEquals("d", url.queryParameter("t"));
-        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
-
         ProductViewMetadataDto m = objectMapper.readValue(url.queryParameter("m"), ProductViewMetadataDto.class);
+        verifyCommonEventFields(url, "d", m);
         assertEquals("USD", m.getCurrency());
         Item addToCartItem = productViewEvent.getItems().get(0);
         assertEquals(addToCartItem.getPrice().getPrice().toString(), m.getPrice());
@@ -345,6 +316,35 @@ public class AttentiveApiTest {
         assertEquals(addToCartItem.getName(), m.getName());
         assertEquals(addToCartItem.getCategory(), m.getCategory());
         assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
+    }
+
+    @Test
+    public void sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
+        // Arrange
+        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
+        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
+        CustomEvent customEvent = buildCustomEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+
+        // Assert
+        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
+        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> customEventRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=ce")).findFirst();
+        assertTrue(customEventRequest.isPresent());
+        assertRequestMethodIsPost(customEventRequest.get());
+        HttpUrl url = customEventRequest.get().url();
+
+        String metadataString = url.queryParameter("m");
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        verifyCommonEventFields(url, "ce", objectMapper.readValue(metadataString, Metadata.class));
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
+
+        Map<String, Object> metadata = (Map<String, Object>) objectMapper.readValue(metadataString, Map.class);
+        Map<String, String> actualProperties = ((Map<String, String>)objectMapper.readValue((String)metadata.get("properties"), Map.class));
+        assertEquals(customEvent.getType(), metadata.get("type"));
+        assertEquals(customEvent.getProperties(), actualProperties);
     }
 
     @Test
@@ -415,6 +415,10 @@ public class AttentiveApiTest {
         return new ProductViewEvent.Builder(List.of(buildItemWithAllFields())).build();
     }
 
+    private CustomEvent buildCustomEventWithAllFields() {
+        return new CustomEvent.Builder("High Fived Friend", Map.of("friendGivenTheHighFive", "Warthog234")).build();
+    }
+
     private Item buildItemWithAllFields() {
         return new Item.Builder("11", "22", new Price.Builder(new BigDecimal("15.99"), Currency.getInstance("USD")).build()).category("categoryValue").name("nameValue").productImage("imageUrl").build();
     }
@@ -465,5 +469,18 @@ public class AttentiveApiTest {
 
     private void assertRequestMethodIsPost(Request request) {
         assertEquals("POST", request.method().toUpperCase());
+    }
+
+    private static void verifyCommonEventFields(HttpUrl url, String eventType, Metadata m) {
+        assertEquals("modern", url.queryParameter("tag"));
+        assertEquals("mobile-app", url.queryParameter("v"));
+        assertEquals("0", url.queryParameter("lt"));
+        assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"));
+        assertEquals(eventType, url.queryParameter("t"));
+        assertEquals(ALL_USER_IDENTIFIERS.getVisitorId(), url.queryParameter("u"));
+
+        assertEquals(ALL_USER_IDENTIFIERS.getPhone(), m.getPhone());
+        assertEquals(ALL_USER_IDENTIFIERS.getEmail(), m.getEmail());
+        assertEquals("msdk", m.getSource());
     }
 }

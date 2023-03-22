@@ -6,5 +6,6 @@
     <string name="push_me_to_identify">Push Me To Identify</string>
     <string name="add_to_cart">Add to Cart</string>
     <string name="purchase">Purchase</string>
+    <string name="custom_event">Send Custom Event</string>
     <string name="push_me_for_product_page">Push Me For Product Page</string>
 </resources>
