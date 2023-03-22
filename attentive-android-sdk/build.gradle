@@ -55,7 +55,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.5.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
+    // 2.14.* does not support Android API Level < 26 https://github.com/FasterXML/jackson-databind/issues/3412
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
