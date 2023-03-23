@@ -44,6 +44,7 @@ jobs:
       - uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 7.3.3
+          cache-read-only: false
 
       - name: Android Tests
         uses: reactivecircus/android-emulator-runner@v2
