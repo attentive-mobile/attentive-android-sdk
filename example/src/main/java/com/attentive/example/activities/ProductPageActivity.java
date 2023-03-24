@@ -5,7 +5,6 @@ import android.view.View;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
@@ -36,7 +35,7 @@ public class ProductPageActivity extends AppCompatActivity {
     public void addToCartButtonClicked(View view) {
         // Send "Add to Cart" Event
         final Item item = createItem();
-        final AddToCartEvent addToCartEvent=  new AddToCartEvent.Builder(List.of(item)).build();
+        final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder(List.of(item)).build();
         AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
         showToastMessageForEvent("Add to Cart");
     }

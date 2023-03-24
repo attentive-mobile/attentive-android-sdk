@@ -8,7 +8,9 @@ on:
 
 jobs:
   test:
+    name: Unit Tests
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -31,3 +33,34 @@ jobs:
         with:
           name: unit-tests-results
           path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
+
+
+  lint:
+    name: Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Run Lint
+        run: ./gradlew checkstyle
+
+      - name: Upload Lint results - SDK
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint-results-sdk
+          path: attentive-android-sdk/build/reports/checkstyle/checkSdk.html
+
+      - name: Upload Lint results - Example
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint-results
+          path: attentive-android-sdk/build/reports/checkstyle/checkExample.html

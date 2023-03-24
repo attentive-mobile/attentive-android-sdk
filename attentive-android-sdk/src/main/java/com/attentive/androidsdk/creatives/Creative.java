@@ -16,7 +16,6 @@ import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.ClassFactory;
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter;
-
 import java.util.Set;
 
 public class Creative {
