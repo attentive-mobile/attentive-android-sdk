@@ -52,6 +52,9 @@ jobs:
 
       - name: Run Lint
         run: ./gradlew checkstyle
+        env:
+          GH_USERNAME: "fake_username"
+          GH_TOKEN: "fake_token"
 
       - name: Upload Lint results - SDK
         uses: actions/upload-artifact@v1
