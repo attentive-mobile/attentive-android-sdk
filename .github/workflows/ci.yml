@@ -33,6 +33,7 @@ jobs:
         with:
           name: unit-tests-results
           path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
+        if: ${{ always() }}
 
 
   lint:
@@ -61,9 +62,11 @@ jobs:
         with:
           name: lint-results-sdk
           path: attentive-android-sdk/build/reports/checkstyle/checkSdk.html
+        if: ${{ always() }}
 
       - name: Upload Lint results - Example
         uses: actions/upload-artifact@v1
         with:
           name: lint-results
           path: attentive-android-sdk/build/reports/checkstyle/checkExample.html
+        if: ${{ always() }}

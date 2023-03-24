@@ -1,22 +1,18 @@
 package com.attentive.androidsdk;
 
 import static junit.framework.TestCase.assertEquals;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.util.Map;
 
 
 @RunWith(AndroidJUnit4.class)
@@ -37,14 +33,14 @@ public class CreativeUrlFormatterTest {
     }
 
     @Test
-    public void buildCompanyCreativeUrl_productionMode_buildsProdUrl(){
+    public void buildCompanyCreativeUrl_productionMode_buildsProdUrl() {
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
 
         assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain", url);
     }
 
     @Test
-    public void buildCompanyCreativeUrl_DebugMode_buildsDebugUrl(){
+    public void buildCompanyCreativeUrl_DebugMode_buildsDebugUrl() {
         when(attentiveConfig.getMode()).thenReturn(AttentiveConfig.Mode.DEBUG);
 
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
@@ -53,7 +49,7 @@ public class CreativeUrlFormatterTest {
     }
 
     @Test
-    public void buildCompanyCreativeUrl_withUserIdentifiers_buildsUrlWithIdentifierQueryParams(){
+    public void buildCompanyCreativeUrl_withUserIdentifiers_buildsUrlWithIdentifierQueryParams() {
 
         UserIdentifiers userIdentifiers = new UserIdentifiers.Builder()
                 .withVisitorId("visitorId")
