@@ -23,8 +23,8 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace --no-daemon
         env:
-          GH_USERNAME: ${{ secrets.GH_USERNAME }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_USERNAME: "fake_username"
+          GH_TOKEN: "fake_token"
 
       - name: Generate Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
