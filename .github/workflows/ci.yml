@@ -1,0 +1,31 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "feature/*" ]
+  pull_request:
+    branches: [ "main", "feature/*" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      
+      # Execute unit tests
+      - name: Run Unit Tests
+        run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace --no-daemon
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Generate Test Report
+        uses: asadmansr/android-test-report-action@v1.2.0
+        if: ${{ always() }} 
