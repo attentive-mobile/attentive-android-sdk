@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: unit-tests-results
-          path: build/reports/tests/testDebugUnitTest/index.html
+          path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
         if: ${{ always() }}
 
 
@@ -67,6 +67,6 @@ jobs:
       - name: Upload Lint results - Example
         uses: actions/upload-artifact@v1
         with:
-          name: lint-results
+          name: lint-results-example
           path: build/reports/checkstyle/checkExample.html
         if: ${{ always() }}
