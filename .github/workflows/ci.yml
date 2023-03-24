@@ -20,7 +20,6 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       
-      # Execute unit tests
       - name: Run Unit Tests
         run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace --no-daemon
         env:
