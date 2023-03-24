@@ -79,7 +79,6 @@ public class AttentiveApiTest {
 
             @Override
             public void onFailure(String message) {
-                Log.e()
                 Log.e(tag, "Could not send the user identifiers. Error: " + message);
             }
 
