@@ -26,6 +26,8 @@ jobs:
           GH_USERNAME: "fake_username"
           GH_TOKEN: "fake_token"
 
-      - name: Generate Test Report
-        uses: asadmansr/android-test-report-action@v1.2.0
-        if: ${{ always() }} 
+      - name: Upload Unit Tests Results
+        uses: actions/upload-artifact@v1
+        with:
+          name: unit-tests-results
+          path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
