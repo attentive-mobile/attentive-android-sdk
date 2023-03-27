@@ -15,7 +15,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.webkit.CookieManager;
-
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.intent.Intents;
@@ -26,16 +25,13 @@ import androidx.test.uiautomator.UiObject;
 import androidx.test.uiautomator.UiObjectNotFoundException;
 import androidx.test.uiautomator.UiSelector;
 import androidx.test.uiautomator.Until;
-
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.example.activities.LoadCreativeActivity;
-
+import java.util.regex.Pattern;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.regex.Pattern;
 
 
 @LargeTest

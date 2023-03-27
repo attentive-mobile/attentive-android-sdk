@@ -1,7 +1,6 @@
 package com.attentive.androidsdk;
 
 import android.content.Context;
-
 import android.util.Log;
 import androidx.annotation.NonNull;
 import com.attentive.androidsdk.internal.events.InfoEvent;

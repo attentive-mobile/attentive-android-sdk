@@ -1,0 +1,72 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "feature/*" ]
+  pull_request:
+    branches: [ "main", "feature/*" ]
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Run Unit Tests
+        run: ./gradlew :attentive-android-sdk:testDebugUnitTest --stacktrace --no-daemon
+        env:
+          GH_USERNAME: "fake_username"
+          GH_TOKEN: "fake_token"
+
+      - name: Upload Unit Tests Results
+        uses: actions/upload-artifact@v1
+        with:
+          name: unit-tests-results
+          path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
+        if: ${{ always() }}
+
+
+  lint:
+    name: Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Run Lint
+        run: ./gradlew checkstyle
+        env:
+          GH_USERNAME: "fake_username"
+          GH_TOKEN: "fake_token"
+
+      - name: Upload Lint results - SDK
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint-results-sdk
+          path: build/reports/checkstyle/checkSdk.html
+        if: ${{ always() }}
+
+      - name: Upload Lint results - Example
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint-results-example
+          path: build/reports/checkstyle/checkExample.html
+        if: ${{ always() }}

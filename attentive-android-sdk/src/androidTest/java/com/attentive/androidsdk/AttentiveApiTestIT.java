@@ -21,11 +21,6 @@ import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Currency;
@@ -34,10 +29,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 
 public class AttentiveApiTestIT {
@@ -86,7 +83,7 @@ public class AttentiveApiTestIT {
         HttpUrl url = uicRequest.get().url();
 
         Metadata m = objectMapper.readValue(url.queryParameter("m"), Metadata.class);
-        verifyCommonEventFields(url,"idn", m);
+        verifyCommonEventFields(url, "idn", m);
 
         assertEquals("[{\"id\":\"someClientUserId\",\"vendor\":\"2\"},{\"id\":\"someShopifyId\",\"vendor\":\"0\"},{\"id\":\"someKlaviyoId\",\"vendor\":\"1\"},{\"id\":\"value1\",\"name\":\"key1\",\"vendor\":\"6\"},{\"id\":\"value2\",\"name\":\"key2\",\"vendor\":\"6\"}]", url.queryParameter("evs"));
     }
@@ -110,7 +107,7 @@ public class AttentiveApiTestIT {
         HttpUrl purchaseUrl = purchaseRequest.get().url();
 
         PurchaseMetadataDto m = objectMapper.readValue(purchaseUrl.queryParameter("m"), PurchaseMetadataDto.class);
-        verifyCommonEventFields(purchaseUrl,"p", m);
+        verifyCommonEventFields(purchaseUrl, "p", m);
 
         assertEquals("USD", m.getCurrency());
         Item purchasedItem = purchaseEvent.getItems().get(0);
@@ -135,7 +132,7 @@ public class AttentiveApiTestIT {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         Metadata metadata = objectMapper.readValue(orderConfirmedUrl.queryParameter("m"), Metadata.class);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
-        verifyCommonEventFields(orderConfirmedUrl,"oc", metadata);
+        verifyCommonEventFields(orderConfirmedUrl, "oc", metadata);
 
         // Can't convert directly to a OrderConfirmedMetadataDto because of the special serialization for products
         Map<String, Object> ocMetadata = objectMapper.readValue(orderConfirmedUrl.queryParameter("m"), Map.class);
@@ -145,7 +142,7 @@ public class AttentiveApiTestIT {
         assertEquals(expectedItem.getPrice().getPrice().toString(), ocMetadata.get("cartTotal"));
         assertEquals(expectedItem.getPrice().getCurrency().getCurrencyCode(), ocMetadata.get("currency"));
 
-        List<ProductDto> products = Arrays.asList((ProductDto[])objectMapper.readValue((String)ocMetadata.get("products"), ProductDto[].class));
+        List<ProductDto> products = Arrays.asList((ProductDto[]) objectMapper.readValue((String) ocMetadata.get("products"), ProductDto[].class));
 
         assertEquals(1, products.size());
         assertEquals(expectedItem.getPrice().getPrice().toString(), products.get(0).getPrice());
@@ -172,7 +169,7 @@ public class AttentiveApiTestIT {
         HttpUrl url = addToCartRequest.get().url();
 
         ProductViewMetadataDto m = objectMapper.readValue(url.queryParameter("m"), ProductViewMetadataDto.class);
-        verifyCommonEventFields(url,"d", m);
+        verifyCommonEventFields(url, "d", m);
 
         assertEquals("USD", m.getCurrency());
         Item addToCartItem = productViewEvent.getItems().get(0);
@@ -200,7 +197,7 @@ public class AttentiveApiTestIT {
         HttpUrl url = addToCartRequest.get().url();
 
         AddToCartMetadataDto m = objectMapper.readValue(url.queryParameter("m"), AddToCartMetadataDto.class);
-        verifyCommonEventFields(url,"c", m);
+        verifyCommonEventFields(url, "c", m);
 
         assertEquals("USD", m.getCurrency());
         Item addToCartItem = addToCartEvent.getItems().get(0);

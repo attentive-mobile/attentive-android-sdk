@@ -2,7 +2,6 @@ package com.attentive.androidsdk;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;

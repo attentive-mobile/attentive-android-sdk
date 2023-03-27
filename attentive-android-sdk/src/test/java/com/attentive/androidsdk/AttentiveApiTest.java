@@ -1,6 +1,9 @@
 package com.attentive.androidsdk;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,7 +15,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import android.util.Log;
-
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
 import com.attentive.androidsdk.events.Item;
@@ -233,7 +235,7 @@ public class AttentiveApiTest {
         assertEquals(expectedItem.getPrice().getPrice().toString(), metadata.get("cartTotal"));
         assertEquals(expectedItem.getPrice().getCurrency().getCurrencyCode(), metadata.get("currency"));
 
-        List<ProductDto> products = Arrays.asList((ProductDto[])objectMapper.readValue((String)metadata.get("products"), ProductDto[].class));
+        List<ProductDto> products = Arrays.asList((ProductDto[]) objectMapper.readValue((String) metadata.get("products"), ProductDto[].class));
         assertEquals(1, products.size());
         assertEquals(expectedItem.getPrice().getPrice().toString(), products.get(0).getPrice());
         assertEquals(expectedItem.getProductId(), products.get(0).getProductId());
@@ -255,11 +257,11 @@ public class AttentiveApiTest {
         // Assert
         ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
         verify(okHttpClient, times(3)).newCall(requestArgumentCaptor.capture());
-        List<Request> allValues = new ArrayList<Request>(requestArgumentCaptor.getAllValues());
+        List<Request> allValues = new ArrayList<>(requestArgumentCaptor.getAllValues());
         assertEquals(3, allValues.size());
 
         int purchaseCount = 0;
-        int orderConfirmedCount= 0;
+        int orderConfirmedCount = 0;
         for (Request request : allValues) {
             final String urlString = request.url().toString();
             if (urlString.contains("t=p")) {
@@ -348,7 +350,7 @@ public class AttentiveApiTest {
     }
 
     @Test
-    public void sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() throws JsonProcessingException {
+    public void sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() {
         // Arrange
         givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint();
         givenOkHttpClientReturnsSuccessFromEventsEndpoint();
@@ -374,7 +376,7 @@ public class AttentiveApiTest {
     }
 
     @Test
-    public void sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() throws JsonProcessingException {
+    public void sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() {
         // Arrange
         givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint();
         givenOkHttpClientReturnsSuccessFromEventsEndpoint();

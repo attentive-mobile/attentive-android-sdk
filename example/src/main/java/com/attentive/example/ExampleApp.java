@@ -33,7 +33,7 @@ public class ExampleApp extends Application {
         return attentiveConfig;
     }
 
-    public void setAttentiveConfig(AttentiveConfig newConfig){
+    public void setAttentiveConfig(AttentiveConfig newConfig) {
         // In a production setting, the AttentiveConfig should only be created once per application
         // lifecycle. This method provides functionality for recreating the AttentiveConfig for easy
         // debugging & testing purposes.
