@@ -1,5 +1,5 @@
 # Attentive Android SDK
-The Attentive Android SDK provides the functionality to render Attentive creative units in Android mobile applications.
+The Attentive Android SDK provides the functionality to render Attentive creative units and collect Attentive events in Android mobile applications.
 
 ## Installation
 Follow the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package)
@@ -28,6 +28,8 @@ implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 ## Usage
 See the [Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example)
 for a sample of how the Attentive Android SDK is used.
+
+__*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
 ### Create the AttentiveConfig
 ```java
@@ -111,3 +113,6 @@ allIdentifiers.getKlaviyoId(); // == 777
 attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
 ```
+
+## Minimum Version Support
+The Attentive Android SDK currently supports Android API Level 26 and above. The SDK will still build on versions below 26, but functionality will no-op.
