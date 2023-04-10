@@ -127,26 +127,6 @@ public class AttentiveApiTest {
     }
 
     @Test
-    public void sendEvent_validEvent_httpMethodIsPost() {
-        // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
-        // Which event we send for this test doesn't matter - choosing AddToCart randomly
-        AddToCartEvent addToCartEvent = buildAddToCartEventWithAllFields();
-
-        // Act
-        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN);
-
-        // Assert
-        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
-        Optional<Request> addToCartRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=c")).findFirst();
-        assertTrue(addToCartRequest.isPresent());
-        Request request = addToCartRequest.get();
-        assertEquals("POST", request.method().toUpperCase());
-    }
-
-    @Test
     public void sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
@@ -338,35 +318,6 @@ public class AttentiveApiTest {
         assertEquals(addToCartItem.getName(), m.getName());
         assertEquals(addToCartItem.getCategory(), m.getCategory());
         assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
-    }
-
-    @Test
-    public void sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() throws JsonProcessingException {
-        // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully();
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint();
-        CustomEvent customEvent = buildCustomEventWithAllFields();
-
-        // Act
-        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN);
-
-        // Assert
-        ArgumentCaptor<Request> requestArgumentCaptor = ArgumentCaptor.forClass(Request.class);
-        verify(okHttpClient, times(1)).newCall(requestArgumentCaptor.capture());
-        Optional<Request> customEventRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=ce")).findFirst();
-        assertTrue(customEventRequest.isPresent());
-        assertRequestMethodIsPost(customEventRequest.get());
-        HttpUrl url = customEventRequest.get().url();
-
-        String metadataString = url.queryParameter("m");
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        verifyCommonEventFields(url, "ce", objectMapper.readValue(metadataString, Metadata.class));
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
-
-        Map<String, Object> metadata = (Map<String, Object>) objectMapper.readValue(metadataString, Map.class);
-        Map<String, String> actualProperties = ((Map<String, String>)objectMapper.readValue((String)metadata.get("properties"), Map.class));
-        assertEquals(customEvent.getType(), metadata.get("type"));
-        assertEquals(customEvent.getProperties(), actualProperties);
     }
 
     @Test

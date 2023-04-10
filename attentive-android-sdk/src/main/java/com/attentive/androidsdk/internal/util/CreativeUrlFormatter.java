@@ -40,7 +40,7 @@ public class CreativeUrlFormatter {
         }
 
         creativeUriBuilder.appendQueryParameter("sdkVersion", AppInfo.getAttentiveSDKVersion());
-        creativeUriBuilder.appendQueryParameter("sdkName", AppInfo.getAttentiveSDKVersion());
+        creativeUriBuilder.appendQueryParameter("sdkName", AppInfo.getAttentiveSDKName());
 
         return creativeUriBuilder;
     }

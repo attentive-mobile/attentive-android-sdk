@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import com.attentive.androidsdk.internal.util.AppInfo;
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +37,7 @@ public class CreativeUrlFormatterTest {
     public void buildCompanyCreativeUrl_productionMode_buildsProdUrl() {
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain", url);
+        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk", url);
     }
 
     @Test
@@ -45,7 +46,7 @@ public class CreativeUrlFormatterTest {
 
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&debug=matter-trip-grass-symbol", url);
+        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&debug=matter-trip-grass-symbol&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk", url);
     }
 
     @Test
@@ -64,7 +65,7 @@ public class CreativeUrlFormatterTest {
 
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D", url);
+        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D", url);
     }
 
     @Test
@@ -82,6 +83,6 @@ public class CreativeUrlFormatterTest {
         String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
 
         // assert custom identifiers set to {} and no error is thrown
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&cstm=%7B%7D", url);
+        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&cstm=%7B%7D", url);
     }
 }
