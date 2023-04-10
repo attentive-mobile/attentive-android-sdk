@@ -1,11 +1,13 @@
 # Attentive Android SDK
-The Attentive Android SDK provides the functionality to render Attentive creative units in Android mobile applications.
+The Attentive Android SDK provides the functionality to render Attentive creative units and collect Attentive events in Android mobile applications.
 
 ## Installation
-Follow the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package)
-on using a GitHub Package to set up your Personal Access Token.
 
-Add the Attentive Android SDK GitHub Package maven repository to your `build.gradle` `buildscript` or
+**First**, if you don't have a GitHub account, create a free one.
+
+**Second**, follow the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic) to create a GitHub Personal Access Token (PAT). When creating the PAT, ensure you add the scope `read:packages`. 
+
+**Third**, add the Attentive Android SDK GitHub Package maven repository to your `build.gradle` `buildscript` or
 `settings.gradle` `dependencyResolutionManagement`:
 ```groovy
 repositories {
@@ -13,14 +15,14 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
         credentials {
-            username = properties.findProperty("gpr.user") ?: System.getenv("USERNAME")
-            password = properties.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            username = "YOUR_GITHUB_USERNAME"
+            password = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_WITH_READ_PACKAGE_SCOPE"
         }
     }
 }
 ```
 
-Add the `attentive-android-sdk` package to your `build.gradle`:
+**Fourth**, add the `attentive-android-sdk` package to your `build.gradle`:
 ```groovy
 implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 ```
@@ -28,6 +30,8 @@ implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 ## Usage
 See the [Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example)
 for a sample of how the Attentive Android SDK is used.
+
+__*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
 ### Create the AttentiveConfig
 ```java
@@ -111,3 +115,6 @@ allIdentifiers.getKlaviyoId(); // == 777
 attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
 ```
+
+## Minimum Version Support
+The Attentive Android SDK currently supports Android API Level 26 and above. The SDK will still build on versions below 26, but functionality will no-op.

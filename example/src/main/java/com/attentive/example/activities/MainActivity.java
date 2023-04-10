@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
@@ -18,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         TextView domainValueTextView = findViewById(R.id.domainValue);
-        domainValueTextView.setText(((ExampleApp)this.getApplication()).getAttentiveConfig().getDomain());
+        domainValueTextView.setText(((ExampleApp) this.getApplication()).getAttentiveConfig().getDomain());
     }
 
     public void startLoadCreativeActivity(View view) {
@@ -35,10 +34,10 @@ public class MainActivity extends AppCompatActivity {
         // Perform app's normal logout functionality
 
         // Clear all Attentive identifiers
-        ((ExampleApp)this.getApplication()).getAttentiveConfig().clearUser();
+        ((ExampleApp) this.getApplication()).getAttentiveConfig().clearUser();
     }
 
     public void identifyUser(View view) {
-        ((ExampleApp)this.getApplication()).getAttentiveConfig().identify(ExampleApp.buildUserIdentifiers());
+        ((ExampleApp) this.getApplication()).getAttentiveConfig().identify(ExampleApp.buildUserIdentifiers());
     }
 }

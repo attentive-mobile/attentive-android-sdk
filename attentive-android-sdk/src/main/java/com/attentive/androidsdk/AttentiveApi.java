@@ -3,7 +3,6 @@ package com.attentive.androidsdk;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
 import androidx.annotation.VisibleForTesting;
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.CustomEvent;
@@ -21,7 +20,6 @@ import com.attentive.androidsdk.internal.network.ProductViewMetadataDto;
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;

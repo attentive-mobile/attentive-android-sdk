@@ -14,11 +14,10 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import android.content.Context;
 import com.attentive.androidsdk.internal.events.InfoEvent;
+import java.util.Map;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Map;
 
 public class AttentiveConfigTest {
     private static final String DOMAIN = "DOMAINValue";

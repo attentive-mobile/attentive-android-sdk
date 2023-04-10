@@ -59,7 +59,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.5.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
+    // 2.14.* does not support Android API Level < 26 https://github.com/FasterXML/jackson-databind/issues/3412
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
@@ -74,8 +75,14 @@ dependencies {
 }
 
 Properties ghProperties = new Properties()
-ghProperties.load(project.rootProject.file("github.properties").newDataInputStream())
-
+File ghPropertiesFile = project.rootProject.file("github.properties")
+if (ghPropertiesFile.exists()) {
+    ghProperties.load(ghPropertiesFile.newDataInputStream())
+}
+else {
+    ghProperties.setProperty('gpr.user', System.getenv("GH_USERNAME"))
+    ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
+}
 
 afterEvaluate {
     publishing {
@@ -95,8 +102,8 @@ afterEvaluate {
                 url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
 
                 credentials {
-                    username = ghProperties.getProperty('gpr.user', System.getenv("GH_USERNAME"))
-                    password = ghProperties.getProperty('gpr.key', System.getenv("GH_TOKEN"))
+                    username = ghProperties.getProperty('gpr.user')
+                    password = ghProperties.getProperty('gpr.key')
                 }
             }
         }

@@ -1,14 +1,13 @@
 package com.attentive.androidsdk;
 
-import static org.junit.Assert.*;
+import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import android.content.Context;
 import com.attentive.androidsdk.events.Event;
 import java.lang.reflect.Field;
-import java.security.InvalidParameterException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,7 +38,7 @@ public class AttentiveEventTrackerTest {
     @Test
     public void getInstance_doesNotThrow() {
         // Verify does not throw
-        AttentiveEventTracker instance = AttentiveEventTracker.getInstance();
+        AttentiveEventTracker.getInstance();
     }
 
     @Test

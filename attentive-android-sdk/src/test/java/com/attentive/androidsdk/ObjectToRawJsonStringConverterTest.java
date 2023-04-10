@@ -3,12 +3,11 @@ package com.attentive.androidsdk;
 import static org.junit.Assert.assertEquals;
 
 import com.attentive.androidsdk.internal.util.ObjectToRawJsonStringConverter;
-
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.Map;
 
 public class ObjectToRawJsonStringConverterTest {
 
@@ -20,7 +19,7 @@ public class ObjectToRawJsonStringConverterTest {
     }
 
     @Test
-    public void convert_nestedObject_serializesToValidJsonString(){
+    public void convert_nestedObject_serializesToValidJsonString() {
         Object objectToConvert = Map.of("key1", List.of("listItem1", "listItem2"));
 
         String convertedObject = objectToRawJsonStringConverter.convert(objectToConvert);
@@ -29,7 +28,7 @@ public class ObjectToRawJsonStringConverterTest {
     }
 
     @Test
-    public void convert_list_serializesToValidJsonString(){
+    public void convert_list_serializesToValidJsonString() {
         Object objectToConvert = List.of("listItem1", "listItem2");
 
         String convertedObject = objectToRawJsonStringConverter.convert(objectToConvert);
