@@ -229,13 +229,13 @@ public class AttentiveApiTestIT {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         Metadata metadata = objectMapper.readValue(customEventUrl.queryParameter("m"), Metadata.class);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
-        verifyCommonEventFields(customEventUrl,"ce", metadata);
+        verifyCommonEventFields(customEventUrl, "ce", metadata);
 
         // Can't convert directly to a CustomEventMetadataDto because of the special serialization for properties
         Map<String, Object> customEventMetadata = objectMapper.readValue(customEventUrl.queryParameter("m"), Map.class);
 
         assertEquals(customEvent.getType(), customEventMetadata.get("type"));
-        Map<String, String> properties = objectMapper.readValue((String)customEventMetadata.get("properties"), Map.class);
+        Map<String, String> properties = objectMapper.readValue((String) customEventMetadata.get("properties"), Map.class);
         assertEquals(customEvent.getProperties(), properties);
     }
 

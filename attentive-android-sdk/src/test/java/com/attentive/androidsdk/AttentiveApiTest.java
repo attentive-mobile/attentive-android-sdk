@@ -344,7 +344,7 @@ public class AttentiveApiTest {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         Map<String, Object> metadata = (Map<String, Object>) objectMapper.readValue(metadataString, Map.class);
-        Map<String, String> actualProperties = ((Map<String, String>)objectMapper.readValue((String)metadata.get("properties"), Map.class));
+        Map<String, String> actualProperties = ((Map<String, String>) objectMapper.readValue((String) metadata.get("properties"), Map.class));
         assertEquals(customEvent.getType(), metadata.get("type"));
         assertEquals(customEvent.getProperties(), actualProperties);
     }
