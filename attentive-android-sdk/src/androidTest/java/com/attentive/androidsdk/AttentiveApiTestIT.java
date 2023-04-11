@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
+import com.attentive.androidsdk.events.CustomEvent;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
@@ -210,6 +211,34 @@ public class AttentiveApiTestIT {
         assertEquals(addToCartItem.getProductVariantId(), m.getSubProductId());
     }
 
+    @Test
+    public void sendEvent_customEventWithAllParams_sendsCorrectCustomEvent() throws JsonProcessingException, InterruptedException {
+        // Arrange
+        CustomEvent customEvent = buildCustomEventWithAllFields();
+
+        // Act
+        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN);
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+
+        // Assert
+        verify(okHttpClient, times(2)).newCall(requestArgumentCaptor.capture());
+        Optional<Request> customEventRequest = requestArgumentCaptor.getAllValues().stream().filter(request -> request.url().toString().contains("t=ce")).findFirst();
+        assertTrue(customEventRequest.isPresent());
+        HttpUrl customEventUrl = customEventRequest.get().url();
+
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        Metadata metadata = objectMapper.readValue(customEventUrl.queryParameter("m"), Metadata.class);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
+        verifyCommonEventFields(customEventUrl, "ce", metadata);
+
+        // Can't convert directly to a CustomEventMetadataDto because of the special serialization for properties
+        Map<String, Object> customEventMetadata = objectMapper.readValue(customEventUrl.queryParameter("m"), Map.class);
+
+        assertEquals(customEvent.getType(), customEventMetadata.get("type"));
+        Map<String, String> properties = objectMapper.readValue((String) customEventMetadata.get("properties"), Map.class);
+        assertEquals(customEvent.getProperties(), properties);
+    }
+
     private static void verifyCommonEventFields(HttpUrl url, String eventType, Metadata m) {
         assertEquals("modern", url.queryParameter("tag"));
         assertEquals("mobile-app", url.queryParameter("v"));
@@ -261,5 +290,9 @@ public class AttentiveApiTestIT {
                 .name("nameValue")
                 .productImage("imageUrl")
                 .build();
+    }
+
+    private static CustomEvent buildCustomEventWithAllFields() {
+        return new CustomEvent.Builder("typeValue", Map.of("propertyKey1", "propertyValue1")).build();
     }
 }

@@ -8,15 +8,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.Cart;
+import com.attentive.androidsdk.events.CustomEvent;
 import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
+import com.attentive.androidsdk.events.Purchase;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.example.R;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
+import java.util.Map;
 
 public class ProductPageActivity extends AppCompatActivity {
 
@@ -59,6 +62,13 @@ public class ProductPageActivity extends AppCompatActivity {
         // Record the PurchaseEvent
         AttentiveEventTracker.getInstance().recordEvent(purchaseEvent);
         showToastMessageForEvent("Purchase");
+    }
+
+    public void customEventButtonClicked(View view) {
+        CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).build();
+
+        AttentiveEventTracker.getInstance().recordEvent(customEvent);
+        showToastMessageForEvent("Custom Event");
     }
 
     @NonNull
