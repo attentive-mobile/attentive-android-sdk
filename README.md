@@ -52,7 +52,7 @@ attentiveConfig.identify(userIdentifiers);
 ```
 
 The more identifiers that are passed to `identify`, the better the SDK will function. Here is the list of possible identifiers:
-| Identifier         | Type                  | Description                                                                                                             |
+| Identifier Name    | Type                  | Description                                                                                                             |
 | ------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Client User ID     | String                | Your unique identifier for the user. This should be consistent across the user's lifetime. For example, a database id.  |
 | Phone              | String                | The users's phone number in E.164 format                                                                                |
