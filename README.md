@@ -59,7 +59,7 @@ The more identifiers that are passed to `identify`, the better the SDK will func
 | Email              | String                | The users's email                                                                                                       |
 | Shopify ID         | String                | The users's Shopify ID                                                                                                  |
 | Klaviyo ID         | String                | The users's Klaviyo ID                                                                                                  | 
-| Custom Identifiers | Map<String,String>    | The users's Klaviyo ID                                                                                                  |
+| Custom Identifiers | Map<String,String>    | Key-value pairs of custom identifier names and values. The values should be unique to this user.                        |
 
 ### Load the Creative
 ```java
