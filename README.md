@@ -51,8 +51,15 @@ UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withClientUserId
 attentiveConfig.identify(userIdentifiers);
 ```
 
-The more identifiers that are passed to `identify`, the better the SDK will function. See the [`UserIdentifiers`](src/main/java/com/attentive/androidsdk/UserIdentifiers.java) object for all identifier types. Here is a subset of identifiers and their descriptions:
-* Client User Id - Your unique identifier for the user. This should be consistent across the user's lifetime. For example, a database id.
+The more identifiers that are passed to `identify`, the better the SDK will function. Here is the list of possible identifiers:
+| Identifier Name    | Type                  | Description                                                                                                             |
+| ------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Client User ID     | String                | Your unique identifier for the user. This should be consistent across the user's lifetime. For example, a database id.  |
+| Phone              | String                | The users's phone number in E.164 format                                                                                |
+| Email              | String                | The users's email                                                                                                       |
+| Shopify ID         | String                | The users's Shopify ID                                                                                                  |
+| Klaviyo ID         | String                | The users's Klaviyo ID                                                                                                  | 
+| Custom Identifiers | Map<String,String>    | Key-value pairs of custom identifier names and values. The values should be unique to this user.                        |
 
 ### Load the Creative
 ```java
