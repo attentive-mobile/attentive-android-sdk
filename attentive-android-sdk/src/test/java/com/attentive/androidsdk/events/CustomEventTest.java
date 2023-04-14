@@ -40,8 +40,9 @@ public class CustomEventTest {
             { "", Map.of(), IllegalArgumentException.class },
             { "f", null, IllegalArgumentException.class },
             { "typeWithInvalidChar[", Map.of(), IllegalArgumentException.class },
-            { "f", Map.of("keyWithInvalidChar[", "some"), IllegalArgumentException.class },
+            { "f", Map.of("keyWithInvalidChar[", "value"), IllegalArgumentException.class },
             { "f", Map.of(), null },
+            { "f", Map.of("key", "value"), null }
         });
     }
 }
