@@ -1,7 +1,7 @@
 package com.attentive.androidsdk.events;
 
+import androidx.annotation.Nullable;
 import com.attentive.androidsdk.ParameterValidation;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,11 +25,45 @@ public class CustomEvent extends Event {
          *                   Keys and values are case-sensitive.
          */
         public Builder(String type, Map<String, String> properties) {
-            ParameterValidation.verifyNotNull(type, "type");
+            ParameterValidation.verifyNotEmpty(type, "type");
             ParameterValidation.verifyNotNull(properties, "properties");
+
+            String invalidChar = findInvalidCharactersInType(type);
+            if (invalidChar != null) {
+                throw new IllegalArgumentException(String.format("The 'type' parameter contains an invalid character: '%s'.", invalidChar));
+            }
+
+            for (String key : properties.keySet()) {
+                String invalidKeyChar = findInvalidCharacterInPropertiesKey(key);
+                if (invalidKeyChar != null) {
+                    throw new IllegalArgumentException(String.format("The properties key '%s' contains an invalid character: '%s'.", key, invalidKeyChar));
+                }
+            }
 
             this.type = type;
             this.properties = new HashMap<>(properties);
+        }
+
+        @Nullable
+        private String findInvalidCharactersInType(String type) {
+            String[] specialCharacters = {"\"", "'", "(", ")", "{", "}", "[", "]", "\\", "|", ","};
+            return findInvalidCharacter(type, specialCharacters);
+        }
+
+        @Nullable
+        private String findInvalidCharacterInPropertiesKey(String key) {
+            String[] specialCharacters = {"\"", "{", "}", "[", "]", "\\", "|"};
+            return findInvalidCharacter(key, specialCharacters);
+        }
+
+        @Nullable
+        private String findInvalidCharacter(String subject, String[] chars) {
+            for (String character : chars) {
+                if (subject.contains(character)) {
+                    return character;
+                }
+            }
+            return null;
         }
 
         public CustomEvent build() {
