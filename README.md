@@ -76,7 +76,7 @@ creative.destroy();
 
 ### Record user events
 
-The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, and `ProductViewEvent`.
+The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`, and `CustomEvent`.
 
 ```java
 // Construct one or more "Item"s, which represents the product(s) purchased
