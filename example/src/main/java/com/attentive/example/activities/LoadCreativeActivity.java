@@ -46,7 +46,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // You can also call creative.trigger() without a callback handler
         creative.trigger(new CreativeTriggerCallback() {
             @Override
-            public void onOpenFailure() {
+            public void onCreativeNotOpened() {
                 Log.e(this.getClass().getName(), "Couldn't open the creative!");
             }
 
@@ -56,7 +56,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onCloseFailure() {
+            public void onCreativeNotClosed() {
                 Log.e(this.getClass().getName(), "Couldn't close the creative!");
             }
 
