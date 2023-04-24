@@ -62,17 +62,50 @@ The more identifiers that are passed to `identify`, the better the SDK will func
 | Custom Identifiers | Map<String,String>    | Key-value pairs of custom identifier names and values. The values should be unique to this user.                        |
 
 ### Load the Creative
+#### 1. Create the Creative
 ```java
 // Create a new creative and attach it to a parent View. This will not render the creative.
 Creative creative = new Creative(attentiveConfig, parentView);
+```
 
-// Load and render the creative
+#### 2. Trigger the Creative
+```java
+// Load and render the creative, with a callback handler. 
+// You may choose which of these methods to implement, they are all optional.
+creative.trigger(new CreativeTriggerCallback() {
+    @Override
+    public void onCreativeNotOpened() {
+        Log.e(this.getClass().getName(), "Couldn't open the creative!");
+    }
+
+    @Override
+    public void onOpen() {
+        Log.i(this.getClass().getName(), "Opened the creative!");
+    }
+
+    @Override
+    public void onCreativeNotClosed() {
+        Log.e(this.getClass().getName(), "Couldn't close the creative!");
+    }
+
+    @Override
+    public void onClose() {
+        Log.i(this.getClass().getName(), "Closed the creative!");
+    }
+});
+
+// Alternatively, you can trigger the creative without a callback handler:
 creative.trigger();
+```
+See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/attentive-android-sdk/src/main/java/com/attentive/androidsdk/creatives/CreativeTriggerCallback.java) for more information on the callback handler methods.
 
-// Destroy the creative and it's associated WebView. You must call the destroy method when the creative
-// is no longer in use to properly clean up the WebView and it's resources
+#### 3. Destroy the Creative
+```java
+// Destroy the creative and it's associated WebView.
 creative.destroy();
 ```
+__*** NOTE: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources ***__
+
 
 ### Record user events
 
