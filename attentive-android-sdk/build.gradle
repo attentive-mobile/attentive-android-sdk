@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'maven-publish'
+    id 'signing'
 }
 
 def versionName = properties["VERSION_NAME"]
@@ -84,28 +85,10 @@ else {
     ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-
-                groupId 'com.attentive'
-                artifactId 'attentive-android-sdk'
-                version "$versionName"
-            }
-        }
-
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
-
-                credentials {
-                    username = ghProperties.getProperty('gpr.user')
-                    password = ghProperties.getProperty('gpr.key')
-                }
-            }
-        }
-    }
+ext {
+    PUBLISH_GROUP_ID = 'com.attentive'
+    PUBLISH_VERSION = "$versionName"
+    PUBLISH_ARTIFACT_ID = 'attentive-android-sdk'
 }
+
+apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"

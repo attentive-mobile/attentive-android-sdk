@@ -1,0 +1,92 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += files("build/generated/source/buildConfig/release")
+    android.libraryVariants.all { variant ->
+        if (variant.name == 'release') {
+            owner.classpath += variant.javaCompileProvider.get().classpath
+        }
+    }
+
+    failOnError false
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives androidSourcesJar
+    archives javadocJar
+}
+
+group = PUBLISH_GROUP_ID
+version = PUBLISH_VERSION
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId PUBLISH_GROUP_ID
+                artifactId PUBLISH_ARTIFACT_ID
+                version PUBLISH_VERSION
+
+                if (project.plugins.findPlugin("com.android.library")) {
+                    from components.release
+                } else {
+                    from components.java
+                }
+
+                artifact androidSourcesJar
+                artifact javadocJar
+
+                pom {
+                    name = PUBLISH_ARTIFACT_ID
+                    description = 'Attentive Android SDK'
+                    url = 'https://github.com/attentive-mobile/attentive-android-sdk'
+                    licenses {
+                        license {
+                            name = 'MIT License'
+                            url = 'https://github.com/attentive-mobile/attentive-android-sdk/blob/main/LICENSE'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'wyattjoe40'
+                            name = 'Wyatt Davis'
+                            email = 'wdavis@attentivemobile.com'
+                        }
+                        developer {
+                            id = 'EPD'
+                            name = 'Attentive EPD'
+                            email = 'epd@attentivemobile.com'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:github.com/attentive-mobile/attentive-android-sdk.git'
+                        developerConnection = 'scm:git:ssh://github.com/attentive-mobile/attentive-android-sdk.git'
+                        url = 'https://github.com/attentive-mobile/attentive-android-sdk/tree/main'
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useInMemoryPgpKeys(
+            rootProject.ext["signing.keyId"],
+            rootProject.ext["signing.key"],
+            rootProject.ext["signing.password"],
+    )
+    sign publishing.publications
+}

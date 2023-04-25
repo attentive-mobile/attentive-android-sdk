@@ -4,6 +4,7 @@ plugins {
     id 'com.android.library' version '7.2.2' apply false
     id 'checkstyle'
     id 'org.jetbrains.kotlin.android' version '1.7.20' apply false
+    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
 
 task clean(type: Delete) {
@@ -41,3 +42,5 @@ task checkstyle() {
     finalizedBy(checkExample)
     finalizedBy(checkSdk)
 }
+
+apply from: "${rootDir}/scripts/publish-root.gradle"

@@ -21,16 +21,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://maven.pkg.github.com/attentive-mobile/attentive-android-sdk")
-            credentials {
-                username = ghProperties.getProperty('gpr.user')
-                password = ghProperties.getProperty('gpr.key')
-            }
-        }
     }
 }
 rootProject.name = "Attentive Android SDK"
-include ':example'
 include ':attentive-android-sdk'
+include ':example'
 include ':example-kotlin'
