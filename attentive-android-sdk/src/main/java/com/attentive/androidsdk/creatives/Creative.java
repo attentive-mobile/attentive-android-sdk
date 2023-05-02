@@ -57,6 +57,8 @@ public class Creative {
 
     private WebView webView;
 
+    private CreativeTriggerCallback triggerCallback;
+
 
     public Creative(AttentiveConfig attentiveConfig, View parentView) {
         this.attentiveConfig = attentiveConfig;
@@ -76,8 +78,17 @@ public class Creative {
     }
 
     public void trigger() {
+        trigger(null);
+    }
+
+    public void trigger(CreativeTriggerCallback callback) {
+        triggerCallback = callback;
+
         if (webView == null) {
             Log.e(this.getClass().getName(), "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
+            if (triggerCallback != null) {
+                triggerCallback.onCreativeNotOpened();
+            }
             return;
         }
 
@@ -178,8 +189,14 @@ public class Creative {
                     handler.post(() -> {
                         if (webView != null) {
                             webView.setVisibility(View.INVISIBLE);
+                            if (triggerCallback != null) {
+                                triggerCallback.onClose();
+                            }
                         } else {
                             Log.w(this.getClass().getName(), "The user closed the creative but the webview is null. Ignoring.");
+                            if (triggerCallback != null) {
+                                triggerCallback.onCreativeNotClosed();
+                            }
                         }
                     });
                 } else if (messageData.equalsIgnoreCase("OPEN")) {
@@ -190,12 +207,21 @@ public class Creative {
                         // be displayed.
                         if (webView != null) {
                             webView.setVisibility(View.VISIBLE);
+                            if (triggerCallback != null) {
+                                triggerCallback.onOpen();
+                            }
                         } else {
                             Log.w(this.getClass().getName(), "The creative loaded but the webview is null. Ignoring.");
+                            if (triggerCallback != null) {
+                                triggerCallback.onCreativeNotOpened();
+                            }
                         }
                     });
                 } else if (messageData.equalsIgnoreCase("TIMED OUT")) {
                     Log.e(this.getClass().getName(), "Creative timed out. Not showing WebView.");
+                    if (triggerCallback != null) {
+                        triggerCallback.onCreativeNotOpened();
+                    }
                 }
             }
         };

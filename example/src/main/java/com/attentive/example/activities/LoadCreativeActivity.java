@@ -2,11 +2,13 @@ package com.attentive.example.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.creatives.Creative;
+import com.attentive.androidsdk.creatives.CreativeTriggerCallback;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
 
@@ -40,8 +42,29 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // if you want to test Creative fatigue and filtering
         clearCookies();
 
-        // Display the creative
-        creative.trigger();
+        // Display the creative, with a callback handler
+        // You can also call creative.trigger() without a callback handler
+        creative.trigger(new CreativeTriggerCallback() {
+            @Override
+            public void onCreativeNotOpened() {
+                Log.e(this.getClass().getName(), "Couldn't open the creative!");
+            }
+
+            @Override
+            public void onOpen() {
+                Log.i(this.getClass().getName(), "Opened the creative!");
+            }
+
+            @Override
+            public void onCreativeNotClosed() {
+                Log.e(this.getClass().getName(), "Couldn't close the creative!");
+            }
+
+            @Override
+            public void onClose() {
+                Log.i(this.getClass().getName(), "Closed the creative!");
+            }
+        });
     }
 
     private void clearCookies() {
