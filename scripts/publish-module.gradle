@@ -60,6 +60,11 @@ afterEvaluate {
                     }
                     developers {
                         developer {
+                            id = 'oliviakim321'
+                            name = 'Olivia Kim'
+                            email = 'okim@attentivemobile.com'
+                        }
+                        developer {
                             id = 'wyattjoe40'
                             name = 'Wyatt Davis'
                             email = 'wdavis@attentivemobile.com'
