@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'maven-publish'
+    id 'signing'
 }
 
 def versionName = properties["VERSION_NAME"]
@@ -74,6 +75,17 @@ dependencies {
     androidTestImplementation 'org.mockito:mockito-android:5.1.1'
 }
 
+ext {
+    PUBLISH_GROUP_ID = 'com.attentive'
+    PUBLISH_VERSION = "$versionName"
+    PUBLISH_ARTIFACT_ID = 'attentive-android-sdk'
+}
+
+apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
+
+// TODO: Once we have fully migrated to Maven Central we should delete this GitHub publishing code
+/* --- GitHub Publishing (deprecated) --- */
+
 Properties ghProperties = new Properties()
 File ghPropertiesFile = project.rootProject.file("github.properties")
 if (ghPropertiesFile.exists()) {
@@ -84,10 +96,11 @@ else {
     ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
 }
 
+
 afterEvaluate {
     publishing {
         publications {
-            release(MavenPublication) {
+            releaseGithub(MavenPublication) {
                 from components.release
 
                 groupId 'com.attentive'
@@ -109,3 +122,5 @@ afterEvaluate {
         }
     }
 }
+
+/* --- End GitHub Publishing --- */
