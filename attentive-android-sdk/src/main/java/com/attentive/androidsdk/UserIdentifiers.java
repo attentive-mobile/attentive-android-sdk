@@ -2,10 +2,12 @@ package com.attentive.androidsdk;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+@JsonDeserialize(builder = UserIdentifiers.Builder.class)
 public class UserIdentifiers {
     private String visitorId;
     private String clientUserId;

@@ -97,7 +97,6 @@ public class Creative {
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
         }
-
         webView.loadUrl(url);
     }
 
@@ -207,6 +206,7 @@ public class Creative {
                         // be displayed.
                         if (webView != null) {
                             webView.setVisibility(View.VISIBLE);
+                            webView.requestLayout();
                             if (triggerCallback != null) {
                                 triggerCallback.onOpen();
                             }

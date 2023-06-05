@@ -1,7 +1,11 @@
 package com.attentive.androidsdk.events;
 
 import androidx.annotation.Nullable;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
+
+@JsonDeserialize(builder = Cart.Builder.class)
 public class Cart {
     private final String cartId;
     private final String cartCoupon;
@@ -11,6 +15,7 @@ public class Cart {
         cartCoupon = builder.cartCoupon;
     }
 
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class Builder {
         private String cartId;
         private String cartCoupon;
