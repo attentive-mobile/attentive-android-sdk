@@ -3,7 +3,12 @@ package com.attentive.androidsdk.events;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.attentive.androidsdk.ParameterValidation;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
+@JsonDeserialize(builder = Item.Builder.class)
 public class Item {
     private final String productId;
     private final String productVariantId;
@@ -23,6 +28,7 @@ public class Item {
         category = builder.category;
     }
 
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class Builder {
         private final String productId;
         private final String productVariantId;
@@ -32,7 +38,10 @@ public class Item {
         private int quantity = 1;
         private String category;
 
-        public Builder(String productId, String productVariantId, Price price) {
+        @JsonCreator
+        public Builder(@JsonProperty("productId") String productId,
+                       @JsonProperty("productVariantId")String productVariantId,
+                       @JsonProperty("price") Price price) {
             ParameterValidation.verifyNotEmpty(productId, "productId");
             ParameterValidation.verifyNotEmpty(productVariantId, "productVariantId");
             ParameterValidation.verifyNotNull(price, "price");

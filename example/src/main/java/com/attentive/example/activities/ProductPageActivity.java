@@ -13,7 +13,6 @@ import com.attentive.androidsdk.events.Item;
 import com.attentive.androidsdk.events.Order;
 import com.attentive.androidsdk.events.Price;
 import com.attentive.androidsdk.events.ProductViewEvent;
-import com.attentive.androidsdk.events.Purchase;
 import com.attentive.androidsdk.events.PurchaseEvent;
 import com.attentive.example.R;
 import java.math.BigDecimal;

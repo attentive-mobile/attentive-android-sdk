@@ -2,10 +2,15 @@ package com.attentive.androidsdk.events;
 
 import androidx.annotation.NonNull;
 import com.attentive.androidsdk.ParameterValidation;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
 
+@JsonDeserialize(builder = Price.Builder.class)
 public class Price {
     private final BigDecimal price;
     private final Currency currency;
@@ -15,11 +20,13 @@ public class Price {
         currency = builder.currency;
     }
 
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class Builder {
         private final BigDecimal price;
         private final Currency currency;
 
-        public Builder(BigDecimal price, Currency currency) {
+        @JsonCreator
+        public Builder(@JsonProperty("price") BigDecimal price, @JsonProperty("currency") Currency currency) {
             ParameterValidation.verifyNotNull(price, "price");
             ParameterValidation.verifyNotNull(currency, "currency");
 
