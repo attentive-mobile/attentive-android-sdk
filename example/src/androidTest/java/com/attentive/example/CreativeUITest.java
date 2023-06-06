@@ -42,8 +42,8 @@ public class CreativeUITest {
     private static final String PRIVACY_URL = "https://www.attentive.com/privacy";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
-    private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Your creative \\(ID: \\d+\\) should be displayed correctly!";
-    private static final String DEBUG_OUTPUT_JSON = "Debug output JSON:";
+    private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Creative \\(ID: \\d+\\) should be displayed correctly!";
+    private static final String DEBUG_OUTPUT_JSON = "Debug output JSON";
 
     private UiDevice device;
     private UiSelector selector;
