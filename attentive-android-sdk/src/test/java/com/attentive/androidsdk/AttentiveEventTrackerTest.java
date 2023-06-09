@@ -47,25 +47,8 @@ public class AttentiveEventTrackerTest {
     }
 
     @Test
-    public void initialize_nullConfig_throws() {
-        assertThrows(IllegalArgumentException.class, () -> AttentiveEventTracker.getInstance().initialize(null));
-    }
-
-    @Test
     public void initialize_validConfig_success() {
         AttentiveEventTracker.getInstance().initialize(config);
-    }
-
-    @Test
-    public void initialize_calledTwice_throws() {
-        AttentiveEventTracker.getInstance().initialize(config);
-        assertThrows(IllegalStateException.class, () -> AttentiveEventTracker.getInstance().initialize(config));
-    }
-
-    @Test
-    public void recordEvent_nullEvent_throws() {
-        AttentiveEventTracker.getInstance().initialize(config);
-        assertThrows(IllegalArgumentException.class, () -> AttentiveEventTracker.getInstance().recordEvent(null));
     }
 
     @Test

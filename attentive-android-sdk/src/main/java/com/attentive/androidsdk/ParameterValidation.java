@@ -1,12 +1,14 @@
 package com.attentive.androidsdk;
 
 import java.util.Collection;
+import android.util.Log;
 
 // TODO move to 'internal' package
 public class ParameterValidation {
+    private static final String TAG = "ParameterValidation";
     public static void verifyNotNull(Object param, String paramName) {
         if (param == null) {
-            throw new IllegalArgumentException(paramName + " cannot be null.");
+            Log.e(TAG, paramName + " cannot be null.");
         }
     }
 
@@ -14,15 +16,15 @@ public class ParameterValidation {
         verifyNotNull(param, paramName);
 
         if (param.isEmpty()) {
-            throw new IllegalArgumentException(paramName + " cannot be empty.");
+            Log.e(TAG, paramName + " cannot be empty.");
         }
     }
 
-    public static void verifyNotEmpty(Collection param, String paramName) {
+    public static <T> void verifyNotEmpty(Collection<T> param, String paramName) {
         verifyNotNull(param, paramName);
 
         if (param.isEmpty()) {
-            throw new IllegalArgumentException(paramName + " cannot be empty.");
+            Log.e(TAG, paramName + " cannot be empty.");
         }
     }
 }
