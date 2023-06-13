@@ -1,13 +1,14 @@
 package com.attentive.androidsdk.events;
 
+import android.util.Log;
 import androidx.annotation.Nullable;
 import com.attentive.androidsdk.ParameterValidation;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CustomEvent extends Event {
-    private String type;
-    private Map<String, String> properties;
+    private final String type;
+    private final Map<String, String> properties;
 
     private CustomEvent(String type, Map<String, String> properties) {
         this.type = type;
@@ -25,18 +26,25 @@ public class CustomEvent extends Event {
          *                   Keys and values are case-sensitive.
          */
         public Builder(String type, Map<String, String> properties) {
-            ParameterValidation.verifyNotEmpty(type, "type");
-            ParameterValidation.verifyNotNull(properties, "properties");
+            this.type = null;
+            this.properties = null;
 
+            boolean typeEmpty = !ParameterValidation.verifyNotEmpty(type, "type");
+            boolean propsEmpty = !ParameterValidation.verifyNotNull(properties, "properties");
+            if (typeEmpty || propsEmpty) {
+                return;
+            }
             String invalidChar = findInvalidCharactersInType(type);
             if (invalidChar != null) {
-                throw new IllegalArgumentException(String.format("The 'type' parameter contains an invalid character: '%s'.", invalidChar));
+                Log.e(this.getClass().getName(), String.format("The 'type' parameter contains an invalid character: '%s'.", invalidChar));
+                return;
             }
 
             for (String key : properties.keySet()) {
                 String invalidKeyChar = findInvalidCharacterInPropertiesKey(key);
                 if (invalidKeyChar != null) {
-                    throw new IllegalArgumentException(String.format("The properties key '%s' contains an invalid character: '%s'.", key, invalidKeyChar));
+                    Log.e(this.getClass().getName(), String.format("The properties key '%s' contains an invalid character: '%s'.", key, invalidKeyChar));
+                    return;
                 }
             }
 
@@ -58,6 +66,9 @@ public class CustomEvent extends Event {
 
         @Nullable
         private String findInvalidCharacter(String subject, String[] chars) {
+            if (subject == null) {
+                return null;
+            }
             for (String character : chars) {
                 if (subject.contains(character)) {
                     return character;

@@ -125,7 +125,7 @@ class AttentiveApi {
                     return;
                 }
 
-                String fullTag = response.body().string();
+                String fullTag = body.string();
                 String geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag);
 
                 if (geoAdjustedDomain == null) {
@@ -410,7 +410,7 @@ class AttentiveApi {
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);
-            throw new IllegalStateException(error);
+            return List.of();
         }
 
         return eventRequests;
@@ -480,7 +480,8 @@ class AttentiveApi {
         try {
             return objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Could not serialize. Error: " + e.getMessage(), e);
+            Log.e(this.getClass().getName(), "Could not serialize. Error: " + e.getMessage());
+            return null;
         }
     }
 

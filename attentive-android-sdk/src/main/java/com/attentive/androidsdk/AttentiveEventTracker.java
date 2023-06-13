@@ -1,11 +1,9 @@
 package com.attentive.androidsdk;
 
 import android.util.Log;
-
 import com.attentive.androidsdk.events.Event;
 
 public class AttentiveEventTracker {
-    private static final String TAG = "AttentiveEventTracker";
     private static AttentiveEventTracker INSTANCE;
 
     public static AttentiveEventTracker getInstance() {
@@ -26,11 +24,11 @@ public class AttentiveEventTracker {
     public void initialize(AttentiveConfig config) {
         synchronized (AttentiveEventTracker.class) {
             if (this.config != null) {
-                Log.e(TAG, "AttentiveEventTracker cannot be initialized again");
+                Log.e(AttentiveEventTracker.class.getName(), "AttentiveEventTracker cannot be initialized again");
                 return;
             }
             if (config == null) {
-                Log.e(TAG, "AttentiveEventTracker must be initialized with non-null config");
+                Log.e(AttentiveEventTracker.class.getName(), "AttentiveEventTracker must be initialized with non-null config");
                 return;
             }
 
@@ -40,12 +38,12 @@ public class AttentiveEventTracker {
 
     public void recordEvent(Event event) {
         if (event == null) {
-            Log.e(TAG, "Will not record null event");
+            Log.e(AttentiveEventTracker.class.getName(), "Will not record null event");
             return;
         }
 
         if (this.config == null) {
-            Log.e(TAG, "AttentiveEventTracker is not initialized. Call initialize() before recording events.");
+            Log.e(AttentiveEventTracker.class.getName(), "AttentiveEventTracker is not initialized. Call initialize() before recording events.");
             return;
         }
 
