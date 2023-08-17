@@ -54,7 +54,7 @@ import org.mockito.stubbing.Answer;
 
 public class AttentiveApiTest {
     private static final String DOMAIN = "adj";
-    private static final String GEO_ADJUSTED_DOMAIN = "domainAdj";
+    private static final String GEO_ADJUSTED_DOMAIN = "domain-adj";
     private static final String DTAG_URL = String.format(AttentiveApi.ATTENTIVE_DTAG_URL, DOMAIN);
     private static final UserIdentifiers ALL_USER_IDENTIFIERS = buildAllUserIdentifiers();
 

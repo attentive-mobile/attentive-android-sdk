@@ -202,7 +202,7 @@ class AttentiveApi {
 
     @Nullable
     private String parseAttentiveDomainFromTag(String tag) {
-        Pattern pattern = Pattern.compile("window.__attentive_domain='(.*?).attn.tv'");
+        Pattern pattern = Pattern.compile("='([a-z0-9-]+)[.]attn[.]tv'");
         Matcher matcher = pattern.matcher(tag);
         if (matcher.find()) {
             if (matcher.groupCount() == 1) {
