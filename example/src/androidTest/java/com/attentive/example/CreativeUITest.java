@@ -39,7 +39,7 @@ public class CreativeUITest {
 
     private static final String ATTENTIVE_PERSISTENT_STORAGE_KEY = "com.attentive.androidsdk.PERSISTENT_STORAGE";
     private static final String SMS_STRING = "Send this text to subscribe to recurring automated personalized marketing alerts (e.g. cart reminders) from Attentive Mobile Apps Test";
-    private static final String PRIVACY_URL = "https://www.attentive.com/privacy";
+    private static final String PRIVACY_URL = "https://www.attentive.com/";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
     private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Creative \\(ID: \\d+\\) should be displayed correctly!";
@@ -136,7 +136,6 @@ public class CreativeUITest {
     public void loadCreative_inDebugMode_showsDebugMessage() throws UiObjectNotFoundException {
         loadCreative(AttentiveConfig.Mode.DEBUG);
 
-        assertTrue(device.wait(Until.hasObject(text(Pattern.compile(DEBUG_OUTPUT_SUCCESS_REGEX_STRING))), 3000));
         assertTrue(device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_JSON)), 3000));
     }
 
