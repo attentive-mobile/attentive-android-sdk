@@ -82,6 +82,7 @@ public class Creative {
     }
 
     public void trigger(CreativeTriggerCallback callback) {
+        Log.i(this.getClass().getName(), String.format("Attempting to trigger creative with attn domain %s", attentiveConfig.getDomain()));
         triggerCallback = callback;
 
         if (webView == null) {
@@ -101,6 +102,7 @@ public class Creative {
     }
 
     public void destroy() {
+        Log.i(this.getClass().getName(), String.format("Destroying creative"));
         if (parentView != null && webView != null) {
             ((ViewGroup) parentView).removeView(webView);
         }
