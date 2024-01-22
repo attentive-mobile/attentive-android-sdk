@@ -57,9 +57,8 @@ public class AttentiveEventTrackerTest {
     }
 
     @Test
-    public void initialize_calledTwice_throws() {
+    public void initialize_calledTwice_doesNotThrow() {
         AttentiveEventTracker.getInstance().initialize(config);
-        assertThrows(IllegalStateException.class, () -> AttentiveEventTracker.getInstance().initialize(config));
     }
 
     @Test

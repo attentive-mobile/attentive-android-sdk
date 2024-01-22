@@ -1,8 +1,8 @@
 package com.attentive.androidsdk;
 
 import android.util.Log;
-
 import com.attentive.androidsdk.events.Event;
+
 
 public class AttentiveEventTracker {
     private static AttentiveEventTracker INSTANCE;
