@@ -92,6 +92,11 @@ public class Creative {
             return;
         }
 
+        Log.i(this.getClass().getName(),
+                String.format("Attempting to trigger creative with attn domain %s, width %s, and height %s",
+                        attentiveConfig.getDomain(),
+                        webView.getWidth(), webView.getHeight()));
+
         String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig);
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
@@ -101,6 +106,7 @@ public class Creative {
     }
 
     public void destroy() {
+        Log.i(this.getClass().getName(), String.format("Destroying creative"));
         if (parentView != null && webView != null) {
             ((ViewGroup) parentView).removeView(webView);
         }
@@ -183,6 +189,7 @@ public class Creative {
     private WebViewCompat.WebMessageListener createCreativeListener() {
         return (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
             String messageData = message.getData();
+            Log.i(this.getClass().getName(), String.format("Creative message data %s", messageData));
             if (messageData != null) {
                 if (messageData.equalsIgnoreCase("CLOSE")) {
                     handler.post(() -> {

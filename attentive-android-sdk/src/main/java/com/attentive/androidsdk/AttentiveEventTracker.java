@@ -1,6 +1,8 @@
 package com.attentive.androidsdk;
 
+import android.util.Log;
 import com.attentive.androidsdk.events.Event;
+
 
 public class AttentiveEventTracker {
     private static AttentiveEventTracker INSTANCE;
@@ -22,10 +24,11 @@ public class AttentiveEventTracker {
 
     public void initialize(AttentiveConfig config) {
         ParameterValidation.verifyNotNull(config, "config");
+        Log.i(this.getClass().getName(), String.format("Initializing Attentive SDK with attn domain %s and mode %s", config.getDomain(), config.getMode()));
 
         synchronized (AttentiveEventTracker.class) {
             if (this.config != null) {
-                throw new IllegalStateException("AttentiveEventTracker cannot be initialized again");
+                Log.w(this.getClass().getName(), "Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime");
             }
 
             this.config = config;
@@ -42,7 +45,7 @@ public class AttentiveEventTracker {
     private void verifyInitialized() {
         synchronized (AttentiveEventTracker.class) {
             if (INSTANCE == null) {
-                throw new IllegalStateException("AttentiveEventTracker must be initialized before use.");
+                Log.e(this.getClass().getName(), "AttentiveEventTracker must be initialized before use.");
             }
         }
     }

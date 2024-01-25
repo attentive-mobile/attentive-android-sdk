@@ -410,7 +410,6 @@ class AttentiveApi {
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
             Log.e(this.getClass().getName(), error);
-            throw new IllegalStateException(error);
         }
 
         return eventRequests;

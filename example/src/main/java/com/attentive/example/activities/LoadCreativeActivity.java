@@ -78,6 +78,8 @@ public class LoadCreativeActivity extends AppCompatActivity {
         String domain = intent.getStringExtra("DOMAIN");
         String mode = intent.getStringExtra("MODE");
 
+        ((ExampleApp) getApplication()).getAttentiveConfig().clearUser();
+
         if (domain != null && mode != null) {
             ((ExampleApp) getApplication()).setAttentiveConfig(new AttentiveConfig(
                     domain, AttentiveConfig.Mode.valueOf(mode), getApplicationContext()));
