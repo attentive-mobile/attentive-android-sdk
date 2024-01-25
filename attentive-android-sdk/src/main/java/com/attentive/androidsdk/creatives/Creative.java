@@ -82,10 +82,6 @@ public class Creative {
     }
 
     public void trigger(CreativeTriggerCallback callback) {
-        Log.i(this.getClass().getName(),
-                String.format("Attempting to trigger creative with attn domain %s, width %s, and height %s",
-                        attentiveConfig.getDomain(),
-                        webView.getWidth(), webView.getHeight()));
         triggerCallback = callback;
 
         if (webView == null) {
@@ -95,6 +91,11 @@ public class Creative {
             }
             return;
         }
+
+        Log.i(this.getClass().getName(),
+                String.format("Attempting to trigger creative with attn domain %s, width %s, and height %s",
+                        attentiveConfig.getDomain(),
+                        webView.getWidth(), webView.getHeight()));
 
         String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig);
 
