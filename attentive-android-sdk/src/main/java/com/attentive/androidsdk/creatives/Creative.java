@@ -82,7 +82,10 @@ public class Creative {
     }
 
     public void trigger(CreativeTriggerCallback callback) {
-        Log.i(this.getClass().getName(), String.format("Attempting to trigger creative with attn domain %s", attentiveConfig.getDomain()));
+        Log.i(this.getClass().getName(),
+                String.format("Attempting to trigger creative with attn domain %s, width %s, and height %s",
+                        attentiveConfig.getDomain(),
+                        webView.getWidth(), webView.getHeight()));
         triggerCallback = callback;
 
         if (webView == null) {
@@ -185,6 +188,7 @@ public class Creative {
     private WebViewCompat.WebMessageListener createCreativeListener() {
         return (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
             String messageData = message.getData();
+            Log.i(this.getClass().getName(), String.format("Creative message data %s", messageData));
             if (messageData != null) {
                 if (messageData.equalsIgnoreCase("CLOSE")) {
                     handler.post(() -> {

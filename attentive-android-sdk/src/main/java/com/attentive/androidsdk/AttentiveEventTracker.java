@@ -23,7 +23,7 @@ public class AttentiveEventTracker {
     }
 
     public void initialize(AttentiveConfig config) {
-        Log.i(this.getClass().getName(), "Initializing Attentive SDK with attn domain %s and mode %s");
+        Log.i(this.getClass().getName(), String.format("Initializing Attentive SDK with attn domain %s and mode %s", config.getDomain(), config.getMode()));
         ParameterValidation.verifyNotNull(config, "config");
 
         synchronized (AttentiveEventTracker.class) {

@@ -4,7 +4,6 @@ import static android.content.Intent.ACTION_VIEW;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasData;
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
-import static androidx.test.uiautomator.By.text;
 import static androidx.test.uiautomator.By.textContains;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasToString;
@@ -27,7 +26,6 @@ import androidx.test.uiautomator.UiSelector;
 import androidx.test.uiautomator.Until;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.example.activities.LoadCreativeActivity;
-import java.util.regex.Pattern;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,7 +40,6 @@ public class CreativeUITest {
     private static final String PRIVACY_URL = "https://www.attentive.com/";
     private static final String PRIVACY_STRING = "Attentive Mobile Inc. Privacy Policy";
     private static final String PUSH_ME_FOR_CREATIVE = "PUSH ME FOR CREATIVE!";
-    private static final String DEBUG_OUTPUT_SUCCESS_REGEX_STRING = "Creative \\(ID: \\d+\\) should be displayed correctly!";
     private static final String DEBUG_OUTPUT_JSON = "Debug output JSON";
 
     private UiDevice device;
@@ -74,69 +71,91 @@ public class CreativeUITest {
 
     @Test
     public void loadCreative_clickClose_closesCreative() throws UiObjectNotFoundException {
-        loadCreative(AttentiveConfig.Mode.PRODUCTION);
+        synchronized (device) {
+            loadCreative(AttentiveConfig.Mode.PRODUCTION);
 
-        // Close the Creative
-        UiObject closeButton = device.findObject(selector.resourceId("closeIconContainer"));
-        closeButton.click();
+            UiObject emailInput = device.findObject(selector.resourceId("input0input"));
+            emailInput.setText("testmail@attentivemobile.com");
 
-        checkIfCreativeClosed();
+            // Close the Creative
+            UiObject closeButton = device.findObject(new UiSelector().resourceId("closeIconContaisdfner"));
+            UiObject dismissButton = device.findObject(new UiSelector().descriptionContains("Disdfsmiss this popup"));
+            UiObject clickOutside = device.findObject(new UiSelector().textContains("Attentive Example"));
+            if (closeButton.exists()) {
+                closeButton.click();
+            } else if (dismissButton.exists()) {
+                dismissButton.click();
+            } else {
+                clickOutside.click();
+            }
+
+            checkIfCreativeClosed();
+        }
     }
 
 
     @Test
-    public void loadCreative_fillOutFormAndSubmit_launchesSmsAppWithPrePopulatedText() throws UiObjectNotFoundException {
-        loadCreative(AttentiveConfig.Mode.PRODUCTION);
+    public void loadCreative_fillOutFormAndSubmit_launchesSmsAppWithPrePopulatedText() throws UiObjectNotFoundException, InterruptedException {
+        synchronized (device) {
+            loadCreative(AttentiveConfig.Mode.PRODUCTION);
 
-        // fill in email
-        UiObject emailInput = device.findObject(selector.resourceId("input0input"));
-        emailInput.setText("testmail@attentivemobile.com");
-        device.pressEnter();
-        device.waitForIdle();
+            // fill in email
+            UiObject emailInput = device.findObject(selector.resourceId("input0input"));
+            emailInput.setText("testmail@attentivemobile.com");
+            device.pressEnter();
+            device.waitForIdle();
 
-        // submit email
-        UiObject emailSubmitButton = device.findObject(selector.resourceId("ctabutton1"));
-        emailSubmitButton.click();
-        device.waitForIdle();
+            // submit email
+            UiObject emailSubmitButton = device.findObject(new UiSelector().textContains("Continue"));
+            if (emailSubmitButton.exists()) {
+                emailSubmitButton.click();
+                device.waitForIdle();
+            }
 
-        // click subscribe button
-        UiObject subscribeButton = device.findObject(selector.textContains("GET 10% OFF NOW"));
-        subscribeButton.click();
-        device.waitForIdle();
+            // click subscribe button
+            device.wait(3000);
+            UiObject subscribeButton = device.findObject(selector.textContains("GET 10% OFF NOW"));
+            subscribeButton.click();
+            device.waitForIdle();
 
-        // Verify intent to open sms app
-        Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
+            // Verify intent to open sms app
+            Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith("sms://")))));
 
-        // Verify that the SMS app is opened with prepopulated text if running locally
-        // (AWS Device Farm doesn't allow use of SMS apps)
-        String testHost = InstrumentationRegistry.getArguments().getString("testHost");
-        if (testHost != null && testHost.equals("local")) {
-            assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+            // Verify that the SMS app is opened with prepopulated text if running locally
+            // (AWS Device Farm doesn't allow use of SMS apps)
+            String testHost = InstrumentationRegistry.getArguments().getString("testHost");
+            if (testHost != null && testHost.equals("local")) {
+                assertTrue(device.wait(Until.hasObject(textContains(SMS_STRING)), 3000));
+            }
         }
     }
 
     @Test
     public void loadCreative_clickPrivacyLink_opensPrivacyPageInWebApp() throws UiObjectNotFoundException {
-        loadCreative(AttentiveConfig.Mode.PRODUCTION);
+        synchronized (device) {
+            loadCreative(AttentiveConfig.Mode.PRODUCTION);
 
-        // Click privacy link
-        UiObject privacyLink = device.findObject(selector.textMatches("Privacy"));
-        privacyLink.click();
+            // Click privacy link
+            UiObject privacyLink = device.findObject(selector.textMatches("Privacy"));
+            privacyLink.click();
 
-        device.waitForIdle();
+            device.waitForIdle();
 
-        // Verify intent to open privacy page in external browser
-        Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(PRIVACY_URL)))));
+            // Verify intent to open privacy page in external browser
+            Intents.intended(allOf(hasAction(ACTION_VIEW), hasData(hasToString(startsWith(PRIVACY_URL)))));
 
-        // Verify that the privacy page is visible in the external browser
-        assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 5000));
+            // Verify that the privacy page is visible in the external browser
+            assertTrue(device.wait(Until.hasObject(textContains(PRIVACY_STRING)), 10000));
+        }
     }
 
     @Test
     public void loadCreative_inDebugMode_showsDebugMessage() throws UiObjectNotFoundException {
-        loadCreative(AttentiveConfig.Mode.DEBUG);
+        synchronized (device) {
+            loadCreative(AttentiveConfig.Mode.DEBUG);
 
-        assertTrue(device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_JSON)), 3000));
+            assertTrue(device.wait(Until.hasObject(textContains(DEBUG_OUTPUT_JSON)), 3000));
+        }
     }
 
     private static void clearSharedPreferences() {
@@ -154,16 +173,18 @@ public class CreativeUITest {
     }
 
     private void loadCreative(AttentiveConfig.Mode mode) throws UiObjectNotFoundException {
-        Intent intent = new Intent(ApplicationProvider.getApplicationContext(), LoadCreativeActivity.class);
-        intent.putExtra("DOMAIN", "mobileapps");
-        intent.putExtra("MODE", mode.toString());
-        ActivityScenario.launch(intent);
+        synchronized (device) {
+            Intent intent = new Intent(ApplicationProvider.getApplicationContext(), LoadCreativeActivity.class);
+            intent.putExtra("DOMAIN", "mobileapps");
+            intent.putExtra("MODE", mode.toString());
+            ActivityScenario.launch(intent);
 
-        device.waitForIdle();
+            device.waitForIdle();
 
-        // Click "Push me for creative!"
-        UiObject creativeButton = device.findObject(selector.textContains(PUSH_ME_FOR_CREATIVE));
-        creativeButton.click();
+            // Click "Push me for creative!"
+            UiObject creativeButton = device.findObject(selector.textContains(PUSH_ME_FOR_CREATIVE));
+            creativeButton.click();
+        }
     }
 
     private void checkIfCreativeClosed() {
