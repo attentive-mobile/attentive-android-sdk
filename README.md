@@ -32,13 +32,13 @@ AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", A
 AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.DEBUG, context);
 ```
 
+\* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)
+
 ### Initialize the Event Tracker
 ```java
 // Right after defining the config, initialize the Event Tracker in order to send ecommerce and identification events *
 AttentiveEventTracker.getInstance().initialize(attentiveConfig);
 ```
-
-\* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)
 
 ### Identify the current user
 ```java
