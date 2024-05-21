@@ -92,6 +92,7 @@ class AttentiveApi {
     @VisibleForTesting
     interface GetGeoAdjustedDomainCallback {
         void onFailure(String reason);
+
         void onSuccess(String geoAdjustedDomain);
     }
 
@@ -160,13 +161,13 @@ class AttentiveApi {
         }
 
         HttpUrl.Builder urlBuilder = getHttpUrlEventsEndpointBuilder()
-            .addQueryParameter("tag", "modern")
-            .addQueryParameter("v", "mobile-app")
-            .addQueryParameter("c", geoAdjustedDomain)
-            .addQueryParameter("t", "idn")
-            .addQueryParameter("evs", externalVendorIdsJson)
-            .addQueryParameter("m", metadataJson)
-            .addQueryParameter("lt", "0");
+                .addQueryParameter("tag", "modern")
+                .addQueryParameter("v", "mobile-app")
+                .addQueryParameter("c", geoAdjustedDomain)
+                .addQueryParameter("t", "idn")
+                .addQueryParameter("evs", externalVendorIdsJson)
+                .addQueryParameter("m", metadataJson)
+                .addQueryParameter("lt", "0");
 
         if (userIdentifiers.getVisitorId() != null) {
             urlBuilder.addQueryParameter("u", userIdentifiers.getVisitorId());
@@ -232,10 +233,10 @@ class AttentiveApi {
 
         if (userIdentifiers.getClientUserId() != null) {
             externalVendorIdList.add(
-                new ExternalVendorId() {{
-                    setVendor(Vendor.CLIENT_USER);
-                    setId(userIdentifiers.getClientUserId());
-                }});
+                    new ExternalVendorId() {{
+                        setVendor(Vendor.CLIENT_USER);
+                        setId(userIdentifiers.getClientUserId());
+                    }});
         }
 
         if (userIdentifiers.getShopifyId() != null) {
@@ -416,7 +417,7 @@ class AttentiveApi {
     }
 
     private void sendEventInternalAsync(List<EventRequest> eventRequests, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
-        for (EventRequest eventRequest: eventRequests) {
+        for (EventRequest eventRequest : eventRequests) {
             sendEventInternalAsync(eventRequest, userIdentifiers, domain, callback);
         }
     }
@@ -435,14 +436,14 @@ class AttentiveApi {
         }
 
         HttpUrl.Builder urlBuilder = getHttpUrlEventsEndpointBuilder()
-            .addQueryParameter("v", "mobile-app")
-            .addQueryParameter("lt", "0")
-            .addQueryParameter("tag", "modern")
-            .addQueryParameter("evs", externalVendorIdsJson)
-            .addQueryParameter("c", domain)
-            .addQueryParameter("t", eventRequest.getType().getAbbreviation())
-            .addQueryParameter("u", userIdentifiers.getVisitorId())
-            .addQueryParameter("m", serialize(metadata));
+                .addQueryParameter("v", "mobile-app")
+                .addQueryParameter("lt", "0")
+                .addQueryParameter("tag", "modern")
+                .addQueryParameter("evs", externalVendorIdsJson)
+                .addQueryParameter("c", domain)
+                .addQueryParameter("t", eventRequest.getType().getAbbreviation())
+                .addQueryParameter("u", userIdentifiers.getVisitorId())
+                .addQueryParameter("m", serialize(metadata));
 
         HttpUrl url = urlBuilder.build();
 
@@ -461,7 +462,7 @@ class AttentiveApi {
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (!response.isSuccessful()) {
                     String error = "Could not send the request. Invalid response code: " + response.code() + ", message: "
-                                 + response.message();
+                            + response.message();
                     Log.e(this.getClass().getName(), error);
                     if (callback != null) {
                         callback.onFailure(error);
@@ -480,6 +481,14 @@ class AttentiveApi {
             return objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Could not serialize. Error: " + e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(
+                    "Could not serialize. If it's due to no default constructor, " +
+                            "consider changing proguard rules to avoid changing the class that's causing " +
+                            "the error. If you are not sure how to do so, consider adding the following:\n" +
+                            "-keep class com.attentive.androidsdk.** { *; }\n" +
+                            "Error: " + e.getMessage(), e
+            );
         }
     }
 
