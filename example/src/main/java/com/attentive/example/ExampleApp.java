@@ -19,7 +19,11 @@ public class ExampleApp extends Application {
         super.onCreate();
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
-        this.attentiveConfig = new AttentiveConfig(ATTENTIVE_DOMAIN, MODE, getApplicationContext());
+        this.attentiveConfig = new AttentiveConfig.Builder()
+                .context(getApplicationContext())
+                .domain(ATTENTIVE_DOMAIN)
+                .mode(MODE)
+                .build();
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can be used to send
         // events. The method "initialize" only needs to be called once.

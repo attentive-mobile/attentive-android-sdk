@@ -17,7 +17,11 @@ class ExampleKotlinApp : Application() {
         super.onCreate()
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
-        attentiveConfig = AttentiveConfig(attentiveDomain, mode, this)
+        attentiveConfig = AttentiveConfig.Builder()
+                .domain(attentiveDomain)
+                .mode(mode)
+                .context(this)
+                .build()
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can
         // be used to send events. The method "initialize" only needs to be called once.

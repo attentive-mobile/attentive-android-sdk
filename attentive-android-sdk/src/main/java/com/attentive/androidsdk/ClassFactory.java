@@ -30,4 +30,8 @@ public class ClassFactory {
     public static AttentiveApi buildAttentiveApi(OkHttpClient okHttpClient, ObjectMapper objectMapper) {
         return new AttentiveApi(okHttpClient, objectMapper);
     }
+
+    public static SettingsService buildSettingsService(PersistentStorage persistentStorage) {
+        return new SettingsService(persistentStorage);
+    }
 }

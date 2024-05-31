@@ -2,6 +2,7 @@ package com.attentive.androidsdk;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class PersistentStorage {
@@ -23,9 +24,21 @@ public class PersistentStorage {
         sharedPreferences.edit().putString(key, value).apply();
     }
 
+    public void save(@NonNull String key, @Nullable Boolean value) {
+        sharedPreferences.edit().putBoolean(key, value).apply();
+    }
+
     @Nullable
     public String read(String key) {
         return sharedPreferences.getString(key, null);
+    }
+
+    @Nullable
+    public Boolean readBoolean(@NonNull String key) {
+        if (sharedPreferences.contains(key)) {
+            return sharedPreferences.getBoolean(key, false);
+        }
+        return null;
     }
 
     public void delete(String key) {

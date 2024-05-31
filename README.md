@@ -18,18 +18,44 @@ implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 ```
 
 ## Usage
-See the [Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example)
+See the [Java Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example) 
+or the [Kotlin Example Project](https://github.com/attentive-mobile/attentive-android-sdk/tree/main/example-kotlin/src/main/java/com/attentive/example_kotlin)
 for a sample of how the Attentive Android SDK is used.
 
 __*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
-### Create the AttentiveConfig
+## Create the AttentiveConfig
+### In Java:
 ```java
 // Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
-AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.PRODUCTION, context);
+AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
+        .context(getApplicationContext())
+        .domain("YOUR_ATTENTIVE_DOMAIN")
+        .mode(AttentiveConfig.Mode.PRODUCTION)
+        .build();
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
-AttentiveConfig attentiveConfig = new AttentiveConfig("YOUR_ATTENTIVE_DOMAIN", AttentiveConfig.Mode.DEBUG, context);
+AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
+        .context(getApplicationContext())
+        .domain("YOUR_ATTENTIVE_DOMAIN")
+        .mode(AttentiveConfig.Mode.DEBUG)
+        .build();
+```
+### In Kotlin:
+```kotlin
+// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
+val attentiveConfig = AttentiveConfig.Builder()
+        .context(getApplicationContext())
+        .domain("YOUR_ATTENTIVE_DOMAIN")
+        .mode(AttentiveConfig.Mode.PRODUCTION)
+        .build()
+
+// Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
+val attentiveConfig = AttentiveConfig.Builder()
+        .context(getApplicationContext())
+        .domain("YOUR_ATTENTIVE_DOMAIN")
+        .mode(AttentiveConfig.Mode.DEBUG)
+        .build()
 ```
 
 \* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)

@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.annotation.Nullable;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import com.attentive.androidsdk.AttentiveConfig;
@@ -81,7 +82,16 @@ public class Creative {
         trigger(null);
     }
 
-    public void trigger(CreativeTriggerCallback callback) {
+    public void trigger(@Nullable CreativeTriggerCallback callback) {
+        trigger(callback, null);
+    }
+
+    /**
+     * Triggers to show the creative.
+     * @param callback {@link CreativeTriggerCallback} to be called when the creative updates it's state.
+     * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
+     */
+    public void trigger(@Nullable CreativeTriggerCallback callback, @Nullable String creativeId) {
         triggerCallback = callback;
 
         if (webView == null) {
@@ -97,7 +107,7 @@ public class Creative {
                         attentiveConfig.getDomain(),
                         webView.getWidth(), webView.getHeight()));
 
-        String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig);
+        String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, creativeId);
 
         if (attentiveConfig.getMode().equals(AttentiveConfig.Mode.DEBUG)) {
             webView.setVisibility(View.VISIBLE);
@@ -106,7 +116,7 @@ public class Creative {
     }
 
     public void destroy() {
-        Log.i(this.getClass().getName(), String.format("Destroying creative"));
+        Log.i(this.getClass().getName(), "Destroying creative");
         if (parentView != null && webView != null) {
             ((ViewGroup) parentView).removeView(webView);
         }

@@ -2,6 +2,7 @@ package com.attentive.androidsdk;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,13 +46,42 @@ public class AttentiveConfigTest {
         // Arrange
 
         // Act
-        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
 
         // Assert
         assertEquals(DOMAIN, config.getDomain());
         assertEquals(MODE, config.getMode());
-        assertFalse(config.getUserIdentifiers().getVisitorId().isEmpty());
-        assertTrue(config.getAttentiveApi() instanceof AttentiveApi);
+        String visitorId = config.getUserIdentifiers().getVisitorId();
+        assertTrue(visitorId != null && !visitorId.isEmpty());
+        assertNotNull(config.getAttentiveApi());
+        assertFalse(config.skipFatigueOnCreatives());
+
+        verify(factoryMocks.getAttentiveApi()).sendEvent(argThat(arg -> arg instanceof InfoEvent), eq(config.getUserIdentifiers()), eq(DOMAIN));
+    }
+
+    @Test
+    public void constructor_validParams_gettersReturnConstructorParams_skipFatigueAsTrue() {
+        // Arrange
+
+        // Act
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .skipFatigueOnCreatives(true)
+                .build();
+
+        // Assert
+        assertEquals(DOMAIN, config.getDomain());
+        assertEquals(MODE, config.getMode());
+        String visitorId = config.getUserIdentifiers().getVisitorId();
+        assertTrue(visitorId != null && !visitorId.isEmpty());
+        assertNotNull(config.getAttentiveApi());
+        assertTrue(config.skipFatigueOnCreatives());
 
         verify(factoryMocks.getAttentiveApi()).sendEvent(argThat(arg -> arg instanceof InfoEvent), eq(config.getUserIdentifiers()), eq(DOMAIN));
     }
@@ -59,7 +89,11 @@ public class AttentiveConfigTest {
     @Test
     public void clearUser_identifyWasPreviouslyCalledWithIdentifiers_identifiersAreCleared() {
         // Arrange
-        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
         UserIdentifiers userIdentifiers = buildUserIdentifiers();
         config.identify(userIdentifiers);
 
@@ -78,7 +112,11 @@ public class AttentiveConfigTest {
     @Test
     public void clearUser_verifyNewVisitorIdCreated() {
         // Arrange
-        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
         assertEquals(VISITOR_ID, config.getUserIdentifiers().getVisitorId());
 
         // Act
@@ -92,7 +130,11 @@ public class AttentiveConfigTest {
     @Test
     public void identify_identifyWasPreviouslyCalledWithIdentifiers_identifiersAreUpdated() {
         // Arrange
-        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
         config.identify(buildUserIdentifiers());
 
         // Act
@@ -119,7 +161,11 @@ public class AttentiveConfigTest {
 
     @Test
     public void identify_withIdentifiers_sendsUserIdentifierCollectedEvent() {
-        AttentiveConfig config = new AttentiveConfig(DOMAIN, MODE, mock(Context.class));
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
         UserIdentifiers userIdentifiers = buildUserIdentifiers();
         config.identify(userIdentifiers);
 
