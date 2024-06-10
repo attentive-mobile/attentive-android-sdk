@@ -2,6 +2,7 @@ plugins {
     id 'com.android.library'
     id 'maven-publish'
     id 'signing'
+    id 'org.jetbrains.kotlin.android'
 }
 
 def versionName = properties["VERSION_NAME"]
@@ -9,11 +10,11 @@ def versionName = properties["VERSION_NAME"]
 android {
     namespace = 'com.attentive.androidsdk'
 
-    compileSdk 32
+    compileSdk 34
 
     defaultConfig {
         minSdk 21
-        targetSdk 32
+        targetSdk 34
 
         buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
@@ -67,6 +68,7 @@ dependencies {
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
     api 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'androidx.activity:activity:1.8.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.9.0'

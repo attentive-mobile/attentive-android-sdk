@@ -2,38 +2,52 @@ package com.attentive.androidsdk.internal.util;
 
 import android.net.Uri;
 import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.UserIdentifiers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 public class CreativeUrlFormatter {
 
+    @NonNull
     private final ObjectMapper objectMapper;
 
-    public CreativeUrlFormatter(ObjectMapper objectMapper) {
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public CreativeUrlFormatter(@NonNull ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
-    public String buildCompanyCreativeUrl(AttentiveConfig attentiveConfig) {
-        Uri.Builder uriBuilder =
-                getCompanyCreativeUriBuilder(attentiveConfig.getDomain(), attentiveConfig.getMode());
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public String buildCompanyCreativeUrl(@NonNull AttentiveConfig attentiveConfig, @Nullable String creativeId) {
+        @NonNull
+        final Uri.Builder uriBuilder = getCompanyCreativeUriBuilder(attentiveConfig, creativeId);
 
-        UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
+        @NonNull
+        final UserIdentifiers userIdentifiers = attentiveConfig.getUserIdentifiers();
 
         addUserIdentifiersAsParameters(uriBuilder, userIdentifiers);
 
         return uriBuilder.build().toString();
     }
 
-    private Uri.Builder getCompanyCreativeUriBuilder(String domain, AttentiveConfig.Mode mode) {
+    @NonNull
+    private Uri.Builder getCompanyCreativeUriBuilder(
+            @NonNull AttentiveConfig config,
+            @Nullable String creativeId
+    ) {
+        String domain = config.getDomain();
+        AttentiveConfig.Mode mode = config.getMode();
+        boolean skipFatigue = config.skipFatigueOnCreatives();
+
         Uri.Builder creativeUriBuilder = new Uri.Builder()
                 .scheme("https")
                 .authority("creatives.attn.tv")
                 .path("mobile-apps/index.html")
                 .appendQueryParameter("domain", domain);
-
 
         if (mode == AttentiveConfig.Mode.DEBUG) {
             creativeUriBuilder.appendQueryParameter("debug", "matter-trip-grass-symbol");
@@ -41,12 +55,19 @@ public class CreativeUrlFormatter {
 
         creativeUriBuilder.appendQueryParameter("sdkVersion", AppInfo.getAttentiveSDKVersion());
         creativeUriBuilder.appendQueryParameter("sdkName", AppInfo.getAttentiveSDKName());
+        creativeUriBuilder.appendQueryParameter("skipFatigue", Boolean.toString(skipFatigue));
+
+        if (creativeId != null) {
+            creativeUriBuilder.appendQueryParameter("attn_creative_id", creativeId);
+        }
 
         return creativeUriBuilder;
     }
 
-    private void addUserIdentifiersAsParameters(Uri.Builder builder,
-                                                UserIdentifiers userIdentifiers) {
+    private void addUserIdentifiersAsParameters(
+            @NonNull Uri.Builder builder,
+            @NonNull UserIdentifiers userIdentifiers
+    ) {
         if (userIdentifiers.getVisitorId() != null) {
             builder.appendQueryParameter("vid", userIdentifiers.getVisitorId());
         } else {
@@ -73,7 +94,8 @@ public class CreativeUrlFormatter {
         }
     }
 
-    private String getCustomIdentifiersJson(UserIdentifiers userIdentifiers) {
+    @NonNull
+    private String getCustomIdentifiersJson(@NonNull UserIdentifiers userIdentifiers) {
         try {
             return objectMapper.writeValueAsString(userIdentifiers.getCustomIdentifiers());
         } catch (JsonProcessingException e) {

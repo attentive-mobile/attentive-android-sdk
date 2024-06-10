@@ -15,10 +15,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-
 @RunWith(AndroidJUnit4.class)
 public class CreativeUrlFormatterTest {
-    private static String DOMAIN = "testDomain";
+    private static final String BASE_TEST_URL = "https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain";
+    private static final String DOMAIN = "testDomain";
 
     private AttentiveConfig attentiveConfig;
     private CreativeUrlFormatter creativeUrlBuilder;
@@ -35,18 +35,18 @@ public class CreativeUrlFormatterTest {
 
     @Test
     public void buildCompanyCreativeUrl_productionMode_buildsProdUrl() {
-        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
+        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig, null);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk", url);
+        assertEquals(BASE_TEST_URL + "&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&skipFatigue=false", url);
     }
 
     @Test
     public void buildCompanyCreativeUrl_DebugMode_buildsDebugUrl() {
         when(attentiveConfig.getMode()).thenReturn(AttentiveConfig.Mode.DEBUG);
 
-        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
+        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig, null);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&debug=matter-trip-grass-symbol&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk", url);
+        assertEquals(BASE_TEST_URL + "&debug=matter-trip-grass-symbol&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&skipFatigue=false", url);
     }
 
     @Test
@@ -63,9 +63,9 @@ public class CreativeUrlFormatterTest {
                 .build();
         when(attentiveConfig.getUserIdentifiers()).thenReturn(userIdentifiers);
 
-        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
+        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig, null);
 
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D", url);
+        assertEquals(BASE_TEST_URL + "&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&skipFatigue=false&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D", url);
     }
 
     @Test
@@ -80,9 +80,17 @@ public class CreativeUrlFormatterTest {
                 .build();
         when(attentiveConfig.getUserIdentifiers()).thenReturn(userIdentifiers);
 
-        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig);
+        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig, null);
 
         // assert custom identifiers set to {} and no error is thrown
-        assertEquals("https://creatives.attn.tv/mobile-apps/index.html?domain=testDomain&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&cstm=%7B%7D", url);
+        assertEquals(BASE_TEST_URL + "&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&skipFatigue=false&cstm=%7B%7D", url);
+    }
+
+    @Test
+    public void buildCompanyCreativeUrl_productionMode_buildsProdUrl_withCreativeId() {
+        final String creativeId = "22233";
+        String url = creativeUrlBuilder.buildCompanyCreativeUrl(attentiveConfig, creativeId);
+
+        assertEquals(BASE_TEST_URL + "&sdkVersion=" + AppInfo.getAttentiveSDKVersion() + "&sdkName=attentive-android-sdk&skipFatigue=false&attn_creative_id=" + creativeId, url);
     }
 }

@@ -1,9 +1,11 @@
 package com.attentive.androidsdk.internal.util;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
 import com.attentive.androidsdk.BuildConfig;
 
 public class AppInfo {
@@ -70,5 +72,14 @@ public class AppInfo {
      */
     public static String getAttentiveSDKName() {
         return "attentive-android-sdk";
+    }
+
+    /**
+     * @return true if the host app is debuggable
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public static boolean isDebuggable(Context context) {
+        return ((context.getApplicationInfo().flags
+                & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
     }
 }
