@@ -1,6 +1,8 @@
 package com.attentive.example_kotlin.activities
 
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.view.View
 import android.webkit.CookieManager
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +21,7 @@ class LoadCreativeActivity : AppCompatActivity() {
 
         // Attach the creative to the provided parentView
         val parentView = findViewById<View>(R.id.loadCreative).parent as View
-        this.creative = Creative(attentiveConfig, parentView)
+        this.creative = Creative(attentiveConfig, parentView, this)
     }
 
     override fun onDestroy() {
@@ -36,6 +38,14 @@ class LoadCreativeActivity : AppCompatActivity() {
 
         // Display the creative
         creative.trigger()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        val creativeClosed = creative.onBackPressed()
+        if (!creativeClosed) {
+            super.onBackPressed()
+        }
     }
 
     private fun clearCookies() {

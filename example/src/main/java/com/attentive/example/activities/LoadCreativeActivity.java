@@ -2,6 +2,7 @@ package com.attentive.example.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -26,7 +27,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
 
         // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
-        this.creative = new Creative(((ExampleApp) getApplication()).getAttentiveConfig(), parentView);
+        this.creative = new Creative(((ExampleApp) getApplication()).getAttentiveConfig(), parentView, this);
     }
 
     @Override
@@ -65,6 +66,14 @@ public class LoadCreativeActivity extends AppCompatActivity {
                 Log.i(this.getClass().getName(), "Closed the creative!");
             }
         });
+    }
+
+    @Override
+    public void onBackPressed() {
+        boolean creativeClosed = creative.onBackPressed();
+        if (!creativeClosed) {
+            super.onBackPressed();
+        }
     }
 
     private void clearCookies() {

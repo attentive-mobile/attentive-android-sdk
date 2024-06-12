@@ -1,9 +1,11 @@
 package com.attentive.androidsdk.creatives;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
@@ -24,6 +26,11 @@ public class Creative {
     public static final String TAG = Creative.class.getSimpleName();
     private static final Set<String> CREATIVE_LISTENER_ALLOWED_ORIGINS = Set.of("https://creatives.attn.tv");
     private static final String CREATIVE_LISTENER_JS = "javascript:(async function() {\n" +
+            "    window.addEventListener('visibilitychange', \n" +
+            "        function(event){\n" +
+            "           CREATIVE_LISTENER.postMessage(`document-visibility: ${document.hidden}`);\n" +
+            "        },\n" +
+            "    false);\n" +
             "    window.addEventListener('message',\n" +
             "        function(event){\n" +
             "            if (event.data && event.data.__attentive && event.data.__attentive.action === 'CLOSE') {\n" +
@@ -63,6 +70,10 @@ public class Creative {
     private CreativeTriggerCallback triggerCallback;
 
     public Creative(AttentiveConfig attentiveConfig, View parentView) {
+        this(attentiveConfig, parentView, null);
+    }
+
+    public Creative(AttentiveConfig attentiveConfig, View parentView, @Nullable Activity activity) {
         this.attentiveConfig = attentiveConfig;
         this.parentView = parentView;
 
@@ -77,12 +88,23 @@ public class Creative {
                 webView, new ViewGroup.LayoutParams(parentView.getLayoutParams()));
 
         this.creativeUrlFormatter = new CreativeUrlFormatter(ClassFactory.buildObjectMapper());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && activity != null) {
+            // Delegate to CreativeActivityCallbacks to handle lifecycle events
+            activity.registerActivityLifecycleCallbacks(new CreativeActivityCallbacks(this));
+        }
     }
 
+    /**
+     * Triggers to show the creative.
+     */
     public void trigger() {
         trigger(null);
     }
 
+    /**
+     * Triggers to show the creative.
+     * @param callback {@link CreativeTriggerCallback} to be called when the creative updates it's state.
+     */
     public void trigger(@Nullable CreativeTriggerCallback callback) {
         trigger(callback, null);
     }
@@ -121,6 +143,14 @@ public class Creative {
         webView.loadUrl(url);
     }
 
+    /**
+     * Destroys the creative. If you are supporting android versions below Build.VERSION_CODES.Q you
+     * should call this method from the Activity#onDestroy lifecycle method.
+     * If you are only supporting android versions above Build.VERSION_CODES.Q there is no need to
+     * call this method anywhere since it will be handled internally on the SDK.
+     * The method is still exposed in case some use case requires you to completely close the
+     * creative.
+     */
     public void destroy() {
         Log.i(TAG, "Destroying creative");
         isCreativeOpen.set(false);
@@ -134,6 +164,20 @@ public class Creative {
             WebView webViewToDestroy = webView;
             webView = null;
             webViewToDestroy.destroy();
+        }
+    }
+
+    /**
+     * Called when the user presses the back button. If the creative is open, it will close it and
+     * return true, otherwise it will return false.
+     * @return true if the creative was closed, false otherwise.
+     */
+    public boolean onBackPressed() {
+        if (isCreativeOpen.get()) {
+            closeCreative();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -215,6 +259,8 @@ public class Creative {
                     openCreative();
                 } else if (messageData.equalsIgnoreCase("TIMED OUT")) {
                     onCreativeTimedOut();
+                } else if (messageData.equalsIgnoreCase("document-visibility: true") && isCreativeOpen.get()) {
+                    closeCreative();
                 }
             }
         };
@@ -258,6 +304,11 @@ public class Creative {
         handler.post(() -> {
             if (webView != null) {
                 changeWebViewVisibility(false);
+                // The following line is needed to avoid showing the previously creative instance
+                // on the web view if a single instance is being used to display two different
+                // creatives
+                webView.clearCache(true);
+                isCreativeOpen.set(false);
                 if (triggerCallback != null) {
                     triggerCallback.onClose();
                 }
@@ -267,7 +318,6 @@ public class Creative {
                     triggerCallback.onCreativeNotClosed();
                 }
             }
-            isCreativeOpen.set(false);
         });
     }
 

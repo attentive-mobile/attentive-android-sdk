@@ -88,6 +88,12 @@ The more identifiers that are passed to `identify`, the better the SDK will func
 ```java
 // Create a new creative and attach it to a parent View. This will not render the creative.
 Creative creative = new Creative(attentiveConfig, parentView);
+
+// A variation to create the creative, only difference is that it will
+// attach the creative lifecycle to the activity lifecycle to
+// automatically clear up resources. Recommended implementation if
+// targeting only users above Build.VERSION_CODES.Q.
+Creative creative = new Creative(attentiveConfig, parentView, activity);
 ```
 
 #### 2. Trigger the Creative
@@ -126,7 +132,8 @@ See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive
 // Destroy the creative and it's associated WebView.
 creative.destroy();
 ```
-__*** NOTE: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources ***__
+__*** NOTE 1: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources.***__
+__*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the destroy lifecycle callback of the activity if the activity is provided to automatically clear up resources and avoid memory leaks.***__
 
 
 ### Record user events
