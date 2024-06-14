@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import org.jetbrains.annotations.NotNull;
+import timber.log.Timber;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 class CreativeActivityCallbacks implements Application.ActivityLifecycleCallbacks {
@@ -51,6 +52,7 @@ class CreativeActivityCallbacks implements Application.ActivityLifecycleCallback
     @Override
     public void onActivityDestroyed(@NonNull Activity activity) {
         if (creative != null) {
+            Timber.d("onActivityDestroyed called");
             creative.destroy();
         }
         creative = null;

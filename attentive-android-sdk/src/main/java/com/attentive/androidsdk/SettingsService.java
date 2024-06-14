@@ -6,9 +6,9 @@ import androidx.annotation.RestrictTo;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class SettingsService {
-    private static final String TAG = SettingsService.class.getSimpleName();
     private static final String SKIP_FATIGUE = "skipFatigue";
-    private static final String[] SETTINGS = { SKIP_FATIGUE };
+    private static final String LOG_LEVEL = "logLevel";
+    private static final String[] SETTINGS = { SKIP_FATIGUE, LOG_LEVEL };
 
     private final PersistentStorage persistentStorage;
 
@@ -23,6 +23,19 @@ public class SettingsService {
 
     public void setSkipFatigueEnabled(@NonNull Boolean enabled) {
         persistentStorage.save(SKIP_FATIGUE, enabled);
+    }
+
+    public void setLogLevel(AttentiveLogLevel attentiveLogLevel) {
+        if (attentiveLogLevel == null) {
+            return;
+        }
+        persistentStorage.save(LOG_LEVEL, attentiveLogLevel.getId());
+    }
+
+    @Nullable
+    public AttentiveLogLevel getLogLevel() {
+        int logLevelId = persistentStorage.readInt(LOG_LEVEL);
+        return AttentiveLogLevel.fromId(logLevelId);
     }
 
     public void resetSettings() {

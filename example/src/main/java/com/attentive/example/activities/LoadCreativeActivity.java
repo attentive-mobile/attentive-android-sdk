@@ -2,7 +2,6 @@ package com.attentive.example.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -12,7 +11,6 @@ import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.androidsdk.creatives.CreativeTriggerCallback;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
-
 
 public class LoadCreativeActivity extends AppCompatActivity {
     private Creative creative;

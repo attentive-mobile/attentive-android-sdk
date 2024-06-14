@@ -10,15 +10,20 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import android.content.Context;
 import com.attentive.androidsdk.internal.events.InfoEvent;
+import com.attentive.androidsdk.internal.util.AppInfo;
 import java.util.Map;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 public class AttentiveConfigTest {
     private static final String DOMAIN = "DOMAINValue";
@@ -27,6 +32,7 @@ public class AttentiveConfigTest {
     private static final String NEW_VISITOR_ID = "newVisitorIdValue";
 
     private FactoryMocks factoryMocks;
+    private static MockedStatic<AppInfo> mockedAppInfo;
 
     @Before
     public void setup() {
@@ -34,11 +40,14 @@ public class AttentiveConfigTest {
 
         doReturn(VISITOR_ID).when(factoryMocks.getVisitorService()).getVisitorId();
         doReturn(NEW_VISITOR_ID).when(factoryMocks.getVisitorService()).createNewVisitorId();
+        mockedAppInfo = Mockito.mockStatic(AppInfo.class);
+        when(AppInfo.isDebuggable(any())).thenReturn(false);
     }
 
     @After
     public void cleanup() {
         factoryMocks.close();
+        mockedAppInfo.close();
     }
 
     @Test

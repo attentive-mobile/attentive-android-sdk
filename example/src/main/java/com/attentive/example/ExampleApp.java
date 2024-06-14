@@ -3,6 +3,7 @@ package com.attentive.example;
 import android.app.Application;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.AttentiveEventTracker;
+import com.attentive.androidsdk.AttentiveLogLevel;
 import com.attentive.androidsdk.UserIdentifiers;
 import java.util.Map;
 
@@ -23,6 +24,7 @@ public class ExampleApp extends Application {
                 .context(getApplicationContext())
                 .domain(ATTENTIVE_DOMAIN)
                 .mode(MODE)
+                .logLevel(AttentiveLogLevel.LIGHT)
                 .build();
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can be used to send

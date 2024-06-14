@@ -7,7 +7,6 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
@@ -21,9 +20,9 @@ import com.attentive.androidsdk.ClassFactory;
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import timber.log.Timber;
 
 public class Creative {
-    public static final String TAG = Creative.class.getSimpleName();
     private static final Set<String> CREATIVE_LISTENER_ALLOWED_ORIGINS = Set.of("https://creatives.attn.tv");
     private static final String CREATIVE_LISTENER_JS = "javascript:(async function() {\n" +
             "    window.addEventListener('visibilitychange', \n" +
@@ -69,11 +68,24 @@ public class Creative {
     @Nullable
     private CreativeTriggerCallback triggerCallback;
 
+    /**
+     * Creates a new Creative instance. Used to display and control creatives.
+     * @param attentiveConfig The AttentiveConfig instance to use.
+     * @param parentView The view to add the WebView to.
+     */
     public Creative(AttentiveConfig attentiveConfig, View parentView) {
         this(attentiveConfig, parentView, null);
     }
 
+    /**
+     * Creates a new Creative instance. Used to display and control creatives.
+     * @param attentiveConfig The AttentiveConfig instance to use.
+     * @param parentView The view to add the WebView to.
+     * @param activity The Activity to use for lifecycle callbacks.
+     */
     public Creative(AttentiveConfig attentiveConfig, View parentView, @Nullable Activity activity) {
+        Timber.d("Calling constructor of Creative with parameters: %s, %s, %s", attentiveConfig, parentView, activity);
+        Timber.i("Android version: %s", Build.VERSION.SDK_INT);
         this.attentiveConfig = attentiveConfig;
         this.parentView = parentView;
 
@@ -115,20 +127,21 @@ public class Creative {
      * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
      */
     public void trigger(@Nullable CreativeTriggerCallback callback, @Nullable String creativeId) {
+        Timber.d("trigger method called with parameters: %s, %s", callback, creativeId);
+        Timber.i("WebView is null: %s", webView == null);
         triggerCallback = callback;
 
         if (webView == null) {
-            Log.e(TAG, "WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
+            Timber.e("WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.");
             if (triggerCallback != null) {
                 triggerCallback.onCreativeNotOpened();
             }
             return;
         }
 
-        Log.i(TAG,
-                String.format("Attempting to trigger creative with attn domain %s, width %s, and height %s",
+        Timber.i("Attempting to trigger creative with attn domain %s, width %s, and height %s",
                         attentiveConfig.getDomain(),
-                        webView.getWidth(), webView.getHeight()));
+                        webView.getWidth(), webView.getHeight());
 
         String url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, creativeId);
 
@@ -137,9 +150,10 @@ public class Creative {
         }
 
         if (isCreativeOpen.get()) {
-            Log.w(TAG, "Attempted to trigger creative, but creative is currently open. Taking no action");
+            Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action");
             return;
         }
+        Timber.i("Start loading creative with url %s", url);
         webView.loadUrl(url);
     }
 
@@ -152,9 +166,10 @@ public class Creative {
      * creative.
      */
     public void destroy() {
-        Log.i(TAG, "Destroying creative");
+        Timber.d("destroy method called");
         isCreativeOpen.set(false);
         if (parentView != null && webView != null) {
+            Timber.i("WebView removed from view hierarchy correctly");
             ((ViewGroup) parentView).removeView(webView);
         }
         // TODO: better thread-safety when destroying. Lock?
@@ -164,6 +179,7 @@ public class Creative {
             WebView webViewToDestroy = webView;
             webView = null;
             webViewToDestroy.destroy();
+            Timber.i("WebView destroyed correctly");
         }
     }
 
@@ -173,6 +189,8 @@ public class Creative {
      * @return true if the creative was closed, false otherwise.
      */
     public boolean onBackPressed() {
+        Timber.d("onBackPressed method called");
+        Timber.d("isCreativeOpen.get() = %s", isCreativeOpen.get());
         if (isCreativeOpen.get()) {
             closeCreative();
             return true;
@@ -200,7 +218,7 @@ public class Creative {
             WebViewCompat.addWebMessageListener(
                     view, "CREATIVE_LISTENER", CREATIVE_LISTENER_ALLOWED_ORIGINS, creativeListener);
         } else {
-            Log.e(TAG, "Creative listener cannot be attached!");
+            Timber.e("Creative listener cannot be attached!");
         }
 
         if (attentiveConfig.getMode() == AttentiveConfig.Mode.PRODUCTION) {
@@ -216,7 +234,7 @@ public class Creative {
                 super.onPageFinished(view, url);
 
                 if (view.getProgress() == 100) {
-                    Log.i(TAG, "Page finished loading");
+                    Timber.i("Page finished loading");
                     view.loadUrl(CREATIVE_LISTENER_JS);
                 }
             }
@@ -236,7 +254,7 @@ public class Creative {
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         view.getContext().startActivity(intent);
                     } catch (Exception e) {
-                        Log.e(TAG, String.format("Error opening the URI '%s' from the WebView. Error message: '%s'", uri, e.getMessage()));
+                        Timber.e("Error opening the URI '%s' from the WebView. Error message: '%s'", uri, e.getMessage());
                     }
 
                     // Don't render the URI in the WebView since the above code tells Android to open the URI in a new app
@@ -251,7 +269,7 @@ public class Creative {
     private WebViewCompat.WebMessageListener createCreativeListener() {
         return (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
             String messageData = message.getData();
-            Log.i(TAG, String.format("Creative message data %s", messageData));
+            Timber.i("Creative message data %s", messageData);
             if (messageData != null) {
                 if (messageData.equalsIgnoreCase("CLOSE")) {
                     closeCreative();
@@ -267,7 +285,7 @@ public class Creative {
     }
 
     private void onCreativeTimedOut() {
-        Log.e(TAG, "Creative timed out. Not showing WebView.");
+        Timber.e("Creative timed out. Not showing WebView.");
         if (triggerCallback != null) {
             triggerCallback.onCreativeNotOpened();
         }
@@ -277,7 +295,7 @@ public class Creative {
     private void openCreative() {
         handler.post(() -> {
             if (isCreativeOpen.get()) {
-                Log.w(TAG, "Attempted to trigger creative, but creative is currently open. Taking no action");
+                Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action");
                 return;
             }
             // Host apps have reported webView NPEs here. The current thinking is that destroy gets
@@ -291,8 +309,9 @@ public class Creative {
                 if (triggerCallback != null) {
                     triggerCallback.onOpen();
                 }
+                Timber.i("WebView correctly displayed");
             } else {
-                Log.w(TAG, "The creative loaded but the WebView is null. Ignoring.");
+                Timber.w("The creative loaded but the WebView is null. Ignoring.");
                 if (triggerCallback != null) {
                     triggerCallback.onCreativeNotOpened();
                 }
@@ -313,7 +332,7 @@ public class Creative {
                     triggerCallback.onClose();
                 }
             } else {
-                Log.w(TAG, "The user closed the creative but the WebView is null. Ignoring.");
+                Timber.w("The user closed the creative but the WebView is null. Ignoring.");
                 if (triggerCallback != null) {
                     triggerCallback.onCreativeNotClosed();
                 }

@@ -1,6 +1,5 @@
 package com.attentive.androidsdk;
 
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
@@ -25,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +36,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import timber.log.Timber;
 
 class AttentiveApi {
     static final String ATTENTIVE_EVENTS_ENDPOINT_HOST = "events.attentivemobile.com";
@@ -71,10 +72,11 @@ class AttentiveApi {
     }
 
     public void sendEvent(Event event, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
+        Timber.d("sendEvent called with event: %s", event.getClass().getName());
         getGeoAdjustedDomainAsync(domain, new GetGeoAdjustedDomainCallback() {
             @Override
             public void onFailure(String reason) {
-                Log.w(this.getClass().getName(), "Could not get geo-adjusted domain. Trying to use the original domain.");
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.");
                 sendEvent(event, userIdentifiers, domain);
             }
 
@@ -115,7 +117,7 @@ class AttentiveApi {
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 // Check explicitly for 200 (instead of response.isSuccessful()) because the response only has the tag in the body when its code is 200
                 if (response.code() != 200) {
-                    callback.onFailure(String.format("Getting geo-adjusted domain returned invalid code: '%d', message: '%s'", response.code(), response.message()));
+                    callback.onFailure(String.format(Locale.getDefault(), "Getting geo-adjusted domain returned invalid code: '%d', message: '%s'", response.code(), response.message()));
                     return;
                 }
 
@@ -126,7 +128,10 @@ class AttentiveApi {
                     return;
                 }
 
-                String fullTag = response.body().string();
+                String fullTag = null;
+                if (response.body() != null) {
+                    fullTag = response.body().string();
+                }
                 String geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag);
 
                 if (geoAdjustedDomain == null) {
@@ -142,7 +147,7 @@ class AttentiveApi {
 
     // TODO replace with the generic 'sendEvent' code
     private void internalSendUserIdentifiersCollectedEventAsync(String geoAdjustedDomain, UserIdentifiers userIdentifiers, AttentiveApiCallback callback) {
-        String externalVendorIdsJson = null;
+        String externalVendorIdsJson;
         try {
             List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
             externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
@@ -151,7 +156,7 @@ class AttentiveApi {
             return;
         }
 
-        String metadataJson = null;
+        String metadataJson;
         try {
             Metadata metadata = buildMetadata(userIdentifiers);
             metadataJson = objectMapper.writeValueAsString(metadata);
@@ -185,7 +190,7 @@ class AttentiveApi {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 if (!response.isSuccessful()) {
-                    callback.onFailure(String.format("Invalid response code when calling the event endpoint: '%d', message: '%s'", response.code(), response.message()));
+                    callback.onFailure(String.format(Locale.getDefault(), "Invalid response code when calling the event endpoint: '%d', message: '%s'", response.code(), response.message()));
                     return;
                 }
 
@@ -309,7 +314,7 @@ class AttentiveApi {
             PurchaseEvent purchaseEvent = (PurchaseEvent) event;
 
             if (purchaseEvent.getItems().isEmpty()) {
-                Log.w(this.getClass().getName(), "Purchase event has no items. Skipping.");
+                Timber.w(this.getClass().getName(), "Purchase event has no items. Skipping.");
                 return List.of();
             }
 
@@ -363,26 +368,19 @@ class AttentiveApi {
             ProductViewEvent productViewEvent = (ProductViewEvent) event;
 
             if (productViewEvent.getItems().isEmpty()) {
-                Log.w(this.getClass().getName(), "Product View event has no items. Skipping.");
+                Timber.w(this.getClass().getName(), "Product View event has no items. Skipping.");
                 return List.of();
             }
 
             for (Item item : productViewEvent.getItems()) {
-                ProductViewMetadataDto productViewMetadata = new ProductViewMetadataDto();
-                productViewMetadata.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
-                productViewMetadata.setPrice(item.getPrice().getPrice().toPlainString());
-                productViewMetadata.setName(item.getName());
-                productViewMetadata.setImage(item.getProductImage());
-                productViewMetadata.setProductId(item.getProductId());
-                productViewMetadata.setSubProductId(item.getProductVariantId());
-                productViewMetadata.setCategory(item.getCategory());
+                ProductViewMetadataDto productViewMetadata = getProductViewMetadataDto(item);
                 eventRequests.add(new EventRequest(productViewMetadata, EventRequest.Type.PRODUCT_VIEW));
             }
         } else if (event instanceof AddToCartEvent) {
             AddToCartEvent addToCartEvent = (AddToCartEvent) event;
 
             if (addToCartEvent.getItems().isEmpty()) {
-                Log.w(this.getClass().getName(), "Add to Cart event has no items. Skipping.");
+                Timber.w(this.getClass().getName(), "Add to Cart event has no items. Skipping.");
                 return List.of();
             }
 
@@ -410,10 +408,23 @@ class AttentiveApi {
             eventRequests.add(new EventRequest(metadataDto, EventRequest.Type.CUSTOM_EVENT));
         } else {
             final String error = "Unknown Event type: " + event.getClass().getName();
-            Log.e(this.getClass().getName(), error);
+            Timber.e(this.getClass().getName(), error);
         }
 
         return eventRequests;
+    }
+
+    @NonNull
+    private static ProductViewMetadataDto getProductViewMetadataDto(Item item) {
+        ProductViewMetadataDto productViewMetadata = new ProductViewMetadataDto();
+        productViewMetadata.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
+        productViewMetadata.setPrice(item.getPrice().getPrice().toPlainString());
+        productViewMetadata.setName(item.getName());
+        productViewMetadata.setImage(item.getProductImage());
+        productViewMetadata.setProductId(item.getProductId());
+        productViewMetadata.setSubProductId(item.getProductVariantId());
+        productViewMetadata.setCategory(item.getCategory());
+        return productViewMetadata;
     }
 
     private void sendEventInternalAsync(List<EventRequest> eventRequests, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
@@ -426,12 +437,12 @@ class AttentiveApi {
         Metadata metadata = eventRequest.getMetadata();
         metadata.enrichWithIdentifiers(userIdentifiers);
 
-        String externalVendorIdsJson = null;
+        String externalVendorIdsJson;
         try {
             List<ExternalVendorId> externalVendorIds = buildExternalVendorIds(userIdentifiers);
             externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds);
         } catch (JsonProcessingException e) {
-            Log.w(this.getClass().getName(), "Could not serialize external vendor ids. Using empty array. Error: " + e.getMessage());
+            Timber.w("Could not serialize external vendor ids. Using empty array. Error: %s", e.getMessage());
             externalVendorIdsJson = "[]";
         }
 
@@ -446,13 +457,14 @@ class AttentiveApi {
                 .addQueryParameter("m", serialize(metadata));
 
         HttpUrl url = urlBuilder.build();
+        Timber.i("Send event url: %s", url.toString());
 
         Request request = new Request.Builder().url(url).post(buildEmptyRequest()).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 final String error = "Could not send the request. Error: " + e.getMessage();
-                Log.e(this.getClass().getName(), error);
+                Timber.e(error);
                 if (callback != null) {
                     callback.onFailure(error);
                 }
@@ -463,14 +475,14 @@ class AttentiveApi {
                 if (!response.isSuccessful()) {
                     String error = "Could not send the request. Invalid response code: " + response.code() + ", message: "
                             + response.message();
-                    Log.e(this.getClass().getName(), error);
+                    Timber.e(error);
                     if (callback != null) {
                         callback.onFailure(error);
                     }
                     return;
                 }
 
-                Log.d(this.getClass().getName(), "Sent the '" + eventRequest.getType() + "' request successfully.");
+                Timber.i("Sent the '" + eventRequest.getType() + "' request successfully.");
             }
         });
     }

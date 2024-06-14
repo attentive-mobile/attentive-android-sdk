@@ -64,6 +64,8 @@ dependencies {
     implementation 'androidx.webkit:webkit:1.5.0'
     // 2.14.* does not support Android API Level < 26 https://github.com/FasterXML/jackson-databind/issues/3412
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
+    // Timber for logging - Upgrading to 5.+ versions causes compilation errors
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object

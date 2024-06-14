@@ -147,4 +147,18 @@ public class UserIdentifiers {
             return null;
         }
     }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "UserIdentifiers{" +
+                "visitorId='" + visitorId + '\'' +
+                ", clientUserId='" + clientUserId + '\'' +
+                ", phone='" + phone + '\'' +
+                ", email='" + email + '\'' +
+                ", shopifyId='" + shopifyId + '\'' +
+                ", klaviyoId='" + klaviyoId + '\'' +
+                ", customIdentifiers=" + customIdentifiers +
+                '}';
+    }
 }
