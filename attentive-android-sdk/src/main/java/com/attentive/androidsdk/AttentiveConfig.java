@@ -3,15 +3,13 @@ package com.attentive.androidsdk;
 import static com.attentive.androidsdk.internal.util.AppInfo.isDebuggable;
 
 import android.content.Context;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import com.attentive.androidsdk.internal.events.InfoEvent;
 import com.attentive.androidsdk.internal.util.LightTree;
 import com.attentive.androidsdk.internal.util.StandardTree;
 import com.attentive.androidsdk.internal.util.VerboseTree;
-import java.util.Objects;
 import okhttp3.OkHttpClient;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import timber.log.Timber;
 
 public class AttentiveConfig {
@@ -21,14 +19,14 @@ public class AttentiveConfig {
     }
 
     private final Mode mode;
-    private final String domain;
+    private String domain;
     private final VisitorService visitorService;
     private UserIdentifiers userIdentifiers;
     private final AttentiveApi attentiveApi;
     private boolean skipFatigueOnCreatives;
     private final SettingsService settingsService;
 
-    private AttentiveConfig(@NonNull Builder builder) {
+    private AttentiveConfig(@NotNull Builder builder) {
         Context context = builder.context;
         this.settingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(context));
         configureLogging(builder.logLevel, settingsService, context);
@@ -52,7 +50,7 @@ public class AttentiveConfig {
      * @deprecated  As of release 0.4.6, replaced by {@link AttentiveConfig.Builder}
      */
     @Deprecated(since = "0.4.6", forRemoval = true)
-    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context) {
+    public AttentiveConfig(@NotNull String domain, @NotNull Mode mode, @NotNull Context context) {
         this(domain, mode, context, ClassFactory.buildOkHttpClient(ClassFactory.buildUserAgentInterceptor(context)));
     }
 
@@ -60,7 +58,7 @@ public class AttentiveConfig {
      * @deprecated  As of release 0.4.6, replaced by {@link AttentiveConfig.Builder}
      */
     @Deprecated(since = "0.4.6", forRemoval = true)
-    public AttentiveConfig(@NonNull String domain, @NonNull Mode mode, @NonNull Context context, @NonNull OkHttpClient okHttpClient) {
+    public AttentiveConfig(@NotNull String domain, @NotNull Mode mode, @NotNull Context context, @NotNull OkHttpClient okHttpClient) {
         this.settingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(context));
         configureLogging(AttentiveLogLevel.VERBOSE, settingsService, context);
         Timber.d("Initializing AttentiveConfig with the following configuration: domain=%s, mode=%s, okHttpClient=%s", domain, mode, okHttpClient);
@@ -79,22 +77,22 @@ public class AttentiveConfig {
         sendInfoEvent();
     }
 
-    @NonNull
+    @NotNull
     public Mode getMode() {
         return mode;
     }
 
-    @NonNull
+    @NotNull
     public String getDomain() {
         return domain;
     }
 
-    @NonNull
+    @NotNull
     public UserIdentifiers getUserIdentifiers() {
         return userIdentifiers;
     }
 
-    @NonNull
+    @NotNull
     AttentiveApi getAttentiveApi() {
         return this.attentiveApi;
     }
@@ -103,7 +101,7 @@ public class AttentiveConfig {
         Timber.d("skipFatigueOnCreatives called");
         if (this.settingsService != null) {
             Boolean skipFatigueOnCreatives = this.settingsService.isSkipFatigueEnabled();
-            return Objects.requireNonNullElseGet(skipFatigueOnCreatives, () -> this.skipFatigueOnCreatives);
+            return skipFatigueOnCreatives == null ? this.skipFatigueOnCreatives : skipFatigueOnCreatives;
         }
         return this.skipFatigueOnCreatives;
     }
@@ -113,7 +111,7 @@ public class AttentiveConfig {
      * @param clientUserId The client user id.
      */
     @Deprecated
-    public void identify(@NonNull String clientUserId) {
+    public void identify(@NotNull String clientUserId) {
         Timber.d("identify called with clientUserId: %s", clientUserId);
         ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId");
 
@@ -124,7 +122,7 @@ public class AttentiveConfig {
      * Method that sets the identifiers from the user to be used on the next events/actions.
      * @param userIdentifiers {@link UserIdentifiers} that have the user information to be used.
      */
-    public void identify(@NonNull UserIdentifiers userIdentifiers) {
+    public void identify(@NotNull UserIdentifiers userIdentifiers) {
         Timber.d("identify called with userIdentifiers: %s", userIdentifiers);
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers");
 
@@ -142,8 +140,25 @@ public class AttentiveConfig {
         String newVisitorId = visitorService.createNewVisitorId();
         this.userIdentifiers = new UserIdentifiers.Builder().withVisitorId(newVisitorId).build();
     }
+    /**
+     * Method that changes the domain of the Attentive instance. It will change the domain for
+     * future use within the Attentive SDK.
+     * @param domain The new domain. Should not be the same domain that it's set to nor an empty
+     *               string
+     */
+    public void changeDomain(@NotNull String domain) {
+        if (domain.isEmpty()) {
+            return;
+        }
+        if (domain.equals(this.domain)) {
+            return;
+        }
 
-    @NonNull
+        this.domain = domain;
+        sendInfoEvent();
+    }
+
+    @NotNull
     @Override
     public String toString() {
         return "AttentiveConfig{" +
@@ -214,25 +229,25 @@ public class AttentiveConfig {
         private boolean skipFatigueOnCreatives;
         private AttentiveLogLevel logLevel;
 
-        public Builder context(@NonNull Context context) {
+        public Builder context(@NotNull Context context) {
             ParameterValidation.verifyNotNull(context, "context");
             this.context = context;
             return this;
         }
 
-        public Builder mode(@NonNull Mode mode) {
+        public Builder mode(@NotNull Mode mode) {
             ParameterValidation.verifyNotNull(mode, "mode");
             this.mode = mode;
             return this;
         }
 
-        public Builder domain(@NonNull String domain) {
+        public Builder domain(@NotNull String domain) {
             ParameterValidation.verifyNotEmpty(domain, "domain");
             this.domain = domain;
             return this;
         }
 
-        public Builder okHttpClient(@NonNull OkHttpClient okHttpClient) {
+        public Builder okHttpClient(@NotNull OkHttpClient okHttpClient) {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient");
             this.okHttpClient = okHttpClient;
             return this;
@@ -262,7 +277,7 @@ public class AttentiveConfig {
         }
 
         @Override
-        @NonNull
+        @NotNull
         public String toString() {
             return "Builder{" +
                     "context=" + context +

@@ -187,6 +187,43 @@ public class AttentiveConfigTest {
                 any(AttentiveApiCallback.class));
     }
 
+    @Test
+    public void changeDomain() {
+        // Arrange
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
+        UserIdentifiers userIdentifiers = buildUserIdentifiers();
+        config.identify(userIdentifiers);
+
+        // Act
+        config.changeDomain("newDomain");
+
+        // Assert
+        assertEquals("newDomain", config.getDomain());
+    }
+
+    @Test
+    public void changeDomain_emptyDomain() {
+        // Arrange
+        AttentiveConfig config = new AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .context(mock(Context.class))
+                .build();
+        UserIdentifiers userIdentifiers = buildUserIdentifiers();
+        config.identify(userIdentifiers);
+
+        // Act
+        config.changeDomain("");
+
+        // Assert
+        assertEquals(DOMAIN, config.getDomain());
+
+    }
+
     private UserIdentifiers buildUserIdentifiers() {
         return new UserIdentifiers.Builder()
                 .withClientUserId("clientId")

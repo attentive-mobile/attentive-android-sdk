@@ -3,11 +3,11 @@ package com.attentive.example.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.example.ExampleApp;
 import com.attentive.example.R;
-
 
 public class MainActivity extends AppCompatActivity {
 
@@ -16,8 +16,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        TextView domainValueTextView = findViewById(R.id.domainValue);
-        domainValueTextView.setText(((ExampleApp) this.getApplication()).getAttentiveConfig().getDomain());
+        setupDomainEditText();
     }
 
     public void startLoadCreativeActivity(View view) {
@@ -39,5 +38,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void identifyUser(View view) {
         ((ExampleApp) this.getApplication()).getAttentiveConfig().identify(ExampleApp.buildUserIdentifiers());
+    }
+
+    private void setupDomainEditText() {
+        EditText domainValueTextView = findViewById(R.id.domainValue);
+        domainValueTextView.setText(((ExampleApp) this.getApplication()).getAttentiveConfig().getDomain());
+        domainValueTextView.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                ((ExampleApp) getApplication()).getAttentiveConfig().changeDomain(domainValueTextView.getText().toString());
+                return true;
+            }
+            return false;
+        });
     }
 }
