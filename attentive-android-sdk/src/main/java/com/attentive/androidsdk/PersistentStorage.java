@@ -2,10 +2,9 @@ package com.attentive.androidsdk;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class PersistentStorage {
@@ -30,7 +29,7 @@ public class PersistentStorage {
      * @param key The key of the value
      * @param value The boolean value
      */
-    public void save(@NonNull String key, @NotNull Boolean value) {
+    public void save(@NotNull String key, @NotNull Boolean value) {
         sharedPreferences.edit().putBoolean(key, value).apply();
     }
 
@@ -39,7 +38,7 @@ public class PersistentStorage {
      * @param key The key of the value
      * @param value The int value
      */
-    public void save(@NonNull String key, int value) {
+    public void save(@NotNull String key, int value) {
         sharedPreferences.edit().putInt(key, value).apply();
     }
 
@@ -58,12 +57,12 @@ public class PersistentStorage {
      * @param key The key of the value
      * @return The boolean value, false if the key does not exist
      */
-    @NotNull
-    public Boolean readBoolean(@NonNull String key) {
+    @Nullable
+    public Boolean readBoolean(@NotNull String key) {
         if (sharedPreferences.contains(key)) {
             return sharedPreferences.getBoolean(key, false);
         }
-        return false;
+        return null;
     }
 
     /**
@@ -72,7 +71,7 @@ public class PersistentStorage {
      * @return The int value, -1 if the key does not exist
      */
     @NotNull
-    public Integer readInt(@NonNull String key) {
+    public Integer readInt(@NotNull String key) {
         if (sharedPreferences.contains(key)) {
             return sharedPreferences.getInt(key, -1);
         }

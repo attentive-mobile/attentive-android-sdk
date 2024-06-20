@@ -22,6 +22,7 @@ class ExampleKotlinApp : Application() {
                 .domain(attentiveDomain)
                 .mode(mode)
                 .context(this)
+                .skipFatigueOnCreatives(true)
                 .logLevel(AttentiveLogLevel.VERBOSE)
                 .build()
 
