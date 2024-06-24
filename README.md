@@ -187,6 +187,14 @@ attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
 ```
 
+### Change domain
+```java
+// If you want to change domain to handle some user flow, you can do so changing the domain on attentive config
+attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
+// Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
+// assigned, if one of those cases happens, no change will be executed.
+```
+
 ### Log Level
 We currently support 3 log levels. Each level is more verbose than the next one.
 You can configure the log level on the Builder for the AttentiveConfig. Please keep 
