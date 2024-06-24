@@ -1,7 +1,6 @@
 package com.attentive.androidsdk.internal.util;
 
 import android.net.Uri;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
@@ -9,6 +8,7 @@ import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.UserIdentifiers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import timber.log.Timber;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class CreativeUrlFormatter {
@@ -71,7 +71,7 @@ public class CreativeUrlFormatter {
         if (userIdentifiers.getVisitorId() != null) {
             builder.appendQueryParameter("vid", userIdentifiers.getVisitorId());
         } else {
-            Log.e(this.getClass().getName(), "No VisitorId found. This should not happen.");
+            Timber.e("No VisitorId found. This should not happen.");
         }
 
         if (userIdentifiers.getClientUserId() != null) {
@@ -99,7 +99,7 @@ public class CreativeUrlFormatter {
         try {
             return objectMapper.writeValueAsString(userIdentifiers.getCustomIdentifiers());
         } catch (JsonProcessingException e) {
-            Log.e(this.getClass().getName(), "Could not serialize the custom identifiers. Message: " + e.getMessage());
+            Timber.e("Could not serialize the custom identifiers. Message: %s", e.getMessage());
             return "{}";
         }
     }

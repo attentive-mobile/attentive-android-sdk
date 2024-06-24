@@ -1,8 +1,7 @@
 package com.attentive.androidsdk;
 
-import android.util.Log;
 import com.attentive.androidsdk.events.Event;
-
+import timber.log.Timber;
 
 public class AttentiveEventTracker {
     private static AttentiveEventTracker INSTANCE;
@@ -24,11 +23,11 @@ public class AttentiveEventTracker {
 
     public void initialize(AttentiveConfig config) {
         ParameterValidation.verifyNotNull(config, "config");
-        Log.i(this.getClass().getName(), String.format("Initializing Attentive SDK with attn domain %s and mode %s", config.getDomain(), config.getMode()));
+        Timber.i("Initializing Attentive SDK with attn domain %s and mode %s", config.getDomain(), config.getMode());
 
         synchronized (AttentiveEventTracker.class) {
             if (this.config != null) {
-                Log.w(this.getClass().getName(), "Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime");
+                Timber.w("Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime");
             }
 
             this.config = config;
@@ -45,7 +44,7 @@ public class AttentiveEventTracker {
     private void verifyInitialized() {
         synchronized (AttentiveEventTracker.class) {
             if (INSTANCE == null) {
-                Log.e(this.getClass().getName(), "AttentiveEventTracker must be initialized before use.");
+                Timber.e("AttentiveEventTracker must be initialized before use.");
             }
         }
     }

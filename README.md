@@ -32,6 +32,7 @@ AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
         .context(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
+        .logLevel(AttentiveLogLevel.VERBOSE)
         .build();
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
@@ -39,6 +40,7 @@ AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
         .context(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.DEBUG)
+        .logLevel(AttentiveLogLevel.VERBOSE)
         .build();
 ```
 ### In Kotlin:
@@ -183,6 +185,19 @@ allIdentifiers.getKlaviyoId(); // == 777
 // If the user logs out then the current user identifiers should be deleted
 attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
+```
+
+### Log Level
+We currently support 3 log levels. Each level is more verbose than the next one.
+You can configure the log level on the Builder for the AttentiveConfig. Please keep 
+in mind that this configuration only works for debuggable builds.
+```java
+    VERBOSE(1),
+    STANDARD(2),
+    LIGHT(3);
+
+    // To set it on the builder
+    .logLevel(AttentiveLogLevel.LIGHT)
 ```
 
 ## Minimum Version Support

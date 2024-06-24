@@ -3,6 +3,7 @@ package com.attentive.example_kotlin
 import android.app.Application
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.UserIdentifiers
 
 class ExampleKotlinApp : Application() {
@@ -21,6 +22,7 @@ class ExampleKotlinApp : Application() {
                 .domain(attentiveDomain)
                 .mode(mode)
                 .context(this)
+                .logLevel(AttentiveLogLevel.VERBOSE)
                 .build()
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can
