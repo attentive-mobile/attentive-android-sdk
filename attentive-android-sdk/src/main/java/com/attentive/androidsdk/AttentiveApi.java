@@ -1,7 +1,5 @@
 package com.attentive.androidsdk;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import com.attentive.androidsdk.events.AddToCartEvent;
 import com.attentive.androidsdk.events.CustomEvent;
@@ -23,6 +21,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,6 +35,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import timber.log.Timber;
 
 class AttentiveApi {
@@ -109,12 +110,12 @@ class AttentiveApi {
         Request request = new Request.Builder().url(url).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 callback.onFailure("Getting geo-adjusted domain failed: " + e.getMessage());
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 // Check explicitly for 200 (instead of response.isSuccessful()) because the response only has the tag in the body when its code is 200
                 if (response.code() != 200) {
                     callback.onFailure(String.format(Locale.getDefault(), "Getting geo-adjusted domain returned invalid code: '%d', message: '%s'", response.code(), response.message()));
@@ -183,12 +184,12 @@ class AttentiveApi {
         Request request = new Request.Builder().url(url).post(buildEmptyRequest()).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 callback.onFailure(String.format("Error when calling the event endpoint: '%s'", e.getMessage()));
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
+            public void onResponse(@NotNull Call call, @NotNull Response response) {
                 if (!response.isSuccessful()) {
                     callback.onFailure(String.format(Locale.getDefault(), "Invalid response code when calling the event endpoint: '%d', message: '%s'", response.code(), response.message()));
                     return;
@@ -270,6 +271,7 @@ class AttentiveApi {
     }
 
     private static class EventRequest {
+
         private enum Type {
             PURCHASE("p"),
             USER_IDENTIFIER_COLLECTED("idn"),
@@ -292,10 +294,17 @@ class AttentiveApi {
 
         private final Metadata metadata;
         private final Type type;
+        @Nullable
+        private final Map<String, String> extraParameters;
 
         public EventRequest(Metadata metadata, Type type) {
+            this(metadata, type, null);
+        }
+
+        public EventRequest(@NotNull Metadata metadata, @NotNull Type type, @Nullable Map<String, String> extraParameters) {
             this.metadata = metadata;
             this.type = type;
+            this.extraParameters = extraParameters;
         }
 
         public Metadata getMetadata() {
@@ -304,6 +313,11 @@ class AttentiveApi {
 
         public Type getType() {
             return type;
+        }
+
+        @Nullable
+        public Map<String, String> getExtraParameters() {
+            return extraParameters;
         }
     }
 
@@ -374,7 +388,12 @@ class AttentiveApi {
 
             for (Item item : productViewEvent.getItems()) {
                 ProductViewMetadataDto productViewMetadata = getProductViewMetadataDto(item);
-                eventRequests.add(new EventRequest(productViewMetadata, EventRequest.Type.PRODUCT_VIEW));
+                
+                eventRequests.add(new EventRequest(
+                        productViewMetadata,
+                        EventRequest.Type.PRODUCT_VIEW,
+                        buildExtraParametersWithDeeplink(((ProductViewEvent) event).getDeeplink())
+                ));
             }
         } else if (event instanceof AddToCartEvent) {
             AddToCartEvent addToCartEvent = (AddToCartEvent) event;
@@ -394,7 +413,11 @@ class AttentiveApi {
                 addToCartMetadataDto.setSubProductId(item.getProductVariantId());
                 addToCartMetadataDto.setCategory(item.getCategory());
                 addToCartMetadataDto.setQuantity(String.valueOf(item.getQuantity()));
-                eventRequests.add(new EventRequest(addToCartMetadataDto, EventRequest.Type.ADD_TO_CART));
+                eventRequests.add(new EventRequest(
+                        addToCartMetadataDto,
+                        EventRequest.Type.ADD_TO_CART,
+                        buildExtraParametersWithDeeplink(addToCartEvent.getDeeplink())
+                ));
             }
         } else if (event instanceof InfoEvent) {
             eventRequests.add(new EventRequest(new Metadata(), EventRequest.Type.INFO));
@@ -414,7 +437,7 @@ class AttentiveApi {
         return eventRequests;
     }
 
-    @NonNull
+    @NotNull
     private static ProductViewMetadataDto getProductViewMetadataDto(Item item) {
         ProductViewMetadataDto productViewMetadata = new ProductViewMetadataDto();
         productViewMetadata.setCurrency(item.getPrice().getCurrency().getCurrencyCode());
@@ -425,6 +448,17 @@ class AttentiveApi {
         productViewMetadata.setSubProductId(item.getProductVariantId());
         productViewMetadata.setCategory(item.getCategory());
         return productViewMetadata;
+    }
+    
+    @NotNull
+    private static Map<String, String> buildExtraParametersWithDeeplink(@Nullable String deeplink) {
+        if (deeplink == null) {
+            return new HashMap<>();
+        } else {
+            HashMap<String, String> extraParameters =  new HashMap<>();
+            extraParameters.put("pd", deeplink);
+            return extraParameters;
+        }
     }
 
     private void sendEventInternalAsync(List<EventRequest> eventRequests, UserIdentifiers userIdentifiers, String domain, @Nullable AttentiveApiCallback callback) {
@@ -456,13 +490,19 @@ class AttentiveApi {
                 .addQueryParameter("u", userIdentifiers.getVisitorId())
                 .addQueryParameter("m", serialize(metadata));
 
+        if (eventRequest.getExtraParameters() != null) {
+            for (Map.Entry<String, String> entry : eventRequest.getExtraParameters().entrySet()) {
+                urlBuilder.addQueryParameter(entry.getKey(), entry.getValue());
+            }
+        }
+
         HttpUrl url = urlBuilder.build();
         Timber.i("Send event url: %s", url.toString());
 
         Request request = new Request.Builder().url(url).post(buildEmptyRequest()).build();
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 final String error = "Could not send the request. Error: " + e.getMessage();
                 Timber.e(error);
                 if (callback != null) {
@@ -471,7 +511,7 @@ class AttentiveApi {
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
+            public void onResponse(@NotNull Call call, @NotNull Response response) {
                 if (!response.isSuccessful()) {
                     String error = "Could not send the request. Invalid response code: " + response.code() + ", message: "
                             + response.message();

@@ -29,7 +29,10 @@ public class ProductPageActivity extends AppCompatActivity {
 
         // Send "Product View" Event
         final Item item = createItem();
-        final ProductViewEvent productViewEvent = new ProductViewEvent.Builder(List.of(item)).build();
+        final ProductViewEvent productViewEvent = new ProductViewEvent.Builder()
+                .items(List.of(item))
+                .deeplink("https://mydeeplink.com/products/32432423")
+                .buildIt();
         AttentiveEventTracker.getInstance().recordEvent(productViewEvent);
         showToastMessageForEvent("Product View");
     }
@@ -37,7 +40,10 @@ public class ProductPageActivity extends AppCompatActivity {
     public void addToCartButtonClicked(View view) {
         // Send "Add to Cart" Event
         final Item item = createItem();
-        final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder(List.of(item)).build();
+        final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
+                .items(List.of(item))
+                .deeplink("https://mydeeplink.com/products/32432423")
+                .buildIt();
         AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
         showToastMessageForEvent("Add to Cart");
     }
