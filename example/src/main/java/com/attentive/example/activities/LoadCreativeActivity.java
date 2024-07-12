@@ -5,8 +5,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 import com.attentive.androidsdk.AttentiveConfig;
+import com.attentive.androidsdk.AttentiveLogLevel;
 import com.attentive.androidsdk.creatives.Creative;
 import com.attentive.androidsdk.creatives.CreativeTriggerCallback;
 import com.attentive.example.ExampleApp;
@@ -26,6 +28,8 @@ public class LoadCreativeActivity extends AppCompatActivity {
         // Attach the creative to the provided parentView
         View parentView = (View) findViewById(R.id.loadCreative).getParent();
         this.creative = new Creative(((ExampleApp) getApplication()).getAttentiveConfig(), parentView, this);
+        Button loadCreativeButton = findViewById(R.id.creativeButton);
+        loadCreativeButton.setOnClickListener(this::displayCreative);
     }
 
     @Override
@@ -84,12 +88,19 @@ public class LoadCreativeActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String domain = intent.getStringExtra("DOMAIN");
         String mode = intent.getStringExtra("MODE");
+        boolean skipFatigue = intent.getBooleanExtra("SKIP_FATIGUE", false);
 
         ((ExampleApp) getApplication()).getAttentiveConfig().clearUser();
 
         if (domain != null && mode != null) {
-            ((ExampleApp) getApplication()).setAttentiveConfig(new AttentiveConfig(
-                    domain, AttentiveConfig.Mode.valueOf(mode), getApplicationContext()));
+            AttentiveConfig config = new AttentiveConfig.Builder()
+                    .context(getApplicationContext())
+                    .domain(domain)
+                    .mode(AttentiveConfig.Mode.valueOf(mode))
+                    .skipFatigueOnCreatives(skipFatigue)
+                    .logLevel(AttentiveLogLevel.VERBOSE)
+                    .build();
+            ((ExampleApp) getApplication()).setAttentiveConfig(config);
         }
     }
 }

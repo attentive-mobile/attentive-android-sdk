@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.ConsoleMessage;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -212,6 +214,13 @@ public class Creative {
         webSettings.setDomStorageEnabled(true);
 
         view.setWebViewClient(webViewClient);
+        view.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                Timber.d(consoleMessage.message());
+                return true;
+            }
+        });
 
         // Add listener for creative OPEN / CLOSE events
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
