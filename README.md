@@ -177,6 +177,17 @@ final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
 AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
 ```
 
+You can also implement custom events to send any information you may want related to the event,
+to achieve that you can implement it like this:
+```java
+CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).build();
+
+AttentiveEventTracker.getInstance().recordEvent(customEvent);
+```
+Keep in mind that it has 2 properties, the first one is the type or name that you want for the event
+and he second one is a Map<String, String> to send any information in the event that you'd want to 
+dynamically populate in a message to subscribers
+
 ### Update the current user when new identifiers are available
 
 ```java
