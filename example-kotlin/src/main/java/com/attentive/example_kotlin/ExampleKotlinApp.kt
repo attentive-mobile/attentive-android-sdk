@@ -5,10 +5,9 @@ import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.UserIdentifiers
+import com.example.example_kotlin.R
 
 class ExampleKotlinApp : Application() {
-    // Change this to your Attentive Domain to test with your Attentive account
-    private val attentiveDomain = "YOUR_ATTENTIVE_DOMAIN"
     // The mode in which to run the Attentive Android SDK
     private val mode = AttentiveConfig.Mode.PRODUCTION
 
@@ -17,13 +16,17 @@ class ExampleKotlinApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+
+        // Change this to your Attentive Domain to test with your Attentive account
+        val attentiveDomain = getString(R.string.default_domain)
+
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         attentiveConfig = AttentiveConfig.Builder()
                 .domain(attentiveDomain)
                 .mode(mode)
                 .context(this)
                 .skipFatigueOnCreatives(true)
-                .logLevel(AttentiveLogLevel.VERBOSE)
+                .logLevel(AttentiveLogLevel.LIGHT)
                 .build()
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can

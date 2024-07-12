@@ -160,6 +160,23 @@ PurchaseEvent purchaseEvent = new PurchaseEvent.Builder(List.of(item), order).ca
 AttentiveEventTracker.getInstance().recordEvent(purchaseEvent);
 ```
 
+For the ProductViewEvent and AddToCartEvent you can build the event with a deeplink to the product/products 
+the user is seeing to complete a customer journey in case the user drops off the flow. To give an 
+example on how this looks like, check the following code snippet:
+
+```java
+// Construct one or more "Item"s, which represents the product(s) purchased
+Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
+Item item = new Item.Builder("11111", "222", price).quantity(1).build();
+
+final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
+                .items(List.of(item))
+                .deeplink("https://mydeeplink.com/products/32432423")
+                .buildIt();
+
+AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
+```
+
 ### Update the current user when new identifiers are available
 
 ```java

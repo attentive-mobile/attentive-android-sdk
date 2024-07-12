@@ -1,14 +1,20 @@
 package com.attentive.example_kotlin.activities
 
 import android.os.Bundle
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.attentive.androidsdk.AttentiveEventTracker
-import com.attentive.androidsdk.events.*
+import com.attentive.androidsdk.events.AddToCartEvent
+import com.attentive.androidsdk.events.Cart
+import com.attentive.androidsdk.events.Item
+import com.attentive.androidsdk.events.Order
+import com.attentive.androidsdk.events.Price
+import com.attentive.androidsdk.events.ProductViewEvent
+import com.attentive.androidsdk.events.PurchaseEvent
 import com.example.example_kotlin.R
 import java.math.BigDecimal
 import java.util.Currency
+import java.util.List
 
 class ProductPageActivity : AppCompatActivity() {
 
@@ -18,20 +24,26 @@ class ProductPageActivity : AppCompatActivity() {
 
         // Send "Product View" Event
         val item = createItem()
-        val productViewEvent = ProductViewEvent.Builder(listOf(item)).build()
+        val productViewEvent = ProductViewEvent.Builder()
+            .items(listOf(item))
+            .deeplink("https://mydeeplink.com/product/32423")
+            .buildIt()
         AttentiveEventTracker.getInstance().recordEvent(productViewEvent)
         showToastMessageForEvent("Product View")
     }
 
-    fun addToCartButtonClicked(view: View?) {
+    fun addToCartButtonClicked() {
         // Send "Add to Cart" Event
         val item = createItem()
-        val addToCartEvent = AddToCartEvent.Builder(listOf(item)).build()
+        val addToCartEvent = AddToCartEvent.Builder()
+            .items(listOf(item))
+            .deeplink("https://mydeeplink.com/products/32432423")
+            .buildIt()
         AttentiveEventTracker.getInstance().recordEvent(addToCartEvent)
         showToastMessageForEvent("Add to Cart")
     }
 
-    fun purchaseButtonClicked(view: View?) {
+    fun purchaseButtonClicked() {
         // Send "Purchase" Event
 
         // Construct one or more "Item"s, which represents the product(s) purchased

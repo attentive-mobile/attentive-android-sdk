@@ -3,6 +3,13 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def attentiveDomain = "YOUR_ATTENTIVE_DOMAIN"
+if (project.rootProject.file('local.properties').exists()) {
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    attentiveDomain = properties.getProperty('attentiveDomain') ?: "YOUR_ATTENTIVE_DOMAIN"
+}
+
 android {
     namespace 'com.example.example_kotlin'
     compileSdk 34
@@ -15,6 +22,8 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        resValue "string", "default_domain", attentiveDomain
     }
 
     buildTypes {

@@ -411,10 +411,11 @@ public class AttentiveApiTest {
     }
 
     private AddToCartEvent buildAddToCartEventWithAllFields() {
-        return new AddToCartEvent.Builder(List.of(buildItemWithAllFields())).build();
+        return new AddToCartEvent.Builder().items(List.of(buildItemWithAllFields())).buildIt();
     }
+
     private ProductViewEvent buildProductViewEventWithAllFields() {
-        return new ProductViewEvent.Builder(List.of(buildItemWithAllFields())).build();
+        return new ProductViewEvent.Builder().items(List.of(buildItemWithAllFields())).buildIt();
     }
 
     private CustomEvent buildCustomEventWithAllFields() {

@@ -4,12 +4,11 @@ import android.app.Application;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.AttentiveLogLevel;
+import com.attentive.androidsdk.BuildConfig;
 import com.attentive.androidsdk.UserIdentifiers;
 import java.util.Map;
 
 public class ExampleApp extends Application {
-    // Change this to your Attentive Domain to test with your Attentive account
-    private static final String ATTENTIVE_DOMAIN = "YOUR_ATTENTIVE_DOMAIN";
     // The mode in which to run the Attentive Android SDK
     private static final AttentiveConfig.Mode MODE = AttentiveConfig.Mode.PRODUCTION;
 
@@ -19,10 +18,13 @@ public class ExampleApp extends Application {
     public void onCreate() {
         super.onCreate();
 
+        // Change this to your Attentive Domain to test with your Attentive account
+        final String attentiveDomain = getString(R.string.default_domain);
+
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         this.attentiveConfig = new AttentiveConfig.Builder()
                 .context(getApplicationContext())
-                .domain(ATTENTIVE_DOMAIN)
+                .domain(attentiveDomain)
                 .mode(MODE)
                 .logLevel(AttentiveLogLevel.LIGHT)
                 .build();
