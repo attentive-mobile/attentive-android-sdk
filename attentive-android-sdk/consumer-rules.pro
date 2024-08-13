@@ -1,1 +1,3 @@
 -keep class com.attentive.androidsdk.internal.util.** { *; }
+-keep class com.attentive.androidsdk.internal.network.** { *; }
+-keep class com.attentive.androidsdk.internal.events.** { *; }
