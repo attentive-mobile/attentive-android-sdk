@@ -10,6 +10,8 @@ def versionName = properties["VERSION_NAME"]
 android {
     namespace = 'com.attentive.androidsdk'
 
+    android.buildFeatures.buildConfig true
+
     compileSdk 34
 
     defaultConfig {
@@ -21,6 +23,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
+
 
     buildTypes {
         release {
