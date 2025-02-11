@@ -33,8 +33,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_9
-        targetCompatibility JavaVersion.VERSION_1_9
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_21.toString()
+    }
+
+    kotlin {
+        jvmToolchain(21)
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     testFixtures {
@@ -72,7 +85,7 @@ dependencies {
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
-    api 'com.squareup.okhttp3:okhttp:4.10.0'
+    api 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.activity:activity:1.8.0'
 
     testImplementation 'junit:junit:4.13.2'
