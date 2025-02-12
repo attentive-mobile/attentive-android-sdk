@@ -28,7 +28,7 @@ class ProductPageActivity : AppCompatActivity() {
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/product/32423")
             .buildIt()
-        AttentiveEventTracker.getInstance().recordEvent(productViewEvent)
+        AttentiveEventTracker.instance.recordEvent(productViewEvent)
         showToastMessageForEvent("Product View")
     }
 
@@ -39,7 +39,7 @@ class ProductPageActivity : AppCompatActivity() {
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/products/32432423")
             .buildIt()
-        AttentiveEventTracker.getInstance().recordEvent(addToCartEvent)
+        AttentiveEventTracker.instance.recordEvent(addToCartEvent)
         showToastMessageForEvent("Add to Cart")
     }
 
@@ -60,7 +60,7 @@ class ProductPageActivity : AppCompatActivity() {
         val purchaseEvent = PurchaseEvent.Builder(listOf(item), order).cart(cart).build()
 
         // Record the PurchaseEvent
-        AttentiveEventTracker.getInstance().recordEvent(purchaseEvent)
+        AttentiveEventTracker.instance.recordEvent(purchaseEvent)
         showToastMessageForEvent("Purchase")
     }
 
