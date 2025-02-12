@@ -21,27 +21,33 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.math.BigDecimal
-import java.util.Arrays
 import java.util.Currency
 import java.util.Locale
 
 class AttentiveApiTest {
-    lateinit var attentiveApi: AttentiveApi
-    lateinit var okHttpClient: OkHttpClient
-    lateinit var objectMapper: ObjectMapper
+    private lateinit var attentiveApi: AttentiveApi
+    private lateinit var okHttpClient: OkHttpClient
+    private lateinit var objectMapper: ObjectMapper
 
     @Before
     fun setup() {
@@ -49,7 +55,7 @@ class AttentiveApiTest {
 
         objectMapper = ObjectMapper()
 
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, objectMapper!!))
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, objectMapper))
     }
 
     @Test
@@ -57,10 +63,10 @@ class AttentiveApiTest {
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
 
         // Act
-        attentiveApi!!.sendUserIdentifiersCollectedEvent(
+        attentiveApi.sendUserIdentifiersCollectedEvent(
             DOMAIN,
             ALL_USER_IDENTIFIERS,
             object : AttentiveApiCallback {
@@ -76,22 +82,19 @@ class AttentiveApiTest {
             })
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(1)).newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
         val userIdentifiersRequest = requestArgumentCaptor.allValues.stream().findFirst()
         Assert.assertTrue(userIdentifiersRequest.isPresent)
         val url = userIdentifiersRequest.get().url
 
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         verifyCommonEventFields(
-            url, "idn", objectMapper!!.readValue(
+            url, "idn", objectMapper.readValue(
                 url.queryParameter("m"),
                 Metadata::class.java
             )
         )
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
         Assert.assertEquals(
             "[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]",
@@ -103,17 +106,14 @@ class AttentiveApiTest {
     fun sendEvent_validEvent_httpMethodIsPost() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         // Which event we send for this test doesn't matter - choosing AddToCart randomly
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
         Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
         val addToCartRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
@@ -127,24 +127,21 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val purchaseEvent = buildPurchaseEventWithRequiredFields()
 
         // Act
-        attentiveApi!!.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
         val purchaseRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
         Assert.assertTrue(purchaseRequest.isPresent)
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
 
-        val m = objectMapper!!.readValue(
+        val m = objectMapper.readValue(
             url.queryParameter("m"),
             PurchaseMetadataDto::class.java
         )
@@ -157,28 +154,30 @@ class AttentiveApiTest {
         Assert.assertEquals(purchaseEvent.order.orderId, m.orderId)
     }
 
+    private val requestArgumentCaptor: ArgumentCaptor<Request> = ArgumentCaptor.forClass(
+        Request::class.java
+    )
+
     @Test
     @Throws(JsonProcessingException::class)
     fun sendEvent_purchaseEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
+
         // Act
-        attentiveApi!!.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(requestArgumentCaptor.capture())
+        verify(okHttpClient, times(2)).newCall(capture(requestArgumentCaptor))
         val purchaseRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
         Assert.assertTrue(purchaseRequest.isPresent)
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
-        val m = objectMapper!!.readValue(
+        val m = objectMapper.readValue(
             url.queryParameter("m"),
             PurchaseMetadataDto::class.java
         )
@@ -204,31 +203,28 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
         val orderConfirmedRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=oc") }.findFirst()
         Assert.assertTrue(orderConfirmedRequest.isPresent)
         assertRequestMethodIsPost(orderConfirmedRequest.get())
         val url = orderConfirmedRequest.get().url
 
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         verifyCommonEventFields(
-            url, "oc", objectMapper!!.readValue(
+            url, "oc", objectMapper.readValue(
                 url.queryParameter("m"),
                 Metadata::class.java
             )
         )
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
         val metadataString = url.queryParameter("m")
         val metadata = objectMapper.readValue(
@@ -243,35 +239,32 @@ class AttentiveApiTest {
             metadata["currency"]
         )
 
-        val products = Arrays.asList(
-            *objectMapper!!.readValue(
+        val products = listOf(
+            *objectMapper.readValue(
                 metadata["products"] as String?,
                 Array<ProductDto>::class.java
-            ) as Array<ProductDto?>
+            ) as Array<ProductDto>
         )
         Assert.assertEquals(1, products.size.toLong())
-        Assert.assertEquals(expectedItem.price.price.toString(), products[0]?.price)
-        Assert.assertEquals(expectedItem.productId, products[0]?.productId)
-        Assert.assertEquals(expectedItem.productVariantId, products[0]?.subProductId)
-        Assert.assertEquals(expectedItem.category, products[0]?.category)
-        Assert.assertEquals(expectedItem.productImage, products[0]?.image)
+        Assert.assertEquals(expectedItem.price.price.toString(), products[0].price)
+        Assert.assertEquals(expectedItem.productId, products[0].productId)
+        Assert.assertEquals(expectedItem.productVariantId, products[0].subProductId)
+        Assert.assertEquals(expectedItem.category, products[0].category)
+        Assert.assertEquals(expectedItem.productImage, products[0].image)
     }
 
     @Test
     fun sendEvent_purchaseEventWithTwoProducts_callsEventsEndpointTwiceForPurchasesAndOnceForOrderConfirmed() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val purchaseEvent = buildPurchaseEventWithTwoItems()
 
         // Act
-        attentiveApi!!.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(capture(requestArgumentCaptor))
         val allValues: List<Request> = ArrayList(requestArgumentCaptor.allValues)
         Assert.assertEquals(3, allValues.size.toLong())
 
@@ -296,24 +289,21 @@ class AttentiveApiTest {
     fun sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
         val addToCartRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
 
-        val m = objectMapper!!.readValue(
+        val m = objectMapper.readValue(
             url.queryParameter("m"),
             AddToCartMetadataDto::class.java
         )
@@ -334,24 +324,21 @@ class AttentiveApiTest {
     fun sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val productViewEvent = buildProductViewEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
         val addToCartRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=d") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
 
-        val m = objectMapper!!.readValue(
+        val m = objectMapper.readValue(
             url.queryParameter("m"),
             ProductViewMetadataDto::class.java
         )
@@ -371,17 +358,14 @@ class AttentiveApiTest {
     fun sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val customEvent = buildCustomEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
         val customEventRequest = requestArgumentCaptor.allValues.stream()
             .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
         Assert.assertTrue(customEventRequest.isPresent)
@@ -389,14 +373,14 @@ class AttentiveApiTest {
         val url = customEventRequest.get().url
 
         val metadataString = url.queryParameter("m")
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         verifyCommonEventFields(
-            url, "ce", objectMapper!!.readValue(
+            url, "ce", objectMapper.readValue(
                 metadataString,
                 Metadata::class.java
             )
         )
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
         val metadata = objectMapper.readValue(
             metadataString,
@@ -413,19 +397,15 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() {
         // Arrange
-        givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val productViewEvent = buildProductViewEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-        attentiveApi!!.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(capture(requestArgumentCaptor))
 
         val eventsSentCount =
             requestArgumentCaptor.allValues.stream()
@@ -443,27 +423,23 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() {
         // Arrange
-        givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint()
-        givenOkHttpClientReturnsSuccessFromEventsEndpoint()
+        givenOkHttpClientReturnsResponseBasedOnHost()
         val productViewEvent = buildProductViewEventWithAllFields()
 
-        Assert.assertNull(attentiveApi!!.cachedGeoAdjustedDomain)
+        Assert.assertNull(attentiveApi.cachedGeoAdjustedDomain)
 
         // Act
-        attentiveApi!!.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(requestArgumentCaptor.capture())
+        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
 
-        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi!!.cachedGeoAdjustedDomain)
+        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
 
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
-            java.util.List.of(
+            listOf(
                 Item.Builder(
                     "11", "22", Price.Builder(
                         BigDecimal("15.99"), Currency.getInstance("USD")
@@ -475,7 +451,7 @@ class AttentiveApiTest {
 
     private fun buildPurchaseEventWithTwoItems(): PurchaseEvent {
         return PurchaseEvent.Builder(
-            java.util.List.of(
+            listOf(
                 Item.Builder(
                     "11",
                     "22",
@@ -493,7 +469,7 @@ class AttentiveApiTest {
 
     private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
-            java.util.List.of(buildItemWithAllFields()),
+            listOf(buildItemWithAllFields()),
             Order.Builder("5555").build()
         ).cart(
             Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build()
@@ -501,11 +477,11 @@ class AttentiveApiTest {
     }
 
     private fun buildAddToCartEventWithAllFields(): AddToCartEvent {
-        return AddToCartEvent.Builder().items(java.util.List.of(buildItemWithAllFields())).buildIt()
+        return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
     }
 
     private fun buildProductViewEventWithAllFields(): ProductViewEvent {
-        return ProductViewEvent.Builder().items(java.util.List.of(buildItemWithAllFields()))
+        return ProductViewEvent.Builder().items(listOf(buildItemWithAllFields()))
             .buildIt()
     }
 
@@ -524,45 +500,45 @@ class AttentiveApiTest {
         ).category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
-    private fun givenOkHttpClientReturnsSuccessFromEventsEndpoint() {
-        val call = Mockito.mock(Call::class.java)
-        Mockito.doReturn(call).`when`(okHttpClient)
-            ?.newCall(ArgumentMatchers.argThat { request: Request ->
-                request.url.host == "events.attentivemobile.com"
-            })
-        Mockito.doAnswer(Answer<Void?> { invocation: InvocationOnMock ->
-            val argument = invocation.getArgument(
-                0,
-                Callback::class.java
-            )
-            argument.onResponse(call, buildSuccessfulResponseMock())
-            null
-        }).`when`(call).enqueue(ArgumentMatchers.any())
-    }
+    private fun givenOkHttpClientReturnsResponseBasedOnHost() {
+        whenever(okHttpClient.newCall(any())).doAnswer { invocation: InvocationOnMock ->
+            val request = invocation.arguments[0] as Request
+            val host = request.url.host
+            val call = mock<Call>()
 
-    private fun givenOkHttpClientReturnsGeoAdjustedDomainFromDtagEndpoint() {
-        val call = Mockito.mock(Call::class.java)
-        Mockito.doReturn(call).`when`(okHttpClient)
-            ?.newCall(ArgumentMatchers.argThat { request: Request ->
-                request.url.host == "cdn.attn.tv"
-            })
-        Mockito.doAnswer(Answer<Void?> { invocation: InvocationOnMock ->
-            val argument = invocation.getArgument(
-                0,
-                Callback::class.java
-            )
-            val responseBody: ResponseBody =
-                ResponseBody.create(null,
-                    String.format(
+            when (host) {
+                "events.attentivemobile.com" -> {
+                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
+                        val callback = enqueueInvocation.getArgument<Callback>(0)
+                        callback.onResponse(call, buildSuccessfulResponseMock())
+                    }
+                }
+                "cdn.attn.tv" -> {
+                    val dtagResponse = mock<Response>()
+                    val content = String.format(
                         "window.__attentive_domain='%s.attn.tv'",
                         GEO_ADJUSTED_DOMAIN
                     )
-                )
-            val dtagResponse = buildSuccessfulResponseMock()
-            Mockito.doReturn(responseBody).`when`(dtagResponse).body
-            argument.onResponse(call, dtagResponse)
-            null
-        }).`when`(call).enqueue(ArgumentMatchers.any())
+                    val responseBody = content.toResponseBody("text/html".toMediaTypeOrNull())
+
+                    whenever(dtagResponse.body).thenReturn(responseBody)
+                    whenever(dtagResponse.request).thenReturn(request)
+                    whenever(dtagResponse.protocol).thenReturn(Protocol.HTTP_1_1)
+                    whenever(dtagResponse.code).thenReturn(200)
+                    whenever(dtagResponse.message).thenReturn("OK")
+                    whenever(dtagResponse.isSuccessful).thenReturn(true)
+
+                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
+                        val callback = enqueueInvocation.getArgument<Callback>(0)
+                        callback.onResponse(call, dtagResponse)
+                    }
+                }
+                else -> {
+                    throw IllegalArgumentException("Unhandled host: $host")
+                }
+            }
+            call
+        }
     }
 
     private fun buildSuccessfulResponseMock(): Response {
@@ -573,17 +549,25 @@ class AttentiveApiTest {
     }
 
     private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfully() {
-        Mockito.doAnswer(Answer<Void?> { invocation: InvocationOnMock ->
+        Mockito.doAnswer { invocation: InvocationOnMock ->
             val argument =
                 invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
             argument.onSuccess(GEO_ADJUSTED_DOMAIN)
-            null
-        }).`when`(attentiveApi).getGeoAdjustedDomainAsync(
-            ArgumentMatchers.eq(
-                DOMAIN
-            ), ArgumentMatchers.any()
+        }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
+            eq(DOMAIN), any()
         )
     }
+
+//    private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfullyAlternative() {
+//        whenever(
+//            attentiveApi.getGeoAdjustedDomainAsync(
+//                eq(DOMAIN),
+//                argThat { true })
+//        ) doAnswer { invocation: InvocationOnMock ->
+//            val (_, callback: GetGeoAdjustedDomainCallback) = invocation.arguments
+//            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
+//        }
+//    }
 
     private fun assertRequestMethodIsPost(request: Request) {
         Assert.assertEquals("POST", request.method.uppercase(Locale.getDefault()))

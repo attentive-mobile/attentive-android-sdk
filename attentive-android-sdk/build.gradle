@@ -72,11 +72,13 @@ dependencies {
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
-    api 'com.squareup.okhttp3:okhttp:4.10.0'
+    api 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.activity:activity:1.8.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.5.0'
+    testImplementation "org.mockito.kotlin:mockito-kotlin:5.4.0"
+
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
