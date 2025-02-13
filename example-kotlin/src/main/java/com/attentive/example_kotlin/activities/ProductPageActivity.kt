@@ -1,6 +1,7 @@
 package com.attentive.example_kotlin.activities
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.attentive.androidsdk.AttentiveEventTracker
@@ -32,7 +33,7 @@ class ProductPageActivity : AppCompatActivity() {
         showToastMessageForEvent("Product View")
     }
 
-    fun addToCartButtonClicked() {
+    fun addToCartButtonClicked(view: View) {
         // Send "Add to Cart" Event
         val item = createItem()
         val addToCartEvent = AddToCartEvent.Builder()
@@ -43,7 +44,7 @@ class ProductPageActivity : AppCompatActivity() {
         showToastMessageForEvent("Add to Cart")
     }
 
-    fun purchaseButtonClicked() {
+    fun purchaseButtonClicked(view: View) {
         // Send "Purchase" Event
 
         // Construct one or more "Item"s, which represents the product(s) purchased
