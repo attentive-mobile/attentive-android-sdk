@@ -27,14 +27,6 @@ class ParameterValidationTest {
     }
 
     @Test
-    fun verifyNotEmpty_nullString_throwsException() {
-        val nullString: String? = null
-        Assert.assertThrows(
-            IllegalArgumentException::class.java
-        ) { ParameterValidation.verifyNotEmpty(nullString!!, "paramName") }
-    }
-
-    @Test
     fun verifyNotEmpty_notEmptyString_succeeds() {
         ParameterValidation.verifyNotEmpty("notEmpty", "paramName")
     }
@@ -49,14 +41,6 @@ class ParameterValidationTest {
                 "paramName"
             )
         }
-    }
-
-    @Test
-    fun verifyNotEmpty_nullCollection_throwsException() {
-        val nullCollection: Collection<*>? = null
-        Assert.assertThrows(
-            IllegalArgumentException::class.java
-        ) { ParameterValidation.verifyNotEmpty(nullCollection!!, "paramName") }
     }
 
     @Test
