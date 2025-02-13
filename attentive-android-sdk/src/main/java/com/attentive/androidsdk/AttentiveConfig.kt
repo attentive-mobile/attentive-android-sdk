@@ -26,7 +26,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         configureLogging(builder.logLevel, settingsService, builder._context)
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
 
-        var okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
         attentiveApi =

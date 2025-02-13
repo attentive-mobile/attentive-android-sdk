@@ -25,18 +25,17 @@ class VisitorService(private val persistentStorage: PersistentStorage) {
             val rand = Random()
             var d = System.currentTimeMillis()
             val format = "xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx"
-            for (i in 0 until format.length) {
-                val c = format[i]
-                if (c == '4') {
+            for (element in format) {
+                if (element == '4') {
                     builder.append('4')
                     continue
                 }
 
                 val r = ((d + rand.nextDouble() * 16) % 16).toLong()
-                d = d / 16
+                d /= 16
                 builder.append(
                     java.lang.Long.toHexString(
-                        if (c == 'x')
+                        if (element == 'x')
                             r
                         else
                             (r and 0x3L) or 0x8L

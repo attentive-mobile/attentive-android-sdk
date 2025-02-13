@@ -508,7 +508,7 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
                     return
                 }
 
-                Timber.i("Sent the '" + eventRequest.type + "' request successfully.")
+                Timber.i("Sent the '${eventRequest.type}' request successfully.")
             }
         })
     }
