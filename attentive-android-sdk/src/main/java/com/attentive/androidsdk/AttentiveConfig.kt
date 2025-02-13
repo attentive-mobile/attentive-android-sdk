@@ -12,8 +12,10 @@ import timber.log.Timber
 class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
-    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId("").build()
-    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    private val visitorService =
+        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    override var userIdentifiers =
+        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
@@ -27,13 +29,14 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         var okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
-        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, ClassFactory.buildObjectMapper())
+        attentiveApi =
+            ClassFactory.buildAttentiveApi(okHttpClient, ClassFactory.buildObjectMapper())
         sendInfoEvent()
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
         Timber.d("skipFatigueOnCreatives called")
-        return settingsService.isSkipFatigueEnabled ?: skipFatigueOnCreatives
+        return skipFatigueOnCreatives
     }
 
     override fun identify(clientUserId: String) {
@@ -63,15 +66,18 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     private fun sendUserIdentifiersCollectedEvent() {
-        attentiveApi.sendUserIdentifiersCollectedEvent(domain, userIdentifiers, object : AttentiveApiCallback {
-            override fun onFailure(message: String?) {
-                Timber.e("Could not send the user identifiers. Error: %s", message)
-            }
+        attentiveApi.sendUserIdentifiersCollectedEvent(
+            domain,
+            userIdentifiers,
+            object : AttentiveApiCallback {
+                override fun onFailure(message: String?) {
+                    Timber.e("Could not send the user identifiers. Error: %s", message)
+                }
 
-            override fun onSuccess() {
-                Timber.i("Successfully sent the user identifiers")
-            }
-        })
+                override fun onSuccess() {
+                    Timber.i("Successfully sent the user identifiers")
+                }
+            })
     }
 
     private fun sendInfoEvent() {
@@ -148,14 +154,13 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
 
         fun build(): AttentiveConfig {
-            if(this::_context.isInitialized.not())
-            {
+            if (this::_context.isInitialized.not()) {
                 throw IllegalStateException("A valid context must be provided.")
             }
-            if(this::_mode.isInitialized.not()){
+            if (this::_mode.isInitialized.not()) {
                 throw IllegalStateException("A valid mode must be provided.")
             }
-            if(this::_domain.isInitialized.not()){
+            if (this::_domain.isInitialized.not()) {
                 throw IllegalStateException("A valid domain must be provided.")
             }
             return AttentiveConfig(this)

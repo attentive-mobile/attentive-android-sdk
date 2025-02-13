@@ -9,14 +9,16 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers
 import org.mockito.MockedStatic
 import org.mockito.Mockito
 import org.mockito.internal.verification.VerificationModeFactory
-import java.util.Map
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.eq
 
 class AttentiveConfigTest {
-    lateinit var factoryMocks: FactoryMocks
+    private lateinit var factoryMocks: FactoryMocks
 
     @Before
     fun setup() {
@@ -28,12 +30,12 @@ class AttentiveConfigTest {
         mockedAppInfo = Mockito.mockStatic(
             AppInfo::class.java
         )
-        Mockito.`when`(isDebuggable(ArgumentMatchers.any())).thenReturn(false)
+        Mockito.`when`(isDebuggable(any())).thenReturn(false)
     }
 
     @After
     fun cleanup() {
-        factoryMocks!!.close()
+        factoryMocks.close()
         mockedAppInfo!!.close()
     }
 
@@ -53,16 +55,17 @@ class AttentiveConfigTest {
         Assert.assertEquals(DOMAIN, config.domain)
         Assert.assertEquals(MODE, config.mode)
         val visitorId = config.userIdentifiers.visitorId
-        Assert.assertTrue(visitorId != null && !visitorId.isEmpty())
+        Assert.assertTrue(!visitorId.isNullOrEmpty())
         Assert.assertNotNull(config.attentiveApi)
         Assert.assertFalse(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
-            ArgumentMatchers.argThat { arg: Event? -> arg is InfoEvent },
-            ArgumentMatchers.eq(config.userIdentifiers),
-            ArgumentMatchers.eq(
+            argThat{ arg: Event? -> arg is InfoEvent },
+            eq(config.userIdentifiers),
+            eq(
                 DOMAIN
-            )
+            ),
+            anyOrNull()
         )
     }
 
@@ -83,16 +86,15 @@ class AttentiveConfigTest {
         Assert.assertEquals(DOMAIN, config.domain)
         Assert.assertEquals(MODE, config.mode)
         val visitorId = config.userIdentifiers.visitorId
-        Assert.assertTrue(visitorId != null && !visitorId.isEmpty())
+        Assert.assertTrue(!visitorId.isNullOrEmpty())
         Assert.assertNotNull(config.attentiveApi)
         Assert.assertTrue(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
-            ArgumentMatchers.argThat { arg: Event? -> arg is InfoEvent },
-            ArgumentMatchers.eq(config.userIdentifiers),
-            ArgumentMatchers.eq(
-                DOMAIN
-            )
+            argThat{ arg: Event? -> arg is InfoEvent },
+            eq(config.userIdentifiers),
+            eq(DOMAIN),
+            anyOrNull()
         )
     }
 
@@ -116,7 +118,7 @@ class AttentiveConfigTest {
         Assert.assertNull(config.userIdentifiers.email)
         Assert.assertNull(config.userIdentifiers.shopifyId)
         Assert.assertNull(config.userIdentifiers.klaviyoId)
-        Assert.assertEquals(Map.of<Any, Any>(), config.userIdentifiers.customIdentifiers)
+        Assert.assertEquals(emptyMap<Any, Any>(), config.userIdentifiers.customIdentifiers)
     }
 
     @Test
@@ -154,7 +156,7 @@ class AttentiveConfigTest {
             .withEmail("newEmail@gmail.com")
             .withShopifyId("67890")
             .withKlaviyoId("09876")
-            .withCustomIdentifiers(Map.of("key1", "newValue1", "extraKey", "extraValue"))
+            .withCustomIdentifiers(mapOf("key1" to "newValue1", "extraKey" to "extraValue"))
             .build()
         config.identify(newUserIdentifiers)
 
@@ -165,7 +167,7 @@ class AttentiveConfigTest {
         Assert.assertEquals("67890", config.userIdentifiers.shopifyId)
         Assert.assertEquals("09876", config.userIdentifiers.klaviyoId)
         Assert.assertEquals(
-            Map.of("key1", "newValue1", "key2", "value2", "extraKey", "extraValue"),
+            mapOf("key1" to "newValue1", "key2" to "value2", "extraKey" to "extraValue"),
             config.userIdentifiers.customIdentifiers
         )
     }
@@ -184,9 +186,9 @@ class AttentiveConfigTest {
             factoryMocks.attentiveApi,
             VerificationModeFactory.times(1)
         ).sendUserIdentifiersCollectedEvent(
-            ArgumentMatchers.eq(DOMAIN),
-            ArgumentMatchers.eq(config.userIdentifiers),
-            ArgumentMatchers.any(AttentiveApiCallback::class.java)
+            eq(DOMAIN),
+            eq(config.userIdentifiers),
+            any()
         )
     }
 
@@ -233,7 +235,7 @@ class AttentiveConfigTest {
             .withEmail("email@gmail.com")
             .withShopifyId("12345")
             .withKlaviyoId("54321")
-            .withCustomIdentifiers(Map.of("key1", "value1", "key2", "value2"))
+            .withCustomIdentifiers(mapOf("key1" to "value1", "key2" to "value2"))
             .build()
     }
 

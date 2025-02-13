@@ -14,6 +14,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.MockedStatic
 import org.mockito.MockedStatic.Verification
 import org.mockito.Mockito
+import org.mockito.kotlin.any
 
 class FactoryMocks private constructor(
     private val classFactoryMockedStatic: MockedStatic<ClassFactory>,
@@ -36,14 +37,14 @@ class FactoryMocks private constructor(
             )
             classFactoryMockedStatic.`when`<Any> {
                 buildPersistentStorage(
-                    ArgumentMatchers.any()
+                    any()
                 )
             }.thenReturn(persistentStorage)
 
             val visitorService = Mockito.mock(VisitorService::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildVisitorService(
-                    ArgumentMatchers.any()
+                    any()
                 )
             }.thenReturn(visitorService)
 
@@ -54,15 +55,15 @@ class FactoryMocks private constructor(
             val okHttpClient = Mockito.mock(OkHttpClient::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildOkHttpClient(
-                    ArgumentMatchers.any()
+                    any()
                 )
             }.thenReturn(okHttpClient)
 
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
-                    ArgumentMatchers.any(),
-                    ArgumentMatchers.any()
+                    any(),
+                    any()
                 )
             }.thenReturn(attentiveApi)
 
