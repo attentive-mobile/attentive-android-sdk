@@ -31,7 +31,7 @@ class ExampleKotlinApp : Application() {
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can
         // be used to send events. The method "initialize" only needs to be called once.
-        AttentiveEventTracker.getInstance().initialize(attentiveConfig)
+        AttentiveEventTracker.instance.initialize(attentiveConfig)
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
         attentiveConfig.identify(buildUserIdentifiers())
