@@ -18,7 +18,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '21'
           distribution: 'temurin'
           cache: gradle
       
@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: "fake_token"
 
       - name: Upload Unit Tests Results
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: unit-tests-results
           path: attentive-android-sdk/build/reports/tests/testDebugUnitTest/index.html
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
+          java-version: '21'
           distribution: 'temurin'
           cache: gradle
 
@@ -58,14 +58,14 @@ jobs:
           GH_TOKEN: "fake_token"
 
       - name: Upload Lint results - SDK
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: lint-results-sdk
           path: build/reports/checkstyle/checkSdk.html
         if: ${{ always() }}
 
       - name: Upload Lint results - Example
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: lint-results-example
           path: build/reports/checkstyle/checkExample.html
