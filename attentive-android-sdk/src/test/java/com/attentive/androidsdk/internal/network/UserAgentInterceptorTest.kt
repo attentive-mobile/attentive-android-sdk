@@ -5,28 +5,28 @@ import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.getApplicationName
 import com.attentive.androidsdk.internal.util.AppInfo.getApplicationPackageName
 import com.attentive.androidsdk.internal.util.AppInfo.getApplicationVersion
-import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
+import org.mockito.Mockito.mockStatic
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.Map
 
 class UserAgentInterceptorTest {
     private var userAgentInterceptor: UserAgentInterceptor? = null
 
     @Before
     fun setup() {
-        userAgentInterceptor = Mockito.spy(
+        userAgentInterceptor = spy(
             UserAgentInterceptor(
-                Mockito.mock(
-                    Context::class.java
-                )
+                mock<Context>()
             )
         )
     }
@@ -35,69 +35,42 @@ class UserAgentInterceptorTest {
     @Throws(IOException::class)
     fun intercept_interceptCalled_customUserAgentIsAdded() {
         // Arrange
-        val chain: Interceptor.Chain = Mockito.mock<Interceptor.Chain>(Interceptor.Chain::class.java)
-        Mockito.doReturn(buildRequest()).`when`<Interceptor.Chain>(chain).request()
+        val chain: Interceptor.Chain = mock()
+        doReturn(buildRequest()).whenever(chain).request()
         val testAgent = "someUserAgentGoesHere"
-        Mockito.doReturn(testAgent).`when`(userAgentInterceptor)?.userAgent
+        doReturn(testAgent).whenever(userAgentInterceptor)?.userAgent
 
         // Act
         userAgentInterceptor!!.intercept(chain)
 
         // Assert
-        val requestArgumentCaptor = ArgumentCaptor.forClass(
-            Request::class.java
-        )
-        Mockito.verify<Interceptor.Chain>(chain).proceed(requestArgumentCaptor.capture())
-        val requestWithUserAgent = requestArgumentCaptor.value
+        val requestArgumentCaptor = org.mockito.kotlin.argumentCaptor<Request>()
+        verify(chain).proceed(requestArgumentCaptor.capture())
+        val requestWithUserAgent = requestArgumentCaptor.firstValue
         Assert.assertEquals(testAgent, requestWithUserAgent.header("User-Agent"))
     }
 
-    @get:Test
-    val userAgent_returnsCorrectlyFormattedUserAgent: Unit
-        get() {
-            Mockito.mockStatic(AppInfo::class.java)
-                .use { appInfoMockedStatic ->
-                    appInfoMockedStatic.`when`<Any> {
-                        getApplicationName(
-                            ArgumentMatchers.any()
-                        )
-                    }.thenReturn(APP_NAME)
-                    appInfoMockedStatic.`when`<Any> {
-                        getApplicationVersion(
-                            ArgumentMatchers.any()
-                        )
-                    }.thenReturn(APP_VERSION)
-                    appInfoMockedStatic.`when`<Any> {
-                        getApplicationPackageName(
-                            ArgumentMatchers.any()
-                        )
-                    }.thenReturn(APP_PACKAGE_NAME)
-                    appInfoMockedStatic.`when`<Any>{(AppInfo::androidLevel)}
-                        .thenReturn(ANDROID_LEVEL)
-                    appInfoMockedStatic.`when`<Any>{(AppInfo::androidVersion)}
-                        .thenReturn(ANDROID_VERSION)
-                    appInfoMockedStatic.`when`<Any>{(AppInfo::attentiveSDKVersion)}
-                        .thenReturn(ATTENTIVE_SDK_VERSION)
-                    appInfoMockedStatic.`when`<Any>{(AppInfo::attentiveSDKName)}
-                        .thenReturn(ATTENTIVE_SDK_NAME)
+    @Test
+    fun userAgent_returnsCorrectlyFormattedUserAgent() {
+        mockStatic(AppInfo::class.java).use { appInfoMockedStatic ->
+            whenever(getApplicationName(any())).thenReturn(APP_NAME)
+            whenever(getApplicationVersion(any())).thenReturn(APP_VERSION)
+            whenever(getApplicationPackageName(any())).thenReturn(APP_PACKAGE_NAME)
+            whenever(AppInfo.androidLevel).thenReturn(ANDROID_LEVEL)
+            whenever(AppInfo.androidVersion).thenReturn(ANDROID_VERSION)
+            whenever(AppInfo.attentiveSDKVersion).thenReturn(ATTENTIVE_SDK_VERSION)
+            whenever(AppInfo.attentiveSDKName).thenReturn(ATTENTIVE_SDK_NAME)
 
-                    val userAgent = userAgentInterceptor!!.userAgent
-                    Assert.assertEquals(
-                        "appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + ATTENTIVE_SDK_NAME + "/" + ATTENTIVE_SDK_VERSION,
-                        userAgent
-                    )
-                }
+            val userAgent = userAgentInterceptor!!.userAgent
+            Assert.assertEquals(
+                "appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + ATTENTIVE_SDK_NAME + "/" + ATTENTIVE_SDK_VERSION,
+                userAgent
+            )
         }
+    }
 
     private fun buildRequest(): Request {
         return Request.Builder().url("https://attentive.com").get().build()
-//        return Request(
-//            HttpUrl.parse()!!,
-//            "GET",
-//            of.of(Map.of<String, String>()),
-//            null,
-//            Map.of<Class<*>, Any>()
-//        )
     }
 
     companion object {

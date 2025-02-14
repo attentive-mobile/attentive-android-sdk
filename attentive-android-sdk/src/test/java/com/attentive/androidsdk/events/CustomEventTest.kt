@@ -8,9 +8,9 @@ import java.util.Arrays
 
 @RunWith(Parameterized::class)
 class CustomEventTest(
-    private val type: String,
-    private val properties: Map<String, String>,
-    private val throwableClass: Class<Throwable>?
+    val type: String,
+    val properties: Map<String, String>,
+    val throwableClass: Class<Throwable>?
 ) {
     @Test
     fun customEventBuilder() {
@@ -32,30 +32,14 @@ class CustomEventTest(
 
     companion object {
         @Parameterized.Parameters
-        fun provideCustomEventBuildParams(): Collection<Array<Any>> {
-            return Arrays.asList<Array<Any>>(
-                arrayOf(
-                    arrayOf(
-                        null, java.util.Map.of<Any, Any>(),
-                        IllegalArgumentException::class.java
-                    ),
-                    arrayOf(
-                        "",
-                        java.util.Map.of<Any, Any>(),
-                        IllegalArgumentException::class.java
-                    ),
-                    arrayOf("f", null, IllegalArgumentException::class.java),
-                    arrayOf(
-                        "typeWithInvalidChar[", java.util.Map.of<Any, Any>(),
-                        IllegalArgumentException::class.java
-                    ),
-                    arrayOf(
-                        "f", java.util.Map.of("keyWithInvalidChar[", "value"),
-                        IllegalArgumentException::class.java
-                    ),
-                    arrayOf("f", java.util.Map.of<Any, Any>(), null),
-                    arrayOf("f", java.util.Map.of("key", "value"), null)
-                )
+        @JvmStatic
+        fun provideCustomEventBuildParams(): Collection<Array<Any?>> {
+            return listOf(
+                arrayOf("", emptyMap<String, String>(), IllegalArgumentException::class.java),
+                arrayOf("typeWithInvalidChar[", emptyMap<String, String>(), IllegalArgumentException::class.java),
+                arrayOf("f", mapOf("keyWithInvalidChar[" to "value"), IllegalArgumentException::class.java),
+                arrayOf("f", emptyMap<String, String>(), null),
+                arrayOf("f", mapOf("key" to "value"), null)
             )
         }
     }
