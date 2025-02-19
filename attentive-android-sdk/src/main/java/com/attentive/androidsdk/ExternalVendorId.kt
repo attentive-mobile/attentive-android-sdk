@@ -29,9 +29,9 @@ object VendorSerializer : KSerializer<ExternalVendorId.Vendor> {
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 open class ExternalVendorId {
+    var vendor: Vendor? = null
     var id: String? = null
     var name: String? = null
-    var vendor: Vendor? = null
 
     @Serializable(with = VendorSerializer::class)
     enum class Vendor(val vendorId: String) {

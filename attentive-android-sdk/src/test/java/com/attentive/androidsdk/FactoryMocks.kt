@@ -2,13 +2,11 @@ package com.attentive.androidsdk
 
 import com.attentive.androidsdk.AttentiveApi
 import com.attentive.androidsdk.ClassFactory.buildAttentiveApi
-import com.attentive.androidsdk.ClassFactory.buildObjectMapper
 import com.attentive.androidsdk.ClassFactory.buildOkHttpClient
 import com.attentive.androidsdk.ClassFactory.buildPersistentStorage
 import com.attentive.androidsdk.ClassFactory.buildVisitorService
 import com.attentive.androidsdk.PersistentStorage
 import com.attentive.androidsdk.VisitorService
-import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.OkHttpClient
 import org.mockito.ArgumentMatchers
 import org.mockito.MockedStatic
@@ -20,7 +18,7 @@ class FactoryMocks private constructor(
     private val classFactoryMockedStatic: MockedStatic<ClassFactory>,
     val persistentStorage: PersistentStorage,
     val visitorService: VisitorService, val okHttpClient: OkHttpClient,
-    val attentiveApi: AttentiveApi, val objectMapper: ObjectMapper
+    val attentiveApi: AttentiveApi
 ) : AutoCloseable {
     override fun close() {
         classFactoryMockedStatic.close()
@@ -48,10 +46,6 @@ class FactoryMocks private constructor(
                 )
             }.thenReturn(visitorService)
 
-            val objectMapper = Mockito.spy(ObjectMapper())
-            classFactoryMockedStatic.`when`<Any>(Verification {buildObjectMapper() })
-                .thenReturn(objectMapper)
-
             val okHttpClient = Mockito.mock(OkHttpClient::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildOkHttpClient(
@@ -62,7 +56,6 @@ class FactoryMocks private constructor(
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
-                    any(),
                     any()
                 )
             }.thenReturn(attentiveApi)
@@ -72,8 +65,7 @@ class FactoryMocks private constructor(
                 persistentStorage,
                 visitorService,
                 okHttpClient,
-                attentiveApi,
-                objectMapper
+                attentiveApi
             )
         }
     }

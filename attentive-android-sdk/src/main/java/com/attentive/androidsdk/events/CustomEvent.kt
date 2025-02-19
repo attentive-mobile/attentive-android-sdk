@@ -14,20 +14,24 @@ data class CustomEvent(
         ParameterValidation.verifyNotNull(properties, "properties")
 
         val invalidChar = findInvalidCharactersInType(type)
-        require(invalidChar == null) {
-            String.format(
-                "The 'type' parameter contains an invalid character: '%s'.",
-                invalidChar
+        if (invalidChar != null) {
+            throw IllegalArgumentException(
+                String.format(
+                    "The 'type' parameter contains an invalid character: '%s'.",
+                    invalidChar
+                )
             )
         }
 
         for (key in properties.keys) {
             val invalidKeyChar = findInvalidCharacterInPropertiesKey(key)
-            require(invalidKeyChar == null) {
-                String.format(
-                    "The properties key '%s' contains an invalid character: '%s'.",
-                    key,
-                    invalidKeyChar
+            if (invalidKeyChar != null) {
+                throw IllegalArgumentException(
+                    String.format(
+                        "The properties key '%s' contains an invalid character: '%s'.",
+                        key,
+                        invalidKeyChar
+                    )
                 )
             }
         }

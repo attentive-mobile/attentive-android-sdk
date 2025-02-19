@@ -103,7 +103,7 @@ class AttentiveApiTestIT {
         verifyCommonEventFields(url, "idn", m)
 
         Assert.assertEquals(
-            "[{\"id\":\"someClientUserId\",\"vendor\":\"2\"},{\"id\":\"someShopifyId\",\"vendor\":\"0\"},{\"id\":\"someKlaviyoId\",\"vendor\":\"1\"},{\"id\":\"value1\",\"name\":\"key1\",\"vendor\":\"6\"},{\"id\":\"value2\",\"name\":\"key2\",\"vendor\":\"6\"}]",
+            "[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"},{\"vendor\":\"6\",\"id\":\"value1\",\"name\":\"key1\"},{\"vendor\":\"6\",\"id\":\"value2\",\"name\":\"key2\"}]",
             url.queryParameter("evs")
         )
     }

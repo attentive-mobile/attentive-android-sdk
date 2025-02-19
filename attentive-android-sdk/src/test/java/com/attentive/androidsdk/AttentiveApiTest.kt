@@ -15,6 +15,8 @@ import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
@@ -44,19 +46,16 @@ import java.util.Locale
 class AttentiveApiTest {
     private lateinit var attentiveApi: AttentiveApi
     private lateinit var okHttpClient: OkHttpClient
-    private lateinit var objectMapper: ObjectMapper
+    private lateinit var json: Json
 
     @Before
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
-
-        objectMapper = ObjectMapper()
-
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, objectMapper))
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient))
+        json = Json{ignoreUnknownKeys = true}
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -84,14 +83,10 @@ class AttentiveApiTest {
         Assert.assertTrue(userIdentifiersRequest.isPresent)
         val url = userIdentifiersRequest.get().url
 
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val decoded = json.decodeFromString<Metadata>(url.queryParameter("m")!!)
         verifyCommonEventFields(
-            url, "idn", objectMapper.readValue(
-                url.queryParameter("m"),
-                Metadata::class.java
-            )
+            url, "idn", decoded
         )
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
         Assert.assertEquals(
             "[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]",
@@ -120,7 +115,7 @@ class AttentiveApiTest {
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -138,9 +133,8 @@ class AttentiveApiTest {
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
 
-        val m = objectMapper.readValue(
-            url.queryParameter("m"),
-            PurchaseMetadataDto::class.java
+        val m = json.decodeFromString<PurchaseMetadataDto>(
+            url.queryParameter("m")!!
         )
         verifyCommonEventFields(url, "p", m)
         Assert.assertEquals("USD", m.currency)
@@ -156,7 +150,7 @@ class AttentiveApiTest {
     )
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -174,10 +168,7 @@ class AttentiveApiTest {
         Assert.assertTrue(purchaseRequest.isPresent)
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
-        val m = objectMapper.readValue(
-            url.queryParameter("m"),
-            PurchaseMetadataDto::class.java
-        )
+        val m = json.decodeFromString<PurchaseMetadataDto>(url.queryParameter("m")!!)
         verifyCommonEventFields(url, "p", m)
 
         Assert.assertEquals("USD", m.currency)
@@ -196,7 +187,7 @@ class AttentiveApiTest {
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -214,20 +205,13 @@ class AttentiveApiTest {
         assertRequestMethodIsPost(orderConfirmedRequest.get())
         val url = orderConfirmedRequest.get().url
 
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         verifyCommonEventFields(
-            url, "oc", objectMapper.readValue(
-                url.queryParameter("m"),
-                Metadata::class.java
-            )
+            url, "oc", json.decodeFromString<Metadata>(
+                url.queryParameter("m")!!)
         )
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
-        val metadataString = url.queryParameter("m")
-        val metadata = objectMapper.readValue(
-            metadataString,
-            Map::class.java
-        )
+        val metadataString = url.queryParameter("m")!!
+        val metadata = json.decodeFromString<Map<String, String>>(metadataString)
         Assert.assertEquals(purchaseEvent.order.orderId, metadata["orderId"])
         val expectedItem = purchaseEvent.items[0]!!
         Assert.assertEquals(expectedItem.price.price.toString(), metadata["cartTotal"])
@@ -236,12 +220,10 @@ class AttentiveApiTest {
             metadata["currency"]
         )
 
-        val products = listOf(
-            *objectMapper.readValue(
-                metadata["products"] as String?,
-                Array<ProductDto>::class.java
-            ) as Array<ProductDto>
-        )
+        val products =
+            json.decodeFromString<Array<ProductDto>>(
+                metadata["products"]!!
+            )
         Assert.assertEquals(1, products.size.toLong())
         Assert.assertEquals(expectedItem.price.price.toString(), products[0].price)
         Assert.assertEquals(expectedItem.productId, products[0].productId)
@@ -282,7 +264,7 @@ class AttentiveApiTest {
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -300,10 +282,7 @@ class AttentiveApiTest {
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
 
-        val m = objectMapper.readValue(
-            url.queryParameter("m"),
-            AddToCartMetadataDto::class.java
-        )
+        val m = json.decodeFromString<AddToCartMetadataDto>(url.queryParameter("m")!!)
         verifyCommonEventFields(url, "c", m)
         Assert.assertEquals("USD", m.currency)
         val addToCartItem = addToCartEvent.items[0]
@@ -317,7 +296,7 @@ class AttentiveApiTest {
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -335,10 +314,7 @@ class AttentiveApiTest {
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
 
-        val m = objectMapper.readValue(
-            url.queryParameter("m"),
-            ProductViewMetadataDto::class.java
-        )
+        val m = json.decodeFromString<ProductViewMetadataDto>(url.queryParameter("m")!!)
         verifyCommonEventFields(url, "d", m)
         Assert.assertEquals("USD", m.currency)
         val addToCartItem = productViewEvent.items[0]
@@ -351,7 +327,7 @@ class AttentiveApiTest {
     }
 
     @Test
-    @Throws(JsonProcessingException::class)
+    @Throws(SerializationException::class)
     fun sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
         givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
@@ -369,24 +345,13 @@ class AttentiveApiTest {
         assertRequestMethodIsPost(customEventRequest.get())
         val url = customEventRequest.get().url
 
-        val metadataString = url.queryParameter("m")
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        val metadataString = url.queryParameter("m")!!
         verifyCommonEventFields(
-            url, "ce", objectMapper.readValue(
-                metadataString,
-                Metadata::class.java
-            )
+            url, "ce", json.decodeFromString(metadataString)
         )
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
 
-        val metadata = objectMapper.readValue(
-            metadataString,
-            MutableMap::class.java
-        )
-        val actualProperties = (objectMapper.readValue(
-            metadata["properties"] as String?,
-            MutableMap::class.java
-        ))
+        val metadata = json.decodeFromString<Map<String, String>>(metadataString)
+        val actualProperties = json.decodeFromString<Map<String, String>>(metadata["properties"]!!)
         Assert.assertEquals(customEvent.type, metadata["type"])
         Assert.assertEquals(customEvent.properties, actualProperties)
     }
@@ -438,9 +403,7 @@ class AttentiveApiTest {
         return PurchaseEvent.Builder(
             listOf(
                 Item.Builder(
-                    "11", "22", Price.Builder(
-                        BigDecimal("15.99"), Currency.getInstance("USD")
-                    ).build()
+                    "11", "22", Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
                 ).build()
             ), Order.Builder("5555").build()
         ).build()
@@ -452,12 +415,12 @@ class AttentiveApiTest {
                 Item.Builder(
                     "11",
                     "22",
-                    Price.Builder(BigDecimal("15.99"), Currency.getInstance("USD")).build()
+                    Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
                 ).build(),
                 Item.Builder(
                     "77",
                     "99",
-                    Price.Builder(BigDecimal("20.00"), Currency.getInstance("USD")).build()
+                    Price.Builder().price(BigDecimal("20.00")).currency(Currency.getInstance("USD")).build()
                 ).build()
             ),
             Order.Builder("5555").build()
@@ -485,16 +448,16 @@ class AttentiveApiTest {
     private fun buildCustomEventWithAllFields(): CustomEvent {
         return CustomEvent.Builder(
             "High Fived Friend",
-            java.util.Map.of("friendGivenTheHighFive", "Warthog234")
-        ).build()
+            mapOf("friendGivenTheHighFive" to "Warthog234")
+        ).buildIt()
     }
 
     private fun buildItemWithAllFields(): Item {
         return Item.Builder(
             "11",
             "22",
-            Price.Builder(BigDecimal("15.99"), Currency.getInstance("USD")).build()
-        ).category("categoryValue").name("nameValue").productImage("imageUrl").build()
+            Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build())
+        .category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
     private fun givenOkHttpClientReturnsResponseBasedOnHost() {
