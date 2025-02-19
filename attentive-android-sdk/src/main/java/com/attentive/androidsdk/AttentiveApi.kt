@@ -49,6 +49,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
 
     val metadataModule = SerializersModule {
         polymorphic(Metadata::class) {
+            subclass(Metadata::class)
             subclass(ProductMetadata::class)
             subclass(OrderConfirmedMetadataDto::class)
             subclass(CustomEventMetadataDto::class)
