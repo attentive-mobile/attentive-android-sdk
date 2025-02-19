@@ -18,7 +18,7 @@ class ExampleKotlinApp : Application() {
 
 
         // Change this to your Attentive Domain to test with your Attentive account
-        val attentiveDomain = getString(R.string.default_domain)
+        val attentiveDomain = "games"
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         attentiveConfig = AttentiveConfig.Builder()
@@ -26,7 +26,7 @@ class ExampleKotlinApp : Application() {
                 .mode(mode)
                 .context(this)
                 .skipFatigueOnCreatives(true)
-                .logLevel(AttentiveLogLevel.LIGHT)
+                .logLevel(AttentiveLogLevel.VERBOSE)
                 .build()
 
         // AttentiveEventTracker's "initialize" must be called before the AttentiveEventTracker can

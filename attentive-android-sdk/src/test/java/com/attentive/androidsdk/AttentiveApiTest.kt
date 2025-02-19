@@ -15,9 +15,6 @@ import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl

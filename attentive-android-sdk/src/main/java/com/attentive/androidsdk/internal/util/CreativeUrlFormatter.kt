@@ -5,14 +5,13 @@ import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveConfigInterface
 import com.attentive.androidsdk.UserIdentifiers
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
-class CreativeUrlFormatter @RestrictTo(RestrictTo.Scope.LIBRARY) constructor(
-    private val objectMapper: ObjectMapper
-) {
+class CreativeUrlFormatter @RestrictTo(RestrictTo.Scope.LIBRARY) constructor() {
+
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun buildCompanyCreativeUrl(attentiveConfig: AttentiveConfigInterface, creativeId: String?): String {
         val uriBuilder = getCompanyCreativeUriBuilder(attentiveConfig, creativeId)
@@ -69,18 +68,17 @@ class CreativeUrlFormatter @RestrictTo(RestrictTo.Scope.LIBRARY) constructor(
         userIdentifiers.klaviyoId?.let { builder.appendQueryParameter("kid", it) }
         userIdentifiers.shopifyId?.let { builder.appendQueryParameter("sid", it) }
 
-        if (!userIdentifiers.customIdentifiers.isNullOrEmpty()) {
+        if (userIdentifiers.customIdentifiers.isNotEmpty()) {
             builder.appendQueryParameter("cstm", getCustomIdentifiersJson(userIdentifiers))
         }
     }
 
     private fun getCustomIdentifiersJson(userIdentifiers: UserIdentifiers): String {
         return runCatching {
-            objectMapper.writeValueAsString(userIdentifiers.customIdentifiers)
+            Json.encodeToString(userIdentifiers.customIdentifiers)
         }.getOrElse { e ->
             Timber.e("Could not serialize the custom identifiers. Message: %s", e.message)
             "{}"
-
         }
     }
 }

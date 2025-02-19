@@ -1,37 +1,37 @@
 package com.attentive.androidsdk.events
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
+import com.attentive.androidsdk.ParameterValidation
+import kotlinx.serialization.Serializable
 
-@JsonDeserialize(builder = Cart.Builder::class)
-class Cart private constructor(builder: Builder) {
-    @JvmField
-    val cartId: String?
-    @JvmField
-    val cartCoupon: String?
-
+@Serializable
+data class Cart(
+    val cartId: String ,
+    val cartCoupon: String? = null
+) {
     init {
-        cartId = builder.cartId
-        cartCoupon = builder.cartCoupon
+        ParameterValidation.verifyNotEmpty(cartId, "cartId")
     }
 
-    @JsonPOJOBuilder(withPrefix = "")
+    @Serializable
     class Builder {
-        var cartId: String? = null
-        var cartCoupon: String? = null
+        lateinit var cartId: String
+        private var cartCoupon: String? = null
 
-        fun cartId(cartId: String?): Builder {
-            this.cartId = cartId
+        fun cartId(id: String): Builder {
+            cartId = id
             return this
         }
 
-        fun cartCoupon(cartCoupon: String?): Builder {
-            this.cartCoupon = cartCoupon
+        fun cartCoupon(id: String?): Builder {
+            cartCoupon = id
             return this
         }
 
         fun build(): Cart {
-            return Cart(this)
+            return Cart(
+                cartId = cartId,
+                cartCoupon = cartCoupon
+            )
         }
     }
 }

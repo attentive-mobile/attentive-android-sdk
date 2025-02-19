@@ -1,43 +1,20 @@
 package com.attentive.androidsdk.events
 
-import com.attentive.androidsdk.ParameterValidation
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
+import kotlinx.serialization.Serializable
 
-@JsonDeserialize(builder = PurchaseEvent.Builder::class)
-class PurchaseEvent private constructor(builder: Builder) :
-    Event() {
-    @JvmField
-    val items: List<Item?>
-    @JvmField
-    val order: Order
-    @JvmField
-    val cart: Cart?
+@Serializable
+data class PurchaseEvent(
+    val items: List<Item>,
+    val order: Order,
+    val cart: Cart? = null
+) : Event() {
 
-    init {
-        items = builder.items
-        order = builder.order
-        cart = builder.cart
-    }
-
-    @JsonPOJOBuilder(withPrefix = "")
-    class Builder @JsonCreator constructor(
-        @JsonProperty("items") items: List<Item?>,
-        @JsonProperty("order") order: Order
+    @Serializable
+    class Builder(
+        private val items: List<Item>,
+        private val order: Order
     ) {
-        val items: List<Item?>
-        val order: Order
-        var cart: Cart? = null
-
-        init {
-            ParameterValidation.verifyNotEmpty(items, "items")
-            ParameterValidation.verifyNotNull(order, "order")
-
-            this.items = items
-            this.order = order
-        }
+        private var cart: Cart? = null
 
         fun cart(`val`: Cart?): Builder {
             cart = `val`
@@ -45,7 +22,7 @@ class PurchaseEvent private constructor(builder: Builder) :
         }
 
         fun build(): PurchaseEvent {
-            return PurchaseEvent(this)
+            return PurchaseEvent(items, order, cart)
         }
     }
 }

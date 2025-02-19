@@ -72,7 +72,7 @@ class Creative @JvmOverloads constructor(
             webView, ViewGroup.LayoutParams(parentView.getLayoutParams())
         )
 
-        this.creativeUrlFormatter = CreativeUrlFormatter(ClassFactory.buildObjectMapper())
+        this.creativeUrlFormatter = CreativeUrlFormatter()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && activity != null) {
             // Delegate to CreativeActivityCallbacks to handle lifecycle events
             activity.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
@@ -92,7 +92,7 @@ class Creative @JvmOverloads constructor(
      * Triggers to show the creative.
      */
     @JvmOverloads
-    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
+    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = "1105292") {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
         Timber.i("WebView is null: %s", webView == null)
         triggerCallback = callback
@@ -111,7 +111,7 @@ class Creative @JvmOverloads constructor(
             webView!!.width, webView!!.height
         )
 
-        val url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, creativeId)
+        val url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, "1105292")
 
         if (attentiveConfig.mode == AttentiveConfig.Mode.DEBUG) {
             changeWebViewVisibility(true)

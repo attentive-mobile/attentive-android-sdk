@@ -2,7 +2,6 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
-import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 
@@ -18,11 +17,6 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildObjectMapper(): ObjectMapper {
-        return ObjectMapper()
-    }
-
-    @JvmStatic
     fun buildOkHttpClient(interceptor: Interceptor): OkHttpClient {
         return OkHttpClient.Builder().addInterceptor(interceptor).build()
     }
@@ -32,8 +26,8 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildAttentiveApi(okHttpClient: OkHttpClient, objectMapper: ObjectMapper): AttentiveApi {
-        return AttentiveApi(okHttpClient, objectMapper)
+    fun buildAttentiveApi(okHttpClient: OkHttpClient): AttentiveApi {
+        return AttentiveApi(okHttpClient)
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {

@@ -1,15 +1,19 @@
 package com.attentive.androidsdk.internal.network
 
 import com.attentive.androidsdk.UserIdentifiers
-import com.fasterxml.jackson.annotation.JsonInclude
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Polymorphic
+import kotlinx.serialization.Serializable
 
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@Polymorphic
 open class Metadata {
-    @JvmField
     var phone: String? = null
-    @JvmField
     var email: String? = null
-    @JvmField
+
+    @EncodeDefault
     var source: String = "msdk"
 
     fun enrichWithIdentifiers(userIdentifiers: UserIdentifiers) {
@@ -20,4 +24,4 @@ open class Metadata {
             this.phone = userIdentifiers.phone
         }
     }
-}
+}    var currency: String? = null

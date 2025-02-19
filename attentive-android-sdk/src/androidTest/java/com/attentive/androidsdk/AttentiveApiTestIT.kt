@@ -9,13 +9,19 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
+import com.attentive.androidsdk.internal.network.CustomEventMetadataDto
 import com.attentive.androidsdk.internal.network.Metadata
+import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto
 import com.attentive.androidsdk.internal.network.ProductDto
+import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -27,16 +33,27 @@ import org.mockito.Mockito
 import java.math.BigDecimal
 import java.util.Arrays
 import java.util.Currency
-import java.util.List
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class AttentiveApiTestIT {
     lateinit var countDownLatch: CountDownLatch
-    lateinit var objectMapper: ObjectMapper
     lateinit var okHttpClient: OkHttpClient
     lateinit var attentiveApi: AttentiveApi
     lateinit var attentiveApiCallback: AttentiveApiCallback
+    val metadataModule = SerializersModule {
+        polymorphic(Metadata::class) {
+            subclass(ProductMetadata::class)
+            subclass(OrderConfirmedMetadataDto::class)
+            subclass(CustomEventMetadataDto::class)
+        }
+        polymorphic(ProductMetadata::class) { // Register ProductMetadata subclasses too
+            subclass(AddToCartMetadataDto::class)
+            subclass(ProductViewMetadataDto::class)
+            subclass(PurchaseMetadataDto::class)
+        }
+    }
+    lateinit var json: Json
 
     private val requestArgumentCaptor: ArgumentCaptor<Request> = ArgumentCaptor.forClass(
         Request::class.java
@@ -47,8 +64,12 @@ class AttentiveApiTestIT {
     fun setup() {
         countDownLatch = CountDownLatch(1)
         okHttpClient = Mockito.spy(OkHttpClient())
-        objectMapper = ObjectMapper()
-        attentiveApi = AttentiveApi(okHttpClient, objectMapper!!)
+        attentiveApi = AttentiveApi(okHttpClient)
+        json = Json {
+            serializersModule = metadataModule
+            classDiscriminator = "className" // Helps identify the subclass
+            ignoreUnknownKeys = true
+        }
         attentiveApiCallback = object : AttentiveApiCallback {
             override fun onFailure(message: String?) {}
 
@@ -61,14 +82,14 @@ class AttentiveApiTestIT {
 
 
     @Test
-    @Throws(InterruptedException::class, JsonProcessingException::class)
+    @Throws(InterruptedException::class, SerializationException::class)
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedWithAllParams_sendsCorrectUserIdentifierCollectedEvent() {
         // Act
-        attentiveApi!!.sendUserIdentifiersCollectedEvent(
+        attentiveApi.sendUserIdentifiersCollectedEvent(
             DOMAIN, ALL_USER_IDENTIFIERS,
-            attentiveApiCallback!!
+            attentiveApiCallback
         )
-        countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
@@ -77,10 +98,8 @@ class AttentiveApiTestIT {
         Assert.assertTrue(uicRequest.isPresent)
         val url = uicRequest.get().url
 
-        val m = objectMapper!!.readValue(
-            url.queryParameter("m"),
-            Metadata::class.java
-        )
+        val queryParam = url.queryParameter("m")!!
+        val m = json.decodeFromString<Metadata>(queryParam)
         verifyCommonEventFields(url, "idn", m)
 
         Assert.assertEquals(
@@ -90,7 +109,7 @@ class AttentiveApiTestIT {
     }
 
     @Test
-    @Throws(JsonProcessingException::class, InterruptedException::class)
+    @Throws(SerializationException::class, InterruptedException::class)
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectPurchaseAndOrderConfirmedEvents() {
         // Arrange
         val purchaseEvent = buildPurchaseEventWithAllFields()
@@ -109,10 +128,7 @@ class AttentiveApiTestIT {
         Assert.assertTrue(purchaseRequest.isPresent)
         val purchaseUrl = purchaseRequest.get().url
 
-        val m = objectMapper!!.readValue(
-            purchaseUrl.queryParameter("m"),
-            PurchaseMetadataDto::class.java
-        )
+        val m = json.decodeFromString<PurchaseMetadataDto>(purchaseUrl.queryParameter("m")!!)
         verifyCommonEventFields(purchaseUrl, "p", m)
 
         Assert.assertEquals("USD", m.currency)
@@ -136,22 +152,10 @@ class AttentiveApiTestIT {
         Assert.assertTrue(orderConfirmedRequest.isPresent)
         val orderConfirmedUrl = orderConfirmedRequest.get().url
 
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        val metadata = objectMapper!!.readValue(
-            orderConfirmedUrl.queryParameter("m"),
-            Metadata::class.java
-        )
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+        val metadata = json.decodeFromString<Metadata>(orderConfirmedUrl.queryParameter("m")!!)
+
+        val ocMetadata = json.decodeFromString<Map<String, String>>(orderConfirmedUrl.queryParameter("m")!!)
         verifyCommonEventFields(orderConfirmedUrl, "oc", metadata)
-
-        // Can't convert directly to a OrderConfirmedMetadataDto because of the special serialization for products
-        val ocMetadata = objectMapper.readValue(
-            orderConfirmedUrl.queryParameter("m"),
-            Map::class.java
-        )
-
-//        Map<String, Object> ocMetadata = objectMapper.readValue(orderConfirmedUrl.queryParameter("m"), Map.class);
-
 
         Assert.assertEquals(purchaseEvent.order.orderId, ocMetadata["orderId"])
         val expectedItem = purchaseEvent.items[0]!!
@@ -161,12 +165,7 @@ class AttentiveApiTestIT {
             ocMetadata["currency"]
         )
 
-        val products = Arrays.asList(
-            *objectMapper!!.readValue(
-                ocMetadata["products"] as String?,
-                Array<ProductDto>::class.java
-            ) as Array<ProductDto?>
-        )
+        val products: List<ProductDto> = json.decodeFromString(ocMetadata["products"]!!)
 
         Assert.assertEquals(1, products.size.toLong())
         Assert.assertEquals(expectedItem.price.price.toString(), products[0]?.price)
@@ -177,11 +176,10 @@ class AttentiveApiTestIT {
     }
 
     @Test
-    @Throws(JsonProcessingException::class, InterruptedException::class)
+    @Throws(SerializationException::class, InterruptedException::class)
     fun sendEvent_productViewEventWithAllParams_sendsCorrectProductViewEvent() {
         // Arrange
         val productViewEvent = buildProductViewEventWithAllFields()
-
         // Act
         attentiveApi!!.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
         countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
@@ -194,9 +192,8 @@ class AttentiveApiTestIT {
         Assert.assertTrue(addToCartRequest.isPresent)
         val url = addToCartRequest.get().url
 
-        val m = objectMapper!!.readValue(
-            url.queryParameter("m"),
-            ProductViewMetadataDto::class.java
+        val m = json.decodeFromString<ProductViewMetadataDto>(
+            url.queryParameter("m")!!
         )
         verifyCommonEventFields(url, "d", m)
 
@@ -211,14 +208,15 @@ class AttentiveApiTestIT {
     }
 
     @Test
-    @Throws(JsonProcessingException::class, InterruptedException::class)
+    @Throws(SerializationException::class, InterruptedException::class)
     fun sendEvent_addToCartEventWithAllParams_sendsCorrectAddToCartEvent() {
+
         // Arrange
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-        countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+        attentiveApi.sendEvent(addToCartEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
@@ -227,9 +225,8 @@ class AttentiveApiTestIT {
         Assert.assertTrue(addToCartRequest.isPresent)
         val url = addToCartRequest.get().url
 
-        val m = objectMapper!!.readValue(
-            url.queryParameter("m"),
-            AddToCartMetadataDto::class.java
+        val m = json.decodeFromString<AddToCartMetadataDto>(
+            url.queryParameter("m")!!
         )
         verifyCommonEventFields(url, "c", m)
 
@@ -245,14 +242,14 @@ class AttentiveApiTestIT {
     }
 
     @Test
-    @Throws(JsonProcessingException::class, InterruptedException::class)
+    @Throws(SerializationException::class, InterruptedException::class)
     fun sendEvent_customEventWithAllParams_sendsCorrectCustomEvent() {
         // Arrange
         val customEvent = buildCustomEventWithAllFields()
 
         // Act
-        attentiveApi!!.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-        countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+        attentiveApi.sendEvent(customEvent, ALL_USER_IDENTIFIERS, DOMAIN)
+        countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
@@ -261,24 +258,18 @@ class AttentiveApiTestIT {
         Assert.assertTrue(customEventRequest.isPresent)
         val customEventUrl = customEventRequest.get().url
 
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        val metadata = objectMapper!!.readValue(
-            customEventUrl.queryParameter("m"),
-            Metadata::class.java
+        val metadata = json.decodeFromString<Metadata>(
+            customEventUrl.queryParameter("m")!!
         )
-        objectMapper!!.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
         verifyCommonEventFields(customEventUrl, "ce", metadata)
 
-        // Can't convert directly to a CustomEventMetadataDto because of the special serialization for properties
-        val customEventMetadata = objectMapper.readValue(
-            customEventUrl.queryParameter("m"),
-            MutableMap::class.java
+        val customEventMetadata = json.decodeFromString<Map<String, String>>(
+            customEventUrl.queryParameter("m")!!
         )
 
         Assert.assertEquals(customEvent.type, customEventMetadata["type"])
-        val properties = objectMapper.readValue(
-            customEventMetadata["properties"] as String?,
-            MutableMap::class.java
+        val properties = json.decodeFromString<Map<String, String>>(
+            customEventMetadata["properties"] as String
         )
         Assert.assertEquals(customEvent.properties, properties)
     }
@@ -317,7 +308,7 @@ class AttentiveApiTestIT {
 
         private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
             return PurchaseEvent.Builder(
-                List.of(buildItemWithAllFields()),
+                listOf(buildItemWithAllFields()),
                 Order.Builder("5555").build()
             )
                 .cart(Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build())
@@ -325,18 +316,18 @@ class AttentiveApiTestIT {
         }
 
         private fun buildAddToCartEventWithAllFields(): AddToCartEvent {
-            return AddToCartEvent.Builder(List.of(buildItemWithAllFields())).build()
+            return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
         }
 
         private fun buildProductViewEventWithAllFields(): ProductViewEvent {
-            return ProductViewEvent.Builder(List.of(buildItemWithAllFields())).build()
+            return ProductViewEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
         }
 
         private fun buildItemWithAllFields(): Item {
             return Item.Builder(
                 "11",
                 "22",
-                Price.Builder(BigDecimal("15.99"), Currency.getInstance("USD")).build()
+                Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
             )
                 .category("categoryValue")
                 .name("nameValue")
@@ -347,8 +338,8 @@ class AttentiveApiTestIT {
         private fun buildCustomEventWithAllFields(): CustomEvent {
             return CustomEvent.Builder(
                 "typeValue",
-                java.util.Map.of("propertyKey1", "propertyValue1")
-            ).build()
+                mapOf("propertyKey1" to "propertyValue1")
+            ).buildIt()
         }
     }
 }

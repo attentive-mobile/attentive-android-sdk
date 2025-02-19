@@ -1,62 +1,63 @@
 package com.attentive.androidsdk
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import kotlinx.serialization.Serializable
 
-@JsonDeserialize(builder = UserIdentifiers.Builder::class)
-data class UserIdentifiers private constructor(
-    val visitorId: String?,
-    val clientUserId: String?,
-    val phone: String?,
-    val email: String?,
-    val shopifyId: String?,
-    val klaviyoId: String?,
-    val customIdentifiers: Map<String, String>
+@Serializable
+data class UserIdentifiers(
+    val visitorId: String? = null,
+    val clientUserId: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val shopifyId: String? = null,
+    val klaviyoId: String? = null,
+    val customIdentifiers: Map<String, String> = emptyMap()
 ) {
+    @Serializable
     class Builder {
-        internal var visitorId: String? = null
-        internal var clientUserId: String? = null
-        internal var phone: String? = null
-        internal var email: String? = null
-        internal var shopifyId: String? = null
-        internal var klaviyoId: String? = null
-        internal var customIdentifiers: Map<String, String> = emptyMap()
+        private var visitorId: String? = null
+        private var clientUserId: String? = null
+        private var phone: String? = null
+        private var email: String? = null
+        private var shopifyId: String? = null
+        private var klaviyoId: String? = null
+        private var customIdentifiers: Map<String, String> = emptyMap()
 
-        fun withVisitorId(visitorId: String) = apply {
+        fun withVisitorId(visitorId: String): Builder = apply {
             ParameterValidation.verifyNotNull(visitorId, "visitorId")
             this.visitorId = visitorId
         }
 
-        fun withClientUserId(clientUserId: String) = apply {
+        fun withClientUserId(clientUserId: String): Builder = apply {
             ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
             this.clientUserId = clientUserId
         }
 
-        fun withPhone(phone: String) = apply {
+        fun withPhone(phone: String): Builder = apply {
             ParameterValidation.verifyNotEmpty(phone, "phone")
             this.phone = phone
         }
 
-        fun withEmail(email: String) = apply {
+        fun withEmail(email: String): Builder = apply {
             ParameterValidation.verifyNotEmpty(email, "email")
             this.email = email
         }
 
-        fun withShopifyId(shopifyId: String) = apply {
+        fun withShopifyId(shopifyId: String): Builder = apply {
             ParameterValidation.verifyNotEmpty(shopifyId, "shopifyId")
             this.shopifyId = shopifyId
         }
 
-        fun withKlaviyoId(klaviyoId: String) = apply {
+        fun withKlaviyoId(klaviyoId: String): Builder = apply {
             ParameterValidation.verifyNotEmpty(klaviyoId, "klaviyoId")
             this.klaviyoId = klaviyoId
         }
 
-        fun withCustomIdentifiers(customIdentifiers: Map<String, String>) = apply {
+        fun withCustomIdentifiers(customIdentifiers: Map<String, String>): Builder = apply {
             ParameterValidation.verifyNotNull(customIdentifiers, "customIdentifiers")
             this.customIdentifiers = customIdentifiers.toMap() // Ensures immutability
         }
 
-        fun build() = UserIdentifiers(
+        fun build(): UserIdentifiers = UserIdentifiers(
             visitorId,
             clientUserId,
             phone,
@@ -70,15 +71,13 @@ data class UserIdentifiers private constructor(
     companion object {
         fun merge(first: UserIdentifiers, second: UserIdentifiers): UserIdentifiers {
             return Builder()
-                .apply {
-                    visitorId = second.visitorId ?: first.visitorId
-                    clientUserId = second.clientUserId ?: first.clientUserId
-                    phone = second.phone ?: first.phone
-                    email = second.email ?: first.email
-                    klaviyoId = second.klaviyoId ?: first.klaviyoId
-                    shopifyId = second.shopifyId ?: first.shopifyId
-                    customIdentifiers = first.customIdentifiers + second.customIdentifiers // second's values overwrite first's
-                }
+                .withVisitorId(second.visitorId ?: first.visitorId ?: "")
+                .withClientUserId(second.clientUserId ?: first.clientUserId ?: "")
+                .withPhone(second.phone ?: first.phone ?: "")
+                .withEmail(second.email ?: first.email ?: "")
+                .withKlaviyoId(second.klaviyoId ?: first.klaviyoId ?: "")
+                .withShopifyId(second.shopifyId ?: first.shopifyId ?: "")
+                .withCustomIdentifiers(first.customIdentifiers + second.customIdentifiers) // second's values overwrite first's
                 .build()
         }
     }
