@@ -92,7 +92,7 @@ class Creative @JvmOverloads constructor(
      * Triggers to show the creative.
      */
     @JvmOverloads
-    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = "1105292") {
+    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
         Timber.i("WebView is null: %s", webView == null)
         triggerCallback = callback
@@ -111,7 +111,7 @@ class Creative @JvmOverloads constructor(
             webView!!.width, webView!!.height
         )
 
-        val url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, "1105292")
+        val url = creativeUrlFormatter.buildCompanyCreativeUrl(attentiveConfig, creativeId)
 
         if (attentiveConfig.mode == AttentiveConfig.Mode.DEBUG) {
             changeWebViewVisibility(true)
