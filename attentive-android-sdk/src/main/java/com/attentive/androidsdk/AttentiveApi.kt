@@ -13,10 +13,13 @@ import com.attentive.androidsdk.internal.network.CustomEventMetadataDto
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto
 import com.attentive.androidsdk.internal.network.ProductDto
+import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.serialization.PolymorphicSerializer
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
@@ -32,10 +35,34 @@ import java.math.RoundingMode
 import java.util.Locale
 import java.util.regex.Pattern
 
-class AttentiveApi(private val httpClient: OkHttpClient, private val objectMapper: ObjectMapper) {
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
+
+
+
+class AttentiveApi(private val httpClient: OkHttpClient) {
     @get:VisibleForTesting
     var cachedGeoAdjustedDomain: String? = null
         private set
+
+
+
+    val metadataModule = SerializersModule {
+        polymorphic(Metadata::class) {
+            subclass(Metadata::class)
+            subclass(ProductMetadata::class)
+            subclass(OrderConfirmedMetadataDto::class)
+            subclass(CustomEventMetadataDto::class)
+            subclass(AddToCartMetadataDto::class)
+            subclass(ProductViewMetadataDto::class)
+            subclass(PurchaseMetadataDto::class)
+        }
+    }
+        val json = Json {
+            serializersModule = metadataModule
+            classDiscriminator = "className" // Helps identify the subclass
+            ignoreUnknownKeys = true
+        }
 
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
@@ -157,8 +184,8 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
         val externalVendorIdsJson: String
         try {
             val externalVendorIds = buildExternalVendorIds(userIdentifiers)
-            externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds)
-        } catch (e: JsonProcessingException) {
+            externalVendorIdsJson = json.encodeToString(externalVendorIds)
+        } catch (e: SerializationException) {
             callback.onFailure(
                 String.format(
                     "Could not serialize the UserIdentifiers. Message: '%s'",
@@ -171,8 +198,8 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
         val metadataJson: String
         try {
             val metadata = buildMetadata(userIdentifiers)
-            metadataJson = objectMapper.writeValueAsString(metadata)
-        } catch (e: JsonProcessingException) {
+            metadataJson = json.encodeToString(metadata)
+        } catch (e: SerializationException) {
             callback.onFailure(
                 String.format(
                     "Could not serialize metadata. Message: '%s'",
@@ -462,8 +489,8 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
         var externalVendorIdsJson: String?
         try {
             val externalVendorIds = buildExternalVendorIds(userIdentifiers)
-            externalVendorIdsJson = objectMapper.writeValueAsString(externalVendorIds)
-        } catch (e: JsonProcessingException) {
+            externalVendorIdsJson = json.encodeToString(externalVendorIds)
+        } catch (e: SerializationException) {
             Timber.w(
                 "Could not serialize external vendor ids. Using empty array. Error: %s",
                 e.message
@@ -479,7 +506,7 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
             .addQueryParameter("c", domain)
             .addQueryParameter("t", eventRequest.type.abbreviation)
             .addQueryParameter("u", userIdentifiers.visitorId)
-            .addQueryParameter("m", serialize<Metadata>(metadata))
+            .addQueryParameter("m", json.encodeToString(PolymorphicSerializer(Metadata::class), metadata))
 
         if (eventRequest.extraParameters != null) {
             for ((key, value) in eventRequest.extraParameters.entries) {
@@ -513,10 +540,10 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val objectMappe
         })
     }
 
-    private fun <T> serialize(`object`: T): String? {
+    private fun serialize(`object`: Any): String? {
         try {
-            return objectMapper.writeValueAsString(`object`)
-        } catch (e: JsonProcessingException) {
+            return Json.encodeToString(`object`)
+        } catch (e: SerializationException) {
             throw RuntimeException("Could not serialize. Error: " + e.message, e)
         } catch (e: IllegalArgumentException) {
             throw RuntimeException(

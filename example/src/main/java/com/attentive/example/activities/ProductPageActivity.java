@@ -70,7 +70,7 @@ public class ProductPageActivity extends AppCompatActivity {
     }
 
     public void customEventButtonClicked(View view) {
-        CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).build();
+        CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).buildIt();
 
         AttentiveEventTracker.getInstance().recordEvent(customEvent);
         showToastMessageForEvent("Custom Event");
@@ -80,7 +80,7 @@ public class ProductPageActivity extends AppCompatActivity {
     private Item createItem() {
         final String productId = "11111";
         final String productVariantId = "222";
-        final Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
+        final Price price = new Price.Builder().price(new BigDecimal("19.99")).currency(Currency.getInstance("USD")).build();
         return new Item.Builder(productId, productVariantId, price).quantity(1).build();
     }
 

@@ -1,44 +1,76 @@
 package com.attentive.androidsdk.events
 
-import com.attentive.androidsdk.ParameterValidation
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Currency
 
-@JsonDeserialize(builder = Price.Builder::class)
-class Price private constructor(builder: Builder) {
-    @JvmField
-    val price: BigDecimal
-    @JvmField
-    val currency: Currency
+object BigDecimalSerializer : KSerializer<BigDecimal> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
 
-    init {
-        price = builder.price
-        currency = builder.currency
+    override fun serialize(encoder: Encoder, value: BigDecimal) {
+        encoder.encodeString(value.toPlainString())
     }
 
-    @JsonPOJOBuilder(withPrefix = "")
-    class Builder @JsonCreator constructor(
-        @JsonProperty("price") price: BigDecimal,
-        @JsonProperty("currency") currency: Currency
-    ) {
-        val price: BigDecimal
-        val currency: Currency
+    override fun deserialize(decoder: Decoder): BigDecimal {
+        return BigDecimal(decoder.decodeString())
+    }
+}
 
-        init {
-            ParameterValidation.verifyNotNull(price, "price")
-            ParameterValidation.verifyNotNull(currency, "currency")
+object CurrencySerializer : KSerializer<Currency> {
+// Custom serializer for Currency
+override val descriptor: SerialDescriptor =
+    PrimitiveSerialDescriptor("Currency", PrimitiveKind.STRING)
 
-            this.price = price.setScale(2, RoundingMode.DOWN)
+override fun serialize(encoder: Encoder, value: Currency) {
+    encoder.encodeString(value.currencyCode)
+}
+
+override fun deserialize(decoder: Decoder): Currency {
+    return Currency.getInstance(decoder.decodeString())
+}
+}
+
+@Serializable
+data class Price(
+    @Serializable(with = BigDecimalSerializer::class)
+    var price: BigDecimal,
+    @Serializable(with = CurrencySerializer::class)
+    val currency: Currency
+) {
+    init {
+        this.price = this.price.setScale(2, RoundingMode.DOWN)
+    }
+
+    @Serializable
+    class Builder {
+        @Serializable(with = BigDecimalSerializer::class)
+        var price: BigDecimal? = null
+        @Serializable(with = CurrencySerializer::class)
+        var currency: Currency? = null
+
+        fun price(price: BigDecimal): Builder {
+            this.price = price
+            return this
+        }
+
+        fun currency(currency: Currency): Builder {
             this.currency = currency
+            return this
         }
 
         fun build(): Price {
-            return Price(this)
+            val price = this.price ?: throw IllegalArgumentException("Price must not be null")
+            val currency = this.currency ?: throw IllegalArgumentException("Currency must not be null")
+            return Price(price, currency)
         }
     }
 }

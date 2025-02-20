@@ -1,15 +1,17 @@
 package com.attentive.androidsdk.internal.network
 
-import com.fasterxml.jackson.annotation.JsonInclude
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Polymorphic
+import kotlinx.serialization.Serializable
 
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@Polymorphic
 class PurchaseMetadataDto : ProductMetadata() {
-    @JvmField
     var quantity: String? = null
-    override var orderId: String? = null
+//    var orderId: String? = null
     var cartTotal: String? = null
-    @JvmField
     var cartId: String? = null
-    @JvmField
     var cartCoupon: String? = null
 }

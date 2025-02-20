@@ -1,42 +1,35 @@
 package com.attentive.androidsdk.events
 
 import com.attentive.androidsdk.ParameterValidation
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-@JsonDeserialize(builder = AddToCartEvent.Builder::class)
-class AddToCartEvent : Event {
-    @JvmField
-    val items: List<Item>
-    val deeplink: String?
-
-    private constructor(items: List<Item>) {
-        this.items = items
-        this.deeplink = null
+@Serializable
+data class AddToCartEvent(
+    val items: List<Item>,
+    val deeplink: String? = null
+) : Event() {
+    init {
+        ParameterValidation.verifyNotEmpty(items, "items")
     }
 
-    private constructor(builder: Builder) {
-        this.items = builder.items
-        this.deeplink = builder.deeplink
-    }
-
-    @JsonPOJOBuilder(withPrefix = "")
-    class Builder {
-        var items: List<Item> = ArrayList()
-        var deeplink: String? = null
-
-        @JsonCreator
-        @Deprecated("As of release 1.0.0-beta01, replaced by standard builder methods")
-        constructor(@JsonProperty("items") items: List<Item>) {
+    companion object {
+        @Deprecated(
+            "As of release 1.0.0-beta01, replaced by standard builder methods",
+            ReplaceWith("AddToCartEvent.Builder().items(items).buildIt()")
+        )
+        fun create(items: List<Item>): AddToCartEvent {
             ParameterValidation.verifyNotEmpty(items, "items")
-
-            this.items = items
-            this.deeplink = null
+            return AddToCartEvent(items)
         }
+    }
 
-        constructor()
+    @Serializable
+    class Builder {
+        var items: List<Item> = emptyList()
+            private set
+        var deeplink: String? = null
+            private set
 
         fun items(items: List<Item>): Builder {
             this.items = items
@@ -49,15 +42,7 @@ class AddToCartEvent : Event {
         }
 
         fun buildIt(): AddToCartEvent {
-            return AddToCartEvent(this)
-        }
-
-        @Deprecated(
-            """As of release 1.0.0-beta01, replaced by {@link ProductViewEvent.Builder#buildIt}
-          Only to be used if using the new builder approach not the deprecated one."""
-        )
-        fun build(): AddToCartEvent {
-            return AddToCartEvent(items)
+            return AddToCartEvent(items, deeplink)
         }
     }
 }

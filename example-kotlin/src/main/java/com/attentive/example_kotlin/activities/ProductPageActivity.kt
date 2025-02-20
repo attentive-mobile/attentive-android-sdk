@@ -68,7 +68,9 @@ class ProductPageActivity : AppCompatActivity() {
     private fun createItem(): Item {
         val productId = "11111"
         val productVariantId = "222"
-        val price = Price.Builder(BigDecimal("19.99"), Currency.getInstance("USD")).build()
+        val amount = BigDecimal("19.99")
+        val currency = Currency.getInstance("USD")
+        val price = Price.Builder().price(amount).currency(currency).build()
         return Item.Builder(productId, productVariantId, price).quantity(1).build()
     }
 
