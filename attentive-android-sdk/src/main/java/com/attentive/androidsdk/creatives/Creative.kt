@@ -13,6 +13,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.annotation.VisibleForTesting
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -25,10 +26,10 @@ import timber.log.Timber
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
-class Creative @JvmOverloads constructor(
+class Creative constructor(
     attentiveConfig: AttentiveConfig,
     parentView: View,
-    activity: Activity? = null
+    activity: Activity? = null,
 ) {
     private val attentiveConfig: AttentiveConfig
     private val creativeUrlFormatter: CreativeUrlFormatter
@@ -36,8 +37,19 @@ class Creative @JvmOverloads constructor(
     private val handler: Handler
     private val webViewClient: WebViewClient
     private val creativeListener: WebMessageListener
-    private var webView: WebView?
+    internal var webView: WebView?
     private var triggerCallback: CreativeTriggerCallback? = null
+
+    // Secondary constructor for testing
+    @VisibleForTesting
+    internal constructor(
+        attentiveConfig: AttentiveConfig,
+        parentView: View,
+        activity: Activity? = null,
+        webView: WebView
+    ) : this(attentiveConfig, parentView, activity) {
+        this.webView = webView
+    }
 
     /**
      * Creates a new Creative instance. Used to display and control creatives.
@@ -65,6 +77,7 @@ class Creative @JvmOverloads constructor(
         this.webViewClient = createWebViewClient()
         this.creativeListener = createCreativeListener()
 
+
         this.webView = createWebView(parentView)
 
         changeWebViewVisibility(false)
@@ -91,10 +104,15 @@ class Creative @JvmOverloads constructor(
     /**
      * Triggers to show the creative.
      */
-    @JvmOverloads
     fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
         Timber.i("WebView is null: %s", webView == null)
+
+        if (isCreativeDestroyed.get()) {
+            Timber.e("Attempted to trigger a destroyed creative. Ignoring.")
+            return
+        }
+
         triggerCallback = callback
 
         if (webView == null) {
@@ -117,11 +135,18 @@ class Creative @JvmOverloads constructor(
             changeWebViewVisibility(true)
         }
 
+        if (isCreativeOpening.get()) {
+            Timber.w("Attempted to trigger creative, but creative is already opening. Taking no action")
+            return
+        }
+
         if (isCreativeOpen.get()) {
             Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action")
             return
         }
+
         Timber.i("Start loading creative with url %s", url)
+        isCreativeOpening.set(true)
         webView!!.loadUrl(url)
     }
 
@@ -136,6 +161,7 @@ class Creative @JvmOverloads constructor(
     fun destroy() {
         Timber.d("destroy method called")
         isCreativeOpen.set(false)
+        isCreativeOpening.set(false)
         if (parentView != null && webView != null) {
             Timber.i("WebView removed from view hierarchy correctly")
             (parentView as ViewGroup).removeView(webView)
@@ -149,6 +175,7 @@ class Creative @JvmOverloads constructor(
             webViewToDestroy?.destroy()
             Timber.i("WebView destroyed correctly")
         }
+        isCreativeDestroyed.set(true)
     }
 
     /**
@@ -168,7 +195,7 @@ class Creative @JvmOverloads constructor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(parentView: View): WebView {
+    internal fun createWebView(parentView: View): WebView {
         val view = WebView(parentView.context)
         val webSettings = view.settings
 
@@ -276,8 +303,9 @@ class Creative @JvmOverloads constructor(
         isCreativeOpen.set(false)
     }
 
-    private fun openCreative() {
+    internal fun openCreative() {
         handler.post {
+            isCreativeOpening.set(false)
             if (isCreativeOpen.get()) {
                 Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action")
                 return@post
@@ -289,6 +317,7 @@ class Creative @JvmOverloads constructor(
             if (webView != null) {
                 changeWebViewVisibility(true)
                 webView!!.requestLayout()
+                isCreativeOpening.set(false)
                 isCreativeOpen.set(true)
                 if (triggerCallback != null) {
                     triggerCallback!!.onOpen()
@@ -296,6 +325,7 @@ class Creative @JvmOverloads constructor(
                 Timber.i("WebView correctly displayed")
             } else {
                 Timber.w("The creative loaded but the WebView is null. Ignoring.")
+                isCreativeOpening.set(false)
                 if (triggerCallback != null) {
                     triggerCallback!!.onCreativeNotOpened()
                 }
@@ -303,15 +333,12 @@ class Creative @JvmOverloads constructor(
         }
     }
 
-    private fun closeCreative() {
+    internal fun closeCreative() {
         handler.post {
+            isCreativeOpen.set(false)  // Ensure state consistency
             if (webView != null) {
                 changeWebViewVisibility(false)
-                // The following line is needed to avoid showing the previously creative instance
-                // on the web view if a single instance is being used to display two different
-                // creatives
                 webView!!.clearCache(true)
-                isCreativeOpen.set(false)
                 if (triggerCallback != null) {
                     triggerCallback!!.onClose()
                 }
@@ -324,7 +351,8 @@ class Creative @JvmOverloads constructor(
         }
     }
 
-    private fun changeWebViewVisibility(visible: Boolean) {
+
+        private fun changeWebViewVisibility(visible: Boolean) {
         if (webView != null) {
             if (visible) {
                 webView!!.visibility = View.VISIBLE
@@ -369,5 +397,19 @@ class Creative @JvmOverloads constructor(
 
         // Making this atomic to make sure it doesn't run into any race conditions
         private val isCreativeOpen = AtomicBoolean(false)
+        private val isCreativeOpening = AtomicBoolean(false)
+        private val isCreativeDestroyed = AtomicBoolean(false)
+
+        internal fun isCreativeOpen(): Boolean{
+            return isCreativeOpen.get()
+        }
+
+        internal fun isCreativeDestroyed(): Boolean{
+            return isCreativeDestroyed.get()
+        }
+
+        internal fun isCreativeOpening(): Boolean{
+            return isCreativeOpening.get()
+        }
     }
 }
