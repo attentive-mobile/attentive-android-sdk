@@ -1,5 +1,7 @@
 package android.util;
 
+import net.bytebuddy.implementation.bytecode.Throw;
+
 public class Log {
     @SuppressWarnings("checkstyle:methodname")
     public static int d(String tag, String msg) {
@@ -22,6 +24,12 @@ public class Log {
     @SuppressWarnings("checkstyle:methodname")
     public static int e(String tag, String msg) {
         System.out.println("ERROR: " + tag + ": " + msg);
+        return 0;
+    }
+
+    @SuppressWarnings("checkstyle:methodname")
+    public static int e(String tag, String message, Throwable t) {
+        System.out.println("ERROR: " + tag + ": " + message);
         return 0;
     }
 }

@@ -9,7 +9,7 @@ import com.example.example_kotlin.R
 
 class ExampleKotlinApp : Application() {
     // The mode in which to run the Attentive Android SDK
-    private val mode = AttentiveConfig.Mode.PRODUCTION
+    private val mode = AttentiveConfig.Mode.DEBUG
 
     lateinit var attentiveConfig: AttentiveConfig
 
