@@ -1,52 +1,102 @@
 package com.attentive.androidsdk.creatives
 
+import android.app.Activity
+import android.os.Handler
 import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebSettings
 import android.webkit.WebView
+import com.attentive.androidsdk.AttentiveConfig
+import com.attentive.androidsdk.TimberRule
+import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.mock
+import org.junit.runner.RunWith
 import org.mockito.MockitoAnnotations
+import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 
+
+@RunWith(MockitoJUnitRunner.Silent::class)
 class CreativeStateTest {
 
-    @Mock
     private lateinit var parentView: View
-
-    @Mock
     private lateinit var webView: WebView
-
-    @Mock
     private lateinit var creative: Creative
+
+    companion object {
+        @get:ClassRule
+        @JvmStatic
+        var timberRule = TimberRule()
+    }
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        whenever(parentView.context).thenReturn(mock(android.content.Context::class.java))
-        whenever(creative.createWebView(any())).thenReturn(webView)
-        creative = mock(Creative::class.java)
-        whenever(creative.destroy()).thenCallRealMethod()
-        whenever(creative.trigger()).thenCallRealMethod()
-        whenever(creative.trigger(anyOrNull(), anyOrNull())).thenCallRealMethod()
+
+        val webSettings = mock<WebSettings>{}
+
+        webView = mock<WebView> {
+            on { settings } doReturn webSettings
+        }
+
+        parentView = mock<ViewGroup>{}
+
+
+        val handler: Handler = mock()
+        whenever(handler.post(any())).thenAnswer { invocation ->
+            val msg = invocation.getArgument<Runnable>(0)
+            msg.run()
+            null
+        }
+
+        val realCreative = Creative(mock<AttentiveConfig>{}, parentView, mock<Activity>{}, webView, handler)
+        realCreative.webView = webView
+        realCreative.creativeUrlFormatter = mock<CreativeUrlFormatter>{
+            doReturn("https://example.com").whenever(it).buildCompanyCreativeUrl(any(), anyOrNull())
+        }
+        creative = spy(realCreative)
+
+
+        doReturn(webView).whenever(creative).createWebView(any())
+    }
+
+    @After
+    fun tearDown() {
+        Creative.isCreativeOpening.set(false)
+        Creative.isCreativeDestroyed.set(false)
+        Creative.isCreativeOpen.set(false)
     }
 
     @Test
     fun testCreativeIsInitiallyClosed() {
-        assertFalse(Creative.isCreativeOpen())
         assertFalse(Creative.isCreativeOpen())
         assertFalse(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeDestroyed())
     }
 
     @Test
-    fun testCreativeOpensCorrectly() {
+    fun testCreativeStartsOpeningCorrectly() {
         creative.trigger()
+        assertTrue(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeOpen())
+        assertFalse(Creative.isCreativeDestroyed())
+    }
+
+    @Test
+    fun testCreativeOpensCorrectly() {
+        creative.openCreative()
+        assertTrue(Creative.isCreativeOpen())
+        assertFalse(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeDestroyed())
     }
 
@@ -66,5 +116,4 @@ class CreativeStateTest {
         assertFalse(Creative.isCreativeOpening())
         assertTrue(Creative.isCreativeDestroyed())
     }
-
 }
