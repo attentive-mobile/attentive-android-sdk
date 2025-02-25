@@ -18,7 +18,7 @@ class ExampleKotlinApp : Application() {
 
 
         // Change this to your Attentive Domain to test with your Attentive account
-        val attentiveDomain = "games"
+        val attentiveDomain = getString(R.string.default_domain)
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         attentiveConfig = AttentiveConfig.Builder()

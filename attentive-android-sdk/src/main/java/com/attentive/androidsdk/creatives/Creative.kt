@@ -20,48 +20,40 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewCompat.WebMessageListener
 import androidx.webkit.WebViewFeature
 import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.ClassFactory
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
 import timber.log.Timber
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
-class Creative constructor(
-    attentiveConfig: AttentiveConfig,
-    parentView: View,
-    activity: Activity? = null,
+class Creative internal constructor(
+    private var attentiveConfig: AttentiveConfig,
+    private var parentView: View,
+    private var activity: Activity? = null,
+    @set:VisibleForTesting
+    internal var webView: WebView? = null,
+    @SuppressLint("SupportAnnotationUsage") @VisibleForTesting
+    private val handler: Handler = Handler()
 ) {
-    private val attentiveConfig: AttentiveConfig
-    private val creativeUrlFormatter: CreativeUrlFormatter
-    private val parentView: View?
-    private val handler: Handler
-    private val webViewClient: WebViewClient
-    private val creativeListener: WebMessageListener
-    internal var webView: WebView?
-    private var triggerCallback: CreativeTriggerCallback? = null
-
-    // Secondary constructor for testing
-    @VisibleForTesting
-    internal constructor(
-        attentiveConfig: AttentiveConfig,
-        parentView: View,
-        activity: Activity? = null,
-        webView: WebView
-    ) : this(attentiveConfig, parentView, activity) {
-        this.webView = webView
-    }
-
     /**
      * Creates a new Creative instance. Used to display and control creatives.
      * @param attentiveConfig The AttentiveConfig instance to use.
      * @param parentView The view to add the WebView to.
      * @param activity The Activity to use for lifecycle callbacks.
      */
-    /**
-     * Creates a new Creative instance. Used to display and control creatives.
-     * @param attentiveConfig The AttentiveConfig instance to use.
-     * @param parentView The view to add the WebView to.
-     */
+    constructor(attentiveConfig: AttentiveConfig, parentView: View, activity: Activity? = null) : this(
+        attentiveConfig,
+        parentView,
+        activity,
+        null,
+        Handler()
+    )
+
+    @VisibleForTesting
+    internal var creativeUrlFormatter: CreativeUrlFormatter
+    private val webViewClient: WebViewClient
+    private val creativeListener: WebMessageListener
+    private var triggerCallback: CreativeTriggerCallback? = null
+
     init {
         Timber.d(
             "Calling constructor of Creative with parameters: %s, %s, %s",
@@ -70,25 +62,27 @@ class Creative constructor(
             activity
         )
         Timber.i("Android version: %s", Build.VERSION.SDK_INT)
-        this.attentiveConfig = attentiveConfig
-        this.parentView = parentView
-
-        this.handler = Handler()
         this.webViewClient = createWebViewClient()
         this.creativeListener = createCreativeListener()
 
 
-        this.webView = createWebView(parentView)
+        if(webView == null) {
+            this.webView = createWebView(parentView)
+        }
+
 
         changeWebViewVisibility(false)
         (parentView as ViewGroup).addView(
-            webView, ViewGroup.LayoutParams(parentView.getLayoutParams())
+            webView, ViewGroup.LayoutParams(parentView.layoutParams)
         )
 
         this.creativeUrlFormatter = CreativeUrlFormatter()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && activity != null) {
-            // Delegate to CreativeActivityCallbacks to handle lifecycle events
-            activity.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
+
+        activity?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Delegate to CreativeActivityCallbacks to handle lifecycle events
+                it.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
+            }
         }
     }
 
@@ -96,13 +90,6 @@ class Creative constructor(
      * Triggers to show the creative.
      * @param callback [CreativeTriggerCallback] to be called when the creative updates it's state.
      * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
-     */
-    /**
-     * Triggers to show the creative.
-     * @param callback [CreativeTriggerCallback] to be called when the creative updates it's state.
-     */
-    /**
-     * Triggers to show the creative.
      */
     fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
@@ -140,11 +127,6 @@ class Creative constructor(
             return
         }
 
-        if (isCreativeOpen.get()) {
-            Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action")
-            return
-        }
-
         Timber.i("Start loading creative with url %s", url)
         isCreativeOpening.set(true)
         webView!!.loadUrl(url)
@@ -159,7 +141,7 @@ class Creative constructor(
      * creative.
      */
     fun destroy() {
-        Timber.d("destroy method called")
+        Timber.d("Destroying creative")
         isCreativeOpen.set(false)
         isCreativeOpening.set(false)
         if (parentView != null && webView != null) {
@@ -304,6 +286,7 @@ class Creative constructor(
     }
 
     internal fun openCreative() {
+        Timber.i("openCreative() called")
         handler.post {
             isCreativeOpening.set(false)
             if (isCreativeOpen.get()) {
@@ -334,8 +317,10 @@ class Creative constructor(
     }
 
     internal fun closeCreative() {
+        Timber.i("closeCreative() called")
         handler.post {
-            isCreativeOpen.set(false)  // Ensure state consistency
+            isCreativeOpen.set(false)
+            isCreativeOpening.set(false)
             if (webView != null) {
                 changeWebViewVisibility(false)
                 webView!!.clearCache(true)
@@ -396,9 +381,9 @@ class Creative constructor(
                 "})()"
 
         // Making this atomic to make sure it doesn't run into any race conditions
-        private val isCreativeOpen = AtomicBoolean(false)
-        private val isCreativeOpening = AtomicBoolean(false)
-        private val isCreativeDestroyed = AtomicBoolean(false)
+        internal val isCreativeOpen = AtomicBoolean(false)
+        internal val isCreativeOpening = AtomicBoolean(false)
+        internal val isCreativeDestroyed = AtomicBoolean(false)
 
         internal fun isCreativeOpen(): Boolean{
             return isCreativeOpen.get()
