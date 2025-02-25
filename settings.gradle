@@ -8,13 +8,13 @@ pluginManagement {
 
 Properties ghProperties = new Properties()
 File ghPropertiesFile = file("github.properties")
-if (ghPropertiesFile.exists()) {
-    ghProperties.load(ghPropertiesFile.newDataInputStream())
-}
-else {
-    ghProperties.setProperty('gpr.user', System.getenv("GH_USERNAME"))
-    ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
-}
+//if (ghPropertiesFile.exists()) {
+//    ghProperties.load(ghPropertiesFile.newDataInputStream())
+//}
+//else {
+//    ghProperties.setProperty('gpr.user', System.getenv("GH_USERNAME"))
+//    ghProperties.setProperty('gpr.key', System.getenv("GH_TOKEN"))
+//}
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -27,3 +27,4 @@ rootProject.name = "Attentive Android SDK"
 include ':attentive-android-sdk'
 include ':example'
 include ':example-kotlin'
+include ':example2'
