@@ -31,13 +31,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.events.Item
+import com.attentive.androidsdk.events.Price
+import java.math.BigDecimal
+import java.util.Currency
+import java.util.Locale
 import kotlin.random.Random
 
 @Composable
 fun ProductScreen(
     navHostController: NavHostController,
-    viewModel: ProductViewModel = ProductViewModel()
+    viewModel: ProductViewModel = viewModel()
 ) {
     ProductScreenContent(navHostController, viewModel)
 }
@@ -45,7 +51,7 @@ fun ProductScreen(
 
 @Composable
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
-    val cartItemCount by viewModel.cartItemCount
+    val cartItemCount = 4
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Products", actions = {
@@ -72,22 +78,21 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             fontSize = 36.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 48.dp)
         )
-        ProductsGrid(viewModel::addToCart)
+        ProductsGrid(viewModel::productWasViewed, viewModel::addToCart)
     }
 }
 
 @Composable
-fun ProductsGrid(onAddToCart: () -> Unit) {
+fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: () -> Unit) {
     LazyVerticalGrid(columns = GridCells.Fixed(2)) {
         items(4) { index ->
-            ProductCard(index, onAddToCart)
-
+            ProductCard(index, onProductViewed, onAddToCart)
         }
     }
 }
 
 @Composable
-fun ProductCard(index: Int, onAddToCart: () -> Unit) {
+fun ProductCard(index: Int, onProductViewed:(item: Item) -> Unit, onAddToCart: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(32.dp)
@@ -103,7 +108,10 @@ fun ProductCard(index: Int, onAddToCart: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Product $index")
+            val price = BigDecimal((index * 10) + 1)
+            Text("Product id: $index \n Price: ${price}")
+            val item = Item.Builder("id", "variantId", Price(price, Currency.getInstance(Locale.getDefault()))).build()
+            onProductViewed(item)
         }
     }
 }
