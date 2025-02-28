@@ -70,15 +70,15 @@ data class UserIdentifiers(
 
     companion object {
         fun merge(first: UserIdentifiers, second: UserIdentifiers): UserIdentifiers {
-            return Builder()
-                .withVisitorId(second.visitorId ?: first.visitorId ?: "")
-                .withClientUserId(second.clientUserId ?: first.clientUserId ?: "")
-                .withPhone(second.phone ?: first.phone ?: "")
-                .withEmail(second.email ?: first.email ?: "")
-                .withKlaviyoId(second.klaviyoId ?: first.klaviyoId ?: "")
-                .withShopifyId(second.shopifyId ?: first.shopifyId ?: "")
-                .withCustomIdentifiers(first.customIdentifiers + second.customIdentifiers) // second's values overwrite first's
-                .build()
+            return Builder().apply {
+                second.visitorId ?: first.visitorId?.let { withVisitorId(it) }
+                second.clientUserId ?: first.clientUserId?.let { withClientUserId(it) }
+                second.phone ?: first.phone?.let { withPhone(it) }
+                second.email ?: first.email?.let { withEmail(it) }
+                second.klaviyoId ?: first.klaviyoId?.let { withKlaviyoId(it) }
+                second.shopifyId ?: first.shopifyId?.let { withShopifyId(it) }
+                withCustomIdentifiers(first.customIdentifiers + second.customIdentifiers)
+            }.build()
         }
     }
 
