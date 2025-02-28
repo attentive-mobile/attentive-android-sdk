@@ -61,6 +61,15 @@ class UserIdentifiersTest {
         verifyUserIdentifiers(mergedUserIdentifiers)
     }
 
+    @Test
+    fun merge_withIncompleteSetOfIdentifiers(){
+        val userIdentifiers = UserIdentifiers.Builder().withClientUserId("oldUserId").build()
+        val newUserIdentifiers = UserIdentifiers.Builder().withClientUserId("newUserId").build()
+
+        val mergedUserIdentifiers = UserIdentifiers.merge(userIdentifiers, newUserIdentifiers)
+        Assert.assertEquals("newUserId", mergedUserIdentifiers.clientUserId)
+    }
+
     private fun verifyUserIdentifiers(userIdentifiersToVerify: UserIdentifiers) {
         Assert.assertEquals("clientId", userIdentifiersToVerify.clientUserId)
         Assert.assertEquals("+14156667777", userIdentifiersToVerify.phone)
