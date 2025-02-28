@@ -2,29 +2,42 @@ package com.attentive.example2
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.State
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.ProductViewEvent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class ProductViewModel : ViewModel() {
-    private val items = mutableListOf<Item>()
+    private val viewedItems = mutableListOf<Item>()
+    private val cartItems = mutableListOf<Item>()
 
-    fun addToCart() {
+    private val _cartItemCount = MutableStateFlow(0)
+    val cartItemCount: StateFlow<Int> get() = _cartItemCount
 
+    fun addToCart(item: Item) {
+        if(cartItems.contains(item).not()) {
+            cartItems.add(item)
+        } else {
+            cartItems.remove(item)
+        }
+        _cartItemCount.value = cartItems.size
     }
 
     fun productWasViewed(item: Item) {
-        if(items.contains(item).not()) {
-            items.add(item)
+        if(viewedItems.contains(item).not()) {
+            viewedItems.add(item)
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         Log.e("pfaff", "onCleared")
-        val event = ProductViewEvent.Builder().items(items).build()
+        val event = ProductViewEvent.Builder().items(viewedItems).build()
         AttentiveEventTracker.instance.recordEvent(event)
+
+        val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
+        AttentiveEventTracker.instance.recordEvent(cartEvent)
     }
 }

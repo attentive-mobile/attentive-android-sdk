@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,13 +52,13 @@ fun ProductScreen(
 
 @Composable
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
-    val cartItemCount = 4
+    val cartItemCount by viewModel.cartItemCount.collectAsState()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Products", actions = {
-            BadgedBox( modifier = Modifier.padding(4.dp),
+            BadgedBox(modifier = Modifier.padding(4.dp),
                 badge = {
-                    if(cartItemCount > 0) {
+                    if (cartItemCount > 0) {
                         Badge(containerColor = Color.White, contentColor = Color.Black) {
                             Text(text = cartItemCount.toString())
                         }
@@ -68,7 +69,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                     onClick = {
                         navHostController.navigate(Routes.CartScreen.name)
                     }
-                ){
+                ) {
                     Icon(imageVector = Icons.Filled.ShoppingCart, contentDescription = "Cart")
                 }
             }
@@ -83,7 +84,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
 }
 
 @Composable
-fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: () -> Unit) {
+fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: (item: Item) -> Unit) {
     LazyVerticalGrid(columns = GridCells.Fixed(2)) {
         items(4) { index ->
             ProductCard(index, onProductViewed, onAddToCart)
@@ -92,13 +93,25 @@ fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: () -> Unit)
 }
 
 @Composable
-fun ProductCard(index: Int, onProductViewed:(item: Item) -> Unit, onAddToCart: () -> Unit) {
+fun ProductCard(
+    index: Int,
+    onProductViewed: (item: Item) -> Unit,
+    onAddToCart: (item: Item) -> Unit
+) {
     Card(
         modifier = Modifier
             .padding(32.dp)
             .height(100.dp)
             .clickable(
-                onClick = { onAddToCart() },
+                onClick = {
+                    val price = BigDecimal((index * 10) + 1)
+                    val item = Item.Builder(
+                        "id",
+                        "variantId",
+                        Price(price, Currency.getInstance(Locale.getDefault()))
+                    ).build()
+                    onAddToCart(item)
+                },
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple()
             ), colors = CardDefaults.cardColors(containerColor = Color(Random(index).nextInt()))
@@ -110,7 +123,11 @@ fun ProductCard(index: Int, onProductViewed:(item: Item) -> Unit, onAddToCart: (
         ) {
             val price = BigDecimal((index * 10) + 1)
             Text("Product id: $index \n Price: ${price}")
-            val item = Item.Builder("id", "variantId", Price(price, Currency.getInstance(Locale.getDefault()))).build()
+            val item = Item.Builder(
+                "id",
+                "variantId",
+                Price(price, Currency.getInstance(Locale.getDefault()))
+            ).build()
             onProductViewed(item)
         }
     }

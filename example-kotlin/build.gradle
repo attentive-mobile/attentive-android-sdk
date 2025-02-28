@@ -12,7 +12,7 @@ if (project.rootProject.file('local.properties').exists()) {
 
 android {
     namespace 'com.example.example_kotlin'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.example_kotlin"
