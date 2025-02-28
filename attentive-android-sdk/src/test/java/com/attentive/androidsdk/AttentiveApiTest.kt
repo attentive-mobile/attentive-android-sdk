@@ -437,19 +437,19 @@ class AttentiveApiTest {
     }
 
     private fun buildAddToCartEventWithAllFields(): AddToCartEvent {
-        return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
+        return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).build()
     }
 
     private fun buildProductViewEventWithAllFields(): ProductViewEvent {
         return ProductViewEvent.Builder().items(listOf(buildItemWithAllFields()))
-            .buildIt()
+            .build()
     }
 
     private fun buildCustomEventWithAllFields(): CustomEvent {
         return CustomEvent.Builder(
             "High Fived Friend",
             mapOf("friendGivenTheHighFive" to "Warthog234")
-        ).buildIt()
+        ).build()
     }
 
     private fun buildItemWithAllFields(): Item {

@@ -28,7 +28,7 @@ class ProductPageActivity : AppCompatActivity() {
         val productViewEvent = ProductViewEvent.Builder()
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/product/32423")
-            .buildIt()
+            .build()
         AttentiveEventTracker.instance.recordEvent(productViewEvent)
         showToastMessageForEvent("Product View")
     }
@@ -39,7 +39,7 @@ class ProductPageActivity : AppCompatActivity() {
         val addToCartEvent = AddToCartEvent.Builder()
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/products/32432423")
-            .buildIt()
+            .build()
         AttentiveEventTracker.instance.recordEvent(addToCartEvent)
         showToastMessageForEvent("Add to Cart")
     }

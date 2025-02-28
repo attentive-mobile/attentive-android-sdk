@@ -59,7 +59,7 @@ data class CustomEvent(
             return this
         }
 
-        fun buildIt(): CustomEvent {
+        fun build(): CustomEvent {
             val type = this.type ?: throw IllegalStateException("Type must be set")
             return CustomEvent(type, properties)
         }

@@ -25,7 +25,7 @@ class CustomEventTest(
                 CustomEvent.Builder(
                     type,
                     properties
-                ).buildIt()
+                ).build()
             }
         }
     }
