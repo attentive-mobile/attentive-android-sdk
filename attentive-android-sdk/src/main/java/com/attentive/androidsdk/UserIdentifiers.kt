@@ -70,15 +70,15 @@ data class UserIdentifiers(
 
     companion object {
         fun merge(first: UserIdentifiers, second: UserIdentifiers): UserIdentifiers {
-            return Builder()
-                .withVisitorId(second.visitorId ?: first.visitorId ?: "")
-                .withClientUserId(second.clientUserId ?: first.clientUserId ?: "")
-                .withPhone(second.phone ?: first.phone ?: "")
-                .withEmail(second.email ?: first.email ?: "")
-                .withKlaviyoId(second.klaviyoId ?: first.klaviyoId ?: "")
-                .withShopifyId(second.shopifyId ?: first.shopifyId ?: "")
-                .withCustomIdentifiers(first.customIdentifiers + second.customIdentifiers) // second's values overwrite first's
-                .build()
+            return Builder().apply {
+                second.visitorId?.let { withVisitorId(it) } ?: first.visitorId?.let { withVisitorId(it) }
+                second.clientUserId?.let { withClientUserId(it) } ?: first.clientUserId?.let { withClientUserId(it) }
+                second.phone?.let { withPhone(it) } ?: first.phone?.let { withPhone(it) }
+                second.email?.let { withEmail(it) } ?: first.email?.let { withEmail(it) }
+                second.klaviyoId?.let { withKlaviyoId(it) } ?: first.klaviyoId?.let { withKlaviyoId(it) }
+                second.shopifyId?.let { withShopifyId(it) } ?: first.shopifyId?.let { withShopifyId(it) }
+                withCustomIdentifiers(first.customIdentifiers + second.customIdentifiers)
+            }.build()
         }
     }
 
