@@ -309,7 +309,7 @@ class AttentiveApiTestIT {
         private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
             return PurchaseEvent.Builder(
                 listOf(buildItemWithAllFields()),
-                Order.Builder("5555").build()
+                Order.Builder().orderId("5555").build()
             )
                 .cart(Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build())
                 .build()
