@@ -67,7 +67,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
             public void onClose() {
                 Log.i(this.getClass().getName(), "Closed the creative!");
             }
-        });
+        }, null);
     }
 
     @Override
