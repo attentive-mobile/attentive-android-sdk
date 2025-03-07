@@ -7,7 +7,6 @@ class AttentiveEventTracker private constructor() {
     private var config: AttentiveConfig? = null
 
     fun initialize(config: AttentiveConfig) {
-        ParameterValidation.verifyNotNull(config, "config")
         Timber.i(
             "Initializing Attentive SDK with attn domain %s and mode %s",
             config.domain,
@@ -23,7 +22,6 @@ class AttentiveEventTracker private constructor() {
     }
 
     fun recordEvent(event: Event) {
-        ParameterValidation.verifyNotNull(event, "event")
         verifyInitialized()
 
         config?.let {
@@ -33,8 +31,8 @@ class AttentiveEventTracker private constructor() {
 
     private fun verifyInitialized() {
         synchronized(AttentiveEventTracker::class.java) {
-            if (INSTANCE == null) {
-                Timber.e("AttentiveEventTracker must be initialized before use.")
+            if (config == null) {
+                Timber.e("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
             }
         }
     }
