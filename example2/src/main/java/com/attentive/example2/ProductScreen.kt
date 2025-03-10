@@ -106,7 +106,7 @@ fun ProductCard(
                 onClick = {
                     val price = BigDecimal((index * 10) + 1)
                     val item = Item.Builder(
-                        "id",
+                        "id + $index",
                         "variantId",
                         Price(price, Currency.getInstance(Locale.getDefault()))
                     ).build()
@@ -127,7 +127,7 @@ fun ProductCard(
                 "id",
                 "variantId",
                 Price(price, Currency.getInstance(Locale.getDefault()))
-            ).build()
+            ).name("T shirt").build()
             onProductViewed(item)
         }
     }

@@ -5,20 +5,17 @@ import androidx.room.Room
 import com.attentive.example2.database.AppDatabase
 
 class AttentiveApp: Application() {
-    private lateinit var _database: AppDatabase
 
     override fun onCreate() {
         super.onCreate()
+        appInstance = this
     }
 
-    fun getDatabase(): AppDatabase {
-        if(!::_database.isInitialized) {
-            _database = Room.databaseBuilder(
-                applicationContext,
-                AppDatabase::class.java, "database-name"
-            ).build()
+    companion object{
+        private lateinit var appInstance: AttentiveApp
+        fun getInstance(): AttentiveApp{
+            return appInstance
         }
-
-        return _database
     }
+
 }
