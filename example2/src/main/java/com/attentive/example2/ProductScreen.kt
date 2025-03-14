@@ -1,5 +1,8 @@
 package com.attentive.example2
 
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,23 +25,21 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.events.Item
-import com.attentive.androidsdk.events.Price
-import java.math.BigDecimal
-import java.util.Currency
-import java.util.Locale
+import com.attentive.example2.database.ExampleProduct
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.random.Random
 
 @Composable
@@ -53,6 +54,7 @@ fun ProductScreen(
 @Composable
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
+    val prices = LocalContext.current.resources.getIntArray(R.array.prices)
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Products", actions = {
@@ -77,17 +79,25 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
         Text(
             "Products",
             fontSize = 36.sp,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 48.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 32.dp)
         )
-        ProductsGrid(viewModel::productWasViewed, viewModel::addToCart)
+        viewModel.productItemsFlow.collectAsState().value.let {
+            if(it.size > 0) {
+                ProductsGrid(it, viewModel::productWasViewed, viewModel::addToCart)
+            }
+        }
     }
 }
 
 @Composable
-fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: (item: Item) -> Unit) {
-    LazyVerticalGrid(columns = GridCells.Fixed(2)) {
+fun ProductsGrid(
+    prodcuts: MutableList<ExampleProduct>,
+    onProductViewed: (item: Item) -> Unit,
+    onAddToCart: (item: ExampleProduct) -> Unit
+) {
+    LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
         items(4) { index ->
-            ProductCard(index, onProductViewed, onAddToCart)
+            ProductCard(index, prodcuts[index], onProductViewed, onAddToCart)
         }
     }
 }
@@ -95,40 +105,34 @@ fun ProductsGrid(onProductViewed: (item: Item) -> Unit, onAddToCart: (item: Item
 @Composable
 fun ProductCard(
     index: Int,
+    item: ExampleProduct,
     onProductViewed: (item: Item) -> Unit,
-    onAddToCart: (item: Item) -> Unit
+    onAddToCart: (item: ExampleProduct) -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
-            .padding(32.dp)
-            .height(100.dp)
+            .padding(8.dp)
+            .height(250.dp)
             .clickable(
                 onClick = {
-                    val price = BigDecimal((index * 10) + 1)
-                    val item = Item.Builder(
-                        "id + $index",
-                        "variantId",
-                        Price(price, Currency.getInstance(Locale.getDefault()))
-                    ).build()
                     onAddToCart(item)
+                    Toast.makeText(context, "Added Product: $index to cart", Toast.LENGTH_SHORT).show()
                 },
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple()
-            ), colors = CardDefaults.cardColors(containerColor = Color(Random(index).nextInt()))
+            ),
+        colors = CardDefaults.cardColors(containerColor = Color(Random(index).nextInt())),
+        elevation = CardDefaults.cardElevation()
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val price = BigDecimal((index * 10) + 1)
-            Text("Product id: $index \n Price: ${price}")
-            val item = Item.Builder(
-                "id",
-                "variantId",
-                Price(price, Currency.getInstance(Locale.getDefault()))
-            ).name("T shirt").build()
-            onProductViewed(item)
+            Text("${item.item.name} \n$${item.item.price.price}")
+            Image(ImageBitmap.imageResource(item.imageId), contentDescription = "T shirt")
+            onProductViewed(item.item)
         }
     }
 }
