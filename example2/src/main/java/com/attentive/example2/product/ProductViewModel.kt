@@ -1,4 +1,4 @@
-package com.attentive.example2
+package com.attentive.example2.product
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -26,7 +26,7 @@ class ProductViewModel : ViewModel() {
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount
 
-    private val database: AppDatabase by lazy { AppDatabase.getInstance(AttentiveApp.getInstance().applicationContext) }
+    private val database: AppDatabase by lazy { AppDatabase.getInstance() }
 
     init {
         CoroutineScope(Dispatchers.IO).launch {

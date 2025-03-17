@@ -1,4 +1,4 @@
-package com.attentive.example2
+package com.attentive.example2.product
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.events.Item
+import com.attentive.example2.R
+import com.attentive.example2.Routes
+import com.attentive.example2.SimpleToolbar
 import com.attentive.example2.database.ExampleProduct
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.random.Random
 
 @Composable

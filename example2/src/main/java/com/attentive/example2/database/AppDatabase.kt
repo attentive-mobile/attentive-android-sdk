@@ -1,12 +1,14 @@
 package com.attentive.example2.database
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.Price
+import com.attentive.example2.AttentiveApp
 import com.attentive.example2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     private fun initWithMockProducts() {
         CoroutineScope(Dispatchers.IO).launch {
             val imageIds =
-                listOf(R.drawable.tshirt, R.drawable.cat_tree, R.drawable.coffee, R.drawable.vinyl)
+                listOf(R.drawable.tshirt, R.drawable.cat_tree, R.drawable.beans, R.drawable.vinyl)
             val names = listOf("T-Shirt", "Cat Tree", "Coffee", "Vinyl")
             val prices = listOf(
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
@@ -40,6 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
                 val product = ExampleProduct("$i", item, imageIds[i])
+                Log.d("pfaff", "initWithMockProducts: $product")
                 productItemDao().insert(product)
             }
         }
@@ -50,10 +53,10 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getInstance(context: Context): AppDatabase {
+        fun getInstance(): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    context.applicationContext,
+                    AttentiveApp.getInstance().applicationContext,
                     AppDatabase::class.java,
                     "app_database"
                 ).build()

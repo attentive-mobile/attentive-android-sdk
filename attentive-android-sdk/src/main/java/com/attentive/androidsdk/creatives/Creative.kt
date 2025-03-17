@@ -91,7 +91,7 @@ class Creative internal constructor(
      * @param callback [CreativeTriggerCallback] to be called when the creative updates it's state.
      * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
      */
-    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
+    fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = "1130223") {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
         Timber.i("WebView is null: %s", webView == null)
 

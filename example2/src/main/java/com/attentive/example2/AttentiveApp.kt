@@ -13,7 +13,7 @@ class AttentiveApp: Application() {
         super.onCreate()
         appInstance = this
         CoroutineScope(Dispatchers.IO).launch {
-            AppDatabase.getInstance(this@AttentiveApp).clearAllTables()
+            AppDatabase.getInstance().clearAllTables()
         }
     }
 

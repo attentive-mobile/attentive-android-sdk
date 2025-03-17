@@ -28,6 +28,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.attentive.example2.cart.CartScreen
+import com.attentive.example2.product.ProductScreen
+import com.attentive.example2.shipping.ShippingScreen
 import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
 import com.attentive.example2.ui.theme.AttentiveDarkYellow
 import com.attentive.example2.ui.theme.AttentiveYellow
@@ -82,6 +85,9 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.CartScreen.name){
                 CartScreen(navController)
+            }
+            composable(Routes.ShippingScreen.name){
+                ShippingScreen(navController)
             }
         }
     }

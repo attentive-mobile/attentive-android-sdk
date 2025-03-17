@@ -1,4 +1,4 @@
-package com.attentive.example2
+package com.attentive.example2.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class CartScreenViewModel: ViewModel() {
 
-    private val database: AppDatabase by lazy { AppDatabase.getInstance(AttentiveApp.getInstance().applicationContext) }
+    private val database: AppDatabase by lazy { AppDatabase.getInstance() }
     private val _exampleCartItems = MutableStateFlow<List<ExampleCartItem>>(emptyList())
     val exampleCartItems: StateFlow<List<ExampleCartItem>> = _exampleCartItems
 
