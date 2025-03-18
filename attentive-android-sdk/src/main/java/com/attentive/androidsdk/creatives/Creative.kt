@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -72,10 +73,24 @@ class Creative internal constructor(
 
 
         changeWebViewVisibility(false)
-        (parentView as ViewGroup).addView(
-            webView, ViewGroup.LayoutParams(parentView.layoutParams)
-        )
 
+        //Wait and listen for parent type views that haven't resolved their height and width yet
+        //e.g. ConstraintLayout with width and height 0
+        (parentView as ViewGroup).viewTreeObserver.addOnGlobalLayoutListener(
+            object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    // Remove the listener to prevent multiple calls
+                    parentView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                    // Get the effective width and height
+                    val width = parentView.width
+                    val height = parentView.height
+
+                    val layoutParams = ViewGroup.LayoutParams(width, height)
+                    (parentView as ViewGroup).addView(webView, layoutParams)
+                }
+            }
+        )
         this.creativeUrlFormatter = CreativeUrlFormatter()
 
         activity?.let {

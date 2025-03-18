@@ -50,6 +50,7 @@ class CreativeStateTest {
         }
 
         parentView = mock<ViewGroup>{}
+        whenever(parentView.viewTreeObserver).thenReturn(mock())
 
 
         val handler: Handler = mock()
