@@ -150,7 +150,7 @@ fun ThankYouDialog(navController: NavController, onDismiss: () -> Unit) {
                 Button(onClick = {
                     onDismiss()
                     navController.navigate(Routes.ProductScreenRoute.name) {
-                        popUpTo(Routes.ProductScreenRoute.name) { inclusive = false }
+                        popUpTo(Routes.ProductScreenRoute.name) { inclusive = true }
                     }
                 }) {
                     Text("Done")

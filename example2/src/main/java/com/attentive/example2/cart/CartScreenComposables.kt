@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -43,18 +46,23 @@ fun CartScreenContent(
     val cartItems by viewModel.exampleCartItems.collectAsState()
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             SimpleToolbar(title = "Cart", actions = {}, navController)
-            LazyVerticalGrid(columns = GridCells.Fixed(1)) {
-                items(cartItems.size) { index ->
-                    ItemInCart(cartItems[index], {
-                        viewModel.removeFromCart(cartItems.get(index))
-                    })
+            LazyColumn {
+                items(cartItems.size + 1) { index ->
+                    if (index < cartItems.size) {
+                        ItemInCart(cartItems[index], {
+                            viewModel.removeFromCart(cartItems.get(index))
+                        })
+                    } else {
+                        // Checkout button
+                        CheckoutButton(navController, viewModel)
+                    }
                 }
             }
-            CheckoutButton(navController, viewModel)
         }
     }
 }
@@ -68,7 +76,7 @@ fun CheckoutButton(navController: NavController, viewModel: CartScreenViewModel)
                 .toFloat()
         }
     }
-    Button(onClick = {
+    Button(modifier = Modifier.padding(24.dp), onClick = {
         navController.navigate(Routes.ShippingScreen.name)
     }) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

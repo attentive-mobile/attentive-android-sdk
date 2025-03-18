@@ -1,5 +1,6 @@
 package com.attentive.example2.cart
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.example2.database.AppDatabase
@@ -8,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -21,8 +24,12 @@ class CartScreenViewModel: ViewModel() {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             database.cartItemDao().getAll()
-                .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-                .collect{ items ->
+                .distinctUntilChanged()
+                .collectLatest { items ->
+                    Log.e("pfaff", "items size is ${items.size}")
+                    items.forEach {
+                        println(it)
+                    }
                     _exampleCartItems.value = items
                 }
         }

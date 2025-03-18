@@ -18,6 +18,9 @@ interface ExampleCartItemDao {
     @Delete
     fun delete(exampleCartItem: ExampleCartItem)
 
+    @Query("DELETE FROM cart_items")
+    fun deleteAll()
+
     @Update
     fun update(exampleCartItem: ExampleCartItem)
 }

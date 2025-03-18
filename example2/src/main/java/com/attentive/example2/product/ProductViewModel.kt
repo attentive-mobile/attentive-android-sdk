@@ -2,6 +2,7 @@ package com.attentive.example2.product
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Item
@@ -12,8 +13,10 @@ import com.attentive.example2.database.ExampleProduct
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 
@@ -29,9 +32,13 @@ class ProductViewModel : ViewModel() {
     private val database: AppDatabase by lazy { AppDatabase.getInstance() }
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             exampleProducts.addAll(database.productItemDao().getAll().first())
             productItemsFlow.emit(exampleProducts)
+
+            database.cartItemDao().getAll().collect{
+                _cartItemCount.value = it.sumOf { it.quantity }
+            }
         }
     }
 
@@ -66,7 +73,9 @@ class ProductViewModel : ViewModel() {
         val event = ProductViewEvent.Builder().items(viewedItems).build()
         AttentiveEventTracker.instance.recordEvent(event)
 
-        val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
-        AttentiveEventTracker.instance.recordEvent(cartEvent)
+        if(cartItems.isNotEmpty()) {
+            val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
+            AttentiveEventTracker.instance.recordEvent(cartEvent)
+        }
     }
 }
