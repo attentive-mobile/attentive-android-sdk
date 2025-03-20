@@ -1,5 +1,7 @@
 package com.attentive.example2.cart
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import com.attentive.example2.Routes
 import com.attentive.example2.SimpleToolbar
@@ -41,7 +45,9 @@ fun CartScreen(navController: NavController) {
 @Composable
 fun CartScreenContent(
     navController: NavController,
-    viewModel: CartScreenViewModel = CartScreenViewModel()
+    viewModel: CartScreenViewModel = ViewModelProvider(
+        LocalActivity.current as ComponentActivity
+    )[CartScreenViewModel::class.java]
 ) {
     val cartItems by viewModel.exampleCartItems.collectAsState()
     Box(modifier = Modifier.fillMaxSize()) {

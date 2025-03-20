@@ -1,6 +1,8 @@
 package com.attentive.example2.product
 
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,19 +37,23 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.events.Item
 import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.SimpleToolbar
+import com.attentive.example2.cart.CartScreenViewModel
 import com.attentive.example2.database.ExampleProduct
 import kotlin.random.Random
 
 @Composable
 fun ProductScreen(
     navHostController: NavHostController,
-    viewModel: ProductViewModel = viewModel()
+    viewModel: ProductViewModel = ViewModelProvider(
+        LocalActivity.current as ComponentActivity
+    )[ProductViewModel::class.java]
 ) {
     ProductScreenContent(navHostController, viewModel)
 }
@@ -84,7 +90,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 32.dp)
         )
         viewModel.productItemsFlow.collectAsState().value.let {
-            if(it.size > 0) {
+            if (it.size > 0) {
                 ProductsGrid(it, viewModel::productWasViewed, viewModel::addToCart)
             }
         }
@@ -93,13 +99,13 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
 
 @Composable
 fun ProductsGrid(
-    prodcuts: MutableList<ExampleProduct>,
+    products: MutableList<ExampleProduct>,
     onProductViewed: (item: Item) -> Unit,
     onAddToCart: (item: ExampleProduct) -> Unit
 ) {
     LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
         items(4) { index ->
-            ProductCard(index, prodcuts[index], onProductViewed, onAddToCart)
+            ProductCard(index, products[index], onProductViewed, onAddToCart)
         }
     }
 }
@@ -119,7 +125,8 @@ fun ProductCard(
             .clickable(
                 onClick = {
                     onAddToCart(item)
-                    Toast.makeText(context, "Added Product: $index to cart", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Added Product: $index to cart", Toast.LENGTH_SHORT)
+                        .show()
                 },
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple()

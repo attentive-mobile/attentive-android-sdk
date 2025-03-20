@@ -36,7 +36,7 @@ class ProductViewModel : ViewModel() {
             exampleProducts.addAll(database.productItemDao().getAll().first())
             productItemsFlow.emit(exampleProducts)
 
-            database.cartItemDao().getAll().collect{
+            database.cartItemDao().getAll().collect {
                 _cartItemCount.value = it.sumOf { it.quantity }
             }
         }
@@ -44,12 +44,14 @@ class ProductViewModel : ViewModel() {
 
     fun addToCart(product: ExampleProduct) {
         CoroutineScope(Dispatchers.IO).launch {
-            var cartItem = database.cartItemDao().getAll().first().firstOrNull { it.product.id == product.id }
+            var cartItem =
+                database.cartItemDao().getAll().first().firstOrNull { it.product.id == product.id }
             if (cartItem == null) {
-                cartItem = ExampleCartItem(product.id, product, 1 )
+                cartItem = ExampleCartItem(product.id, product, 1)
                 database.cartItemDao().insert(cartItem)
             } else {
-                val updatedExampleCartItem = ExampleCartItem(product.id, product, cartItem.quantity + 1)
+                val updatedExampleCartItem =
+                    ExampleCartItem(product.id, product, cartItem.quantity + 1)
                 database.cartItemDao().update(updatedExampleCartItem)
             }
 
@@ -62,18 +64,17 @@ class ProductViewModel : ViewModel() {
     }
 
     fun productWasViewed(item: Item) {
-        if(viewedItems.contains(item).not()) {
+        if (viewedItems.contains(item).not()) {
             viewedItems.add(item)
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        Log.e("pfaff", "onCleared")
         val event = ProductViewEvent.Builder().items(viewedItems).build()
         AttentiveEventTracker.instance.recordEvent(event)
 
-        if(cartItems.isNotEmpty()) {
+        if (cartItems.isNotEmpty()) {
             val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
             AttentiveEventTracker.instance.recordEvent(cartEvent)
         }

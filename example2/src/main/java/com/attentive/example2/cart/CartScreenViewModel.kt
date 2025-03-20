@@ -23,13 +23,10 @@ class CartScreenViewModel: ViewModel() {
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            database.cartItemDao().getAll()
-                .distinctUntilChanged()
+            database
+                .cartItemDao()
+                .getAll()
                 .collectLatest { items ->
-                    Log.e("pfaff", "items size is ${items.size}")
-                    items.forEach {
-                        println(it)
-                    }
                     _exampleCartItems.value = items
                 }
         }
@@ -38,7 +35,6 @@ class CartScreenViewModel: ViewModel() {
     fun removeFromCart(item: ExampleCartItem){
         viewModelScope.launch(Dispatchers.IO){
             database.cartItemDao().delete(item)
-            //_cartItems.value = database.cartItemDao().getAll()
         }
     }
 }
