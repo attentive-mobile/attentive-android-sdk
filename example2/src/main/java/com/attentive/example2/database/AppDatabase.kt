@@ -17,11 +17,12 @@ import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
 
-@Database(entities = [ExampleCartItem::class, ExampleProduct::class], version = 1)
+@Database(entities = [ExampleCartItem::class, ExampleProduct::class, Account::class], version = 1)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cartItemDao(): ExampleCartItemDao
     abstract fun productItemDao(): ExampleProductDao
+    abstract fun accountDao(): AccountDao
 
     private fun initWithMockProducts() {
         CoroutineScope(Dispatchers.IO).launch {

@@ -1,5 +1,7 @@
-package com.attentive.example2
+package com.attentive.example2.welcome
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,14 +22,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.attentive.example2.R
+import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
 import com.attentive.example2.product.ProductScreen
 import com.attentive.example2.shipping.ShippingScreen
@@ -36,7 +42,7 @@ import com.attentive.example2.ui.theme.AttentiveDarkYellow
 import com.attentive.example2.ui.theme.AttentiveYellow
 
 @Composable
-fun WelcomeScreenContent(navController: NavHostController){
+fun WelcomeScreenContent(navController: NavHostController) {
     var newAccount by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = AttentiveYellow) { innerPadding ->
         Column(
@@ -53,7 +59,7 @@ fun WelcomeScreenContent(navController: NavHostController){
                     .weight(.5f)
             )
 
-            AccountNameTextField(isVisible = newAccount)
+            SignUpForm(isVisible = newAccount, navController)
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Attentive Logo",
@@ -66,13 +72,14 @@ fun WelcomeScreenContent(navController: NavHostController){
                     Text("Create Account", color = Color.Black)
                 }
 
-                Button(onClick = { navController.navigate(Routes.ProductScreenRoute.name)}) {
+                Button(onClick = { navController.navigate(Routes.ProductScreenRoute.name) }) {
                     Text("Continue as guest")
                 }
             }
         }
     }
 }
+
 @Composable
 fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = AttentiveYellow) { innerPadding ->
@@ -83,26 +90,14 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             composable(Routes.ProductScreenRoute.name) {
                 ProductScreen(navController)
             }
-            composable(Routes.CartScreen.name){
+            composable(Routes.CartScreen.name) {
                 CartScreen(navController)
             }
-            composable(Routes.ShippingScreen.name){
+            composable(Routes.ShippingScreen.name) {
                 ShippingScreen(navController)
             }
         }
     }
-}
-
-@Composable
-fun AccountNameTextField(isVisible: Boolean) {
-    var currentText by remember { mutableStateOf("") }
-    if (isVisible)
-        TextField(
-            value = currentText,
-            onValueChange = { currentText = it },
-            label = { Text("Account Name") },
-            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White)
-        )
 }
 
 @Preview
@@ -131,4 +126,51 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         fontSize = 24.sp,
         modifier = modifier
     )
+}
+
+@Composable
+fun SignUpForm(
+    isVisible: Boolean,
+    navHostController: NavHostController,
+    viewModel: SignUpViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpViewModel::class.java]
+    ) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var submitIsVisible by remember { mutableStateOf(false) }
+    if (isVisible) {
+        Column {
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") }
+            )
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") }
+            )
+            TextField(
+                value = confirmPassword,
+                onValueChange = {
+                    confirmPassword = it
+                    submitIsVisible = password == confirmPassword
+                },
+                label = { Text("Confirm Password") }
+            )
+            if (submitIsVisible) {
+                Button(onClick = {
+                    viewModel.onSubmit(email, password)
+                    navHostController.navigate(Routes.ProductScreenRoute.name)
+                }) {
+                    Text("Submit")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SignOutButton() {
+
 }
