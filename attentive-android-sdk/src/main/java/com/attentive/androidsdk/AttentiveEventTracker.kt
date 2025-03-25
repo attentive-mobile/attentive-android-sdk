@@ -4,7 +4,7 @@ import com.attentive.androidsdk.events.Event
 import timber.log.Timber
 
 class AttentiveEventTracker private constructor() {
-    private var config: AttentiveConfig? = null
+    var config: AttentiveConfig? = null
 
     fun initialize(config: AttentiveConfig) {
         ParameterValidation.verifyNotNull(config, "config")

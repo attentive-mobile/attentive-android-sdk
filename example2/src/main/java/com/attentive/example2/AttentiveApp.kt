@@ -2,12 +2,15 @@ package com.attentive.example2
 
 import android.app.Application
 import androidx.room.Room
+import com.attentive.androidsdk.AttentiveConfig
+import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.example2.database.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class AttentiveApp: Application() {
+class AttentiveApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
@@ -15,11 +18,24 @@ class AttentiveApp: Application() {
         CoroutineScope(Dispatchers.IO).launch {
             AppDatabase.getInstance().clearAllTables()
         }
+        initAttentiveTracker()
     }
 
-    companion object{
+    private fun initAttentiveTracker() {
+        val attentiveConfig =
+            AttentiveConfig
+                .Builder()
+                .context(this)
+                .domain("games")
+                .mode(AttentiveConfig.Mode.DEBUG)
+                .logLevel(AttentiveLogLevel.VERBOSE).build()
+
+        AttentiveEventTracker.instance.initialize(attentiveConfig)
+    }
+
+    companion object {
         private lateinit var appInstance: AttentiveApp
-        fun getInstance(): AttentiveApp{
+        fun getInstance(): AttentiveApp {
             return appInstance
         }
     }

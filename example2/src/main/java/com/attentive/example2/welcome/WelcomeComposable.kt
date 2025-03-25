@@ -15,6 +15,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.attentive.example2.ui.theme.AttentiveYellow
 @Composable
 fun WelcomeScreenContent(navController: NavHostController) {
     var newAccount by remember { mutableStateOf(false) }
+    var existingAccount by remember { mutableStateOf(false) }
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = AttentiveYellow) { innerPadding ->
         Column(
             modifier = Modifier
@@ -60,6 +62,7 @@ fun WelcomeScreenContent(navController: NavHostController) {
             )
 
             SignUpForm(isVisible = newAccount, navController)
+            SignInForm(isVisible = existingAccount, navController)
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Attentive Logo",
@@ -70,6 +73,11 @@ fun WelcomeScreenContent(navController: NavHostController) {
                     colors = ButtonDefaults.buttonColors(containerColor = AttentiveDarkYellow),
                     onClick = { newAccount = true }) {
                     Text("Create Account", color = Color.Black)
+                }
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = AttentiveDarkYellow),
+                    onClick = { existingAccount = true }) {
+                    Text("Sign In", color = Color.Black)
                 }
 
                 Button(onClick = { navController.navigate(Routes.ProductScreenRoute.name) }) {
@@ -132,12 +140,17 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 fun SignUpForm(
     isVisible: Boolean,
     navHostController: NavHostController,
-    viewModel: SignUpViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpViewModel::class.java]
-    ) {
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var submitIsVisible by remember { mutableStateOf(false) }
+    val signedIn by viewModel.signedIn.collectAsState()
+
+    LaunchedEffect(signedIn) {
+        if (signedIn) navHostController.navigate(Routes.ProductScreenRoute.name)
+    }
     if (isVisible) {
         Column {
             TextField(
@@ -160,12 +173,49 @@ fun SignUpForm(
             )
             if (submitIsVisible) {
                 Button(onClick = {
-                    viewModel.onSubmit(email, password)
-                    navHostController.navigate(Routes.ProductScreenRoute.name)
+                    viewModel.onSignUp(email, password)
+
                 }) {
                     Text("Submit")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SignInForm(
+    isVisible: Boolean,
+    navHostController: NavHostController,
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    val signedIn = viewModel.signedIn.collectAsState()
+
+    LaunchedEffect(signedIn) {
+        if (signedIn.value) navHostController.navigate(Routes.ProductScreenRoute.name)
+    }
+
+    if (isVisible) {
+        Column {
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") }
+            )
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") }
+            )
+            Button(onClick = {
+                viewModel.onSignIn(email, password)
+            }) {
+                Text("Submit")
+            }
+
         }
     }
 }
