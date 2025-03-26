@@ -20,7 +20,7 @@ class VisitorService(private val persistentStorage: PersistentStorage) {
         private const val VISITOR_ID_KEY = "visitorId"
 
         private fun generateVisitorId(): String {
-            // This code should produce the same visitor ids as the tag's visitor id creation code
+            // This generation logic matches the generation logic of the tag's visitor id creation code on the backend
             val builder = StringBuilder()
             val rand = Random()
             var d = System.currentTimeMillis()

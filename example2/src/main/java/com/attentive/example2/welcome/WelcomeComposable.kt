@@ -36,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
+import com.attentive.example2.debug.DebugScreen
 import com.attentive.example2.product.ProductScreen
 import com.attentive.example2.shipping.ShippingScreen
 import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
@@ -103,6 +104,9 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.ShippingScreen.name) {
                 ShippingScreen(navController)
+            }
+            composable(Routes.DebugScreen.name) {
+                DebugScreen(navController)
             }
         }
     }

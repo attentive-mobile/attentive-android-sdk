@@ -16,11 +16,6 @@ class AttentiveApp : Application() {
     override fun onCreate() {
         super.onCreate()
         appInstance = this
-        CoroutineScope(Dispatchers.IO).launch {
-//            Log.d("pfaff", "onCreate: clear tables")
-//            AppDatabase.getInstance().clearAllTables()
-//            Log.d("pfaff", "onCreate: cleared tables")
-        }
         initAttentiveTracker()
     }
 
@@ -29,7 +24,7 @@ class AttentiveApp : Application() {
             AttentiveConfig
                 .Builder()
                 .context(this)
-                .domain("games")
+                .domain("")
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 

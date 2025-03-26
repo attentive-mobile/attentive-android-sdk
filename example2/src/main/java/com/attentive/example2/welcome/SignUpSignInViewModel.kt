@@ -35,7 +35,7 @@ class SignUpSignInViewModel(application: Application): AndroidViewModel(Attentiv
     fun onSignIn(email: String, password: String){
         var accountFound = false
         viewModelScope.launch(Dispatchers.IO){
-            AppDatabase.getInstance().accountDao().getAll().collect(){
+            AppDatabase.getInstance().accountDao().getAll().collect{
                 it.forEach { account ->
                     if(account.email == email && account.password == password){
                         accountFound = true
