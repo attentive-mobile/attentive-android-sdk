@@ -13,18 +13,17 @@ import com.attentive.example2.database.ExampleProduct
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.withContext
 
 class ProductViewModel : ViewModel() {
     private val viewedItems = mutableListOf<Item>()
     private val cartItems = mutableListOf<Item>()
-    private val exampleProducts = mutableListOf<ExampleProduct>()
-    val productItemsFlow = MutableStateFlow(exampleProducts)
+    private val _productItemsFlow = MutableStateFlow<List<ExampleProduct>>(emptyList())
+    val productItemsFlow: StateFlow<List<ExampleProduct>> = _productItemsFlow.asStateFlow()
 
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount
@@ -33,9 +32,11 @@ class ProductViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            exampleProducts.addAll(database.productItemDao().getAll().first())
-            productItemsFlow.emit(exampleProducts)
-
+            withContext(Dispatchers.IO) {
+                database.productItemDao().getAll().collect{
+                    _productItemsFlow.value = it
+                }
+            }
             database.cartItemDao().getAll().collect {
                 _cartItemCount.value = it.sumOf { it.quantity }
             }

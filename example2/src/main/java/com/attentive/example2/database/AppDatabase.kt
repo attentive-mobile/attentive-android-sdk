@@ -62,7 +62,11 @@ abstract class AppDatabase : RoomDatabase() {
                     "app_database"
                 ).build()
                 CoroutineScope(Dispatchers.IO).launch {
-                    instance.initWithMockProducts()
+                    instance.productItemDao().getAll().collect {
+                        if (it.isEmpty()) {
+                            instance.initWithMockProducts()
+                        }
+                    }
                 }
                 INSTANCE = instance
                 instance

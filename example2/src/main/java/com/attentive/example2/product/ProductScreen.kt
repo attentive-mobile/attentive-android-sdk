@@ -1,5 +1,6 @@
 package com.attentive.example2.product
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -63,6 +65,7 @@ fun ProductScreen(
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val prices = LocalContext.current.resources.getIntArray(R.array.prices)
+    val items by viewModel.productItemsFlow.collectAsState()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Products", actions = {
@@ -83,23 +86,32 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                     Icon(imageVector = Icons.Filled.ShoppingCart, contentDescription = "Cart")
                 }
             }
+            IconButton(
+                onClick = {
+                    navHostController.navigate(Routes.DebugScreen.name)
+                }
+            ) {
+                Icon(imageVector = Icons.Filled.Build, contentDescription = "Debug")
+            }
         }, navHostController)
         Text(
             "Products",
             fontSize = 36.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 32.dp)
         )
-        viewModel.productItemsFlow.collectAsState().value.let {
-            if (it.size > 0) {
-                ProductsGrid(it, viewModel::productWasViewed, viewModel::addToCart)
-            }
+
+        if(items.isNotEmpty()) {
+            Log.d("pfaff", "items is not empty")
+            ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
+        } else {
+            Log.d("pfaff", "items is empty")
         }
     }
 }
 
 @Composable
 fun ProductsGrid(
-    products: MutableList<ExampleProduct>,
+    products: List<ExampleProduct>,
     onProductViewed: (item: Item) -> Unit,
     onAddToCart: (item: ExampleProduct) -> Unit
 ) {

@@ -1,6 +1,7 @@
 package com.attentive.example2
 
 import android.app.Application
+import android.util.Log
 import androidx.room.Room
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
@@ -16,7 +17,9 @@ class AttentiveApp : Application() {
         super.onCreate()
         appInstance = this
         CoroutineScope(Dispatchers.IO).launch {
-            AppDatabase.getInstance().clearAllTables()
+//            Log.d("pfaff", "onCreate: clear tables")
+//            AppDatabase.getInstance().clearAllTables()
+//            Log.d("pfaff", "onCreate: cleared tables")
         }
         initAttentiveTracker()
     }
