@@ -1,18 +1,21 @@
 package com.attentive.androidsdk
 
+import android.os.Looper
 import com.attentive.androidsdk.AttentiveApi
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveEventTracker.Companion.instance
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.whenever
 
 class AttentiveEventTrackerTest {
-    private var config: AttentiveConfig? = null
+    lateinit var config: AttentiveConfig
     private var attentiveApi: AttentiveApi? = null
 
     @Before
@@ -41,19 +44,19 @@ class AttentiveEventTrackerTest {
 
     @Test
     fun initialize_validConfig_success() {
-        instance.initialize(config!!)
+        instance.initialize(config)
     }
 
     @Test
     fun initialize_calledTwice_doesNotThrow() {
-        instance.initialize(config!!)
+        instance.initialize(config)
     }
 
 
     @Test
     fun recordEvent_validEvent_sendsToApi() {
         // Arrange
-        instance.initialize(config!!)
+        instance.initialize(config)
         val eventToSend = Mockito.mock(
             Event::class.java
         )
