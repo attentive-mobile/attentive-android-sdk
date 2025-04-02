@@ -1,11 +1,13 @@
 package com.attentive.androidsdk
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
@@ -18,6 +20,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
+    internal val appLaunchTracker: AppLaunchTracker = builder._launchTracker
+        ?: AppLaunchTracker()
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
@@ -32,6 +36,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         attentiveApi =
             ClassFactory.buildAttentiveApi(okHttpClient)
         sendInfoEvent()
+
+        appLaunchTracker.registerAppLaunchTracker()
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
@@ -121,6 +127,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _context: Context
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
+        internal var _launchTracker: AppLaunchTracker? = null
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel? = null
@@ -140,6 +147,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _domain = domain
         }
 
+        @VisibleForTesting
+        internal fun appLaunchTracker(appLaunchTracker: AppLaunchTracker) = apply {
+            _launchTracker = appLaunchTracker
+        }
+
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
             this.okHttpClient = okHttpClient
@@ -152,6 +164,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun logLevel(logLevel: AttentiveLogLevel) = apply {
             this.logLevel = logLevel
         }
+
+
 
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {
