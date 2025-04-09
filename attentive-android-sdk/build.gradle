@@ -33,21 +33,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    kotlin {
-        jvmToolchain(21)
-    }
+//    kotlin {
+//        jvmToolchain(21)
+//    }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     testFixtures {
