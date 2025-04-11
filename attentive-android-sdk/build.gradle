@@ -83,6 +83,8 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
