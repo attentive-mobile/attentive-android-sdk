@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -37,7 +38,7 @@ class Creative internal constructor(
     @set:VisibleForTesting
     internal var webView: WebView? = null,
     @SuppressLint("SupportAnnotationUsage") @VisibleForTesting
-    private val handler: Handler = Handler()
+    private val handler: Handler = Handler(Looper.getMainLooper())
 ) {
     /**
      * Creates a new Creative instance. Used to display and control creatives.
@@ -50,7 +51,7 @@ class Creative internal constructor(
         parentView,
         activity,
         null,
-        Handler()
+        Handler(Looper.getMainLooper())
     )
 
     @VisibleForTesting
