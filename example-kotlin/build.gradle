@@ -47,6 +47,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+   // implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
 
     // Use the attentive-android-sdk package from your local attentive-android-sdk folder
     implementation project(path: ':attentive-android-sdk')

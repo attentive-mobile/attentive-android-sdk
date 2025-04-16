@@ -27,6 +27,9 @@ import androidx.webkit.WebViewCompat.WebMessageListener
 import androidx.webkit.WebViewFeature
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -46,7 +49,11 @@ class Creative internal constructor(
      * @param parentView The view to add the WebView to.
      * @param activity The Activity to use for lifecycle callbacks.
      */
-    constructor(attentiveConfig: AttentiveConfig, parentView: View, activity: Activity? = null) : this(
+    constructor(
+        attentiveConfig: AttentiveConfig,
+        parentView: View,
+        activity: Activity? = null
+    ) : this(
         attentiveConfig,
         parentView,
         activity,
@@ -78,33 +85,14 @@ class Creative internal constructor(
         this.creativeListener = createCreativeListener()
 
 
-        if(webView == null) {
-            this.webView = createWebView(parentView)
+        CoroutineScope(Dispatchers.Main).launch {
+            if (webView == null) {
+                Timber.d("Creating WebView on main thread")
+                webView = createWebView(parentView)
+                addWebViewToParent()
+            }
         }
 
-
-        changeWebViewVisibility(false)
-
-        //Wait and listen for parent type views that haven't resolved their height and width yet
-        //e.g. ConstraintLayout with width and height 0
-        (parentView as ViewGroup).viewTreeObserver.addOnGlobalLayoutListener(
-            object : ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    // Remove the listener to prevent multiple calls
-                    parentView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                    // Get the effective width and height
-                    val width = parentView.width
-                    val height = parentView.height
-
-                    Timber.d("parentView width onGlobalLayout() = %s", width)
-                    Timber.d("parentView height onGlobalLayout() = %s", height)
-
-                    val layoutParams = ViewGroup.LayoutParams(width, height)
-                    (parentView as ViewGroup).addView(webView, layoutParams)
-                }
-            }
-        )
         this.creativeUrlFormatter = CreativeUrlFormatter()
 
         activity?.let {
@@ -114,6 +102,14 @@ class Creative internal constructor(
                 it.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
             }
         }
+    }
+
+    private fun addWebViewToParent() {
+        changeWebViewVisibility(false)
+        val width = parentView.width
+        val height = parentView.height
+        val layoutParams = ViewGroup.LayoutParams(width, height)
+        (parentView as ViewGroup).addView(webView, layoutParams)
     }
 
     /**
@@ -141,7 +137,7 @@ class Creative internal constructor(
         }
 
         Timber.d(
-            "Attempting to trigger creative with attn domain %s, width %s, and height %s",
+            "Attempting to trigger creative with attn domain %s, webview width %s, and webview height %s",
             attentiveConfig.domain,
             webView!!.width, webView!!.height
         )
@@ -264,7 +260,7 @@ class Creative internal constructor(
                 request: WebResourceRequest?,
                 errorResponse: WebResourceResponse?
             ) {
-                Timber.e("onReceivedHttpError: %s %s",webView, errorResponse)
+                Timber.e("onReceivedHttpError: %s %s", webView, errorResponse)
                 super.onReceivedHttpError(view, request, errorResponse)
             }
 
@@ -318,7 +314,13 @@ class Creative internal constructor(
             val messageData = message.data
             Timber.d("Creative message data %s", messageData)
             if (messageData != null) {
-                Timber.d("messageData is not null message:%s message:%s %s %s", messageData, message, sourceOrigin, isMainFrame)
+                Timber.d(
+                    "messageData is not null message:%s message:%s %s %s",
+                    messageData,
+                    message,
+                    sourceOrigin,
+                    isMainFrame
+                )
                 if (messageData.equals("CLOSE", ignoreCase = true)) {
                     closeCreative()
                 } else if (messageData.equals("OPEN", ignoreCase = true)) {
@@ -339,7 +341,7 @@ class Creative internal constructor(
 
     private fun onCreativeTimedOut() {
         Timber.e("Creative timed out. Not showing WebView.")
-        triggerCallback?.let{
+        triggerCallback?.let {
             Timber.e("Trigger callback is not null")
             it.onCreativeNotOpened()
         }
@@ -348,12 +350,12 @@ class Creative internal constructor(
 
     internal fun openCreative() {
         Timber.d("openCreative() called")
-        handler.post {
+        CoroutineScope(Dispatchers.Main).launch {
             Timber.d("handler post")
             isCreativeOpening.set(false)
             if (isCreativeOpen.get()) {
                 Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action")
-                return@post
+                return@launch
             }
             // Host apps have reported webView NPEs here. The current thinking is that destroy gets
             // called just before this callback is executed. If destroy was previously called then it's
@@ -381,7 +383,7 @@ class Creative internal constructor(
 
     internal fun closeCreative() {
         Timber.d("closeCreative() called")
-        handler.post {
+        CoroutineScope(Dispatchers.Main).launch {
             Timber.d("handler post")
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
@@ -402,7 +404,7 @@ class Creative internal constructor(
     }
 
 
-        private fun changeWebViewVisibility(visible: Boolean) {
+    private fun changeWebViewVisibility(visible: Boolean) {
         Timber.d("changeWebViewVisibility() called with parameter %s", visible)
         if (webView != null) {
             if (visible) {
@@ -451,15 +453,15 @@ class Creative internal constructor(
         internal val isCreativeOpening = AtomicBoolean(false)
         internal val isCreativeDestroyed = AtomicBoolean(false)
 
-        internal fun isCreativeOpen(): Boolean{
+        internal fun isCreativeOpen(): Boolean {
             return isCreativeOpen.get()
         }
 
-        internal fun isCreativeDestroyed(): Boolean{
+        internal fun isCreativeDestroyed(): Boolean {
             return isCreativeDestroyed.get()
         }
 
-        internal fun isCreativeOpening(): Boolean{
+        internal fun isCreativeOpening(): Boolean {
             return isCreativeOpening.get()
         }
     }
