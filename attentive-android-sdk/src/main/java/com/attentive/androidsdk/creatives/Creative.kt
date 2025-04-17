@@ -67,6 +67,10 @@ class Creative internal constructor(
     private val creativeListener: WebMessageListener
     private var triggerCallback: CreativeTriggerCallback? = null
 
+    private val triggerQueue = mutableListOf<() -> Unit>()
+    @VisibleForTesting
+    internal var isWebViewReady = false
+
     init {
         Timber.d(
             "Calling constructor of Creative with parameters: %s, %s, %s, %s, %s",
@@ -91,6 +95,9 @@ class Creative internal constructor(
                 webView = createWebView(parentView)
                 addWebViewToParent()
             }
+            isWebViewReady = true
+            triggerQueue.forEach { it() }
+            triggerQueue.clear()
         }
 
         this.creativeUrlFormatter = CreativeUrlFormatter()
@@ -119,20 +126,24 @@ class Creative internal constructor(
      */
     fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
         Timber.d("trigger method called with parameters: %s, %s", callback, creativeId)
-        Timber.d("WebView is null: %s", webView == null)
-
-        if (isCreativeDestroyed.get()) {
-            Timber.e("Attempted to trigger a destroyed creative. Ignoring.")
-            return
-        }
 
         triggerCallback = callback
 
+        if (!isWebViewReady) {
+            Timber.d("WebView not ready yet, queueing trigger")
+            triggerQueue.add { trigger(callback, creativeId) }
+            return
+        }
+
+        if (isCreativeDestroyed.get()) {
+            Timber.e("Attempted to trigger a destroyed creative. Ignoring.")
+            triggerCallback?.onCreativeNotOpened()
+            return
+        }
+
         if (webView == null) {
             Timber.e("WebView not properly created or `destroy` already called on this Creative. Cannot trigger Creative after destroyed.")
-            if (triggerCallback != null) {
-                triggerCallback!!.onCreativeNotOpened()
-            }
+            triggerCallback?.onCreativeNotOpened()
             return
         }
 

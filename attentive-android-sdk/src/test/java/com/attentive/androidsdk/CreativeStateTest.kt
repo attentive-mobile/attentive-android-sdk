@@ -96,6 +96,7 @@ class CreativeStateTest {
 
     @Test
     fun testCreativeStartsOpeningCorrectly() {
+        creative.isWebViewReady = true
         creative.trigger()
         assertTrue(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeOpen())
@@ -104,7 +105,9 @@ class CreativeStateTest {
 
     @Test
     fun testCreativeOpensCorrectly() {
+        creative.isWebViewReady = true
         creative.openCreative()
+        testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
         assertTrue(Creative.isCreativeOpen())
         assertFalse(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeDestroyed())
