@@ -56,7 +56,7 @@ public class ProductPageActivity extends AppCompatActivity {
 
         // Construct an "Order", which represents the order for the purchase
         final String orderId = "23456";
-        final Order order = new Order.Builder(orderId).build();
+        final Order order = new Order.Builder().orderId(orderId).build();
 
         // (Optional) Construct a "Cart", which represents the cart this Purchase was made from
         final Cart cart = new Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build();

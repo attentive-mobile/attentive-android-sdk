@@ -9,6 +9,11 @@ import android.webkit.WebView
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.TimberRule
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -26,12 +31,14 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(MockitoJUnitRunner.Silent::class)
 class CreativeStateTest {
 
     private lateinit var parentView: View
     private lateinit var webView: WebView
     private lateinit var creative: Creative
+    private val testDispatcher = StandardTestDispatcher()
 
     companion object {
         @get:ClassRule
@@ -42,6 +49,7 @@ class CreativeStateTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
+        Dispatchers.setMain(testDispatcher) // Set the test dispatcher
 
         val webSettings = mock<WebSettings>{}
 
@@ -50,6 +58,7 @@ class CreativeStateTest {
         }
 
         parentView = mock<ViewGroup>{}
+        whenever(parentView.viewTreeObserver).thenReturn(mock())
 
 
         val handler: Handler = mock()
@@ -75,6 +84,7 @@ class CreativeStateTest {
         Creative.isCreativeOpening.set(false)
         Creative.isCreativeDestroyed.set(false)
         Creative.isCreativeOpen.set(false)
+        Dispatchers.resetMain() // Reset the main dispatcher
     }
 
     @Test
@@ -86,6 +96,7 @@ class CreativeStateTest {
 
     @Test
     fun testCreativeStartsOpeningCorrectly() {
+        creative.isWebViewReady = true
         creative.trigger()
         assertTrue(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeOpen())
@@ -94,7 +105,9 @@ class CreativeStateTest {
 
     @Test
     fun testCreativeOpensCorrectly() {
+        creative.isWebViewReady = true
         creative.openCreative()
+        testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
         assertTrue(Creative.isCreativeOpen())
         assertFalse(Creative.isCreativeOpening())
         assertFalse(Creative.isCreativeDestroyed())

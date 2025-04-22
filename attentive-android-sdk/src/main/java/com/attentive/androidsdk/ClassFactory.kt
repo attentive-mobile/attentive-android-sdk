@@ -4,6 +4,10 @@ import android.content.Context
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import timber.log.Timber
+import kotlin.math.log
+
 
 object ClassFactory {
     @JvmStatic
@@ -18,7 +22,9 @@ object ClassFactory {
 
     @JvmStatic
     fun buildOkHttpClient(interceptor: Interceptor): OkHttpClient {
-        return OkHttpClient.Builder().addInterceptor(interceptor).build()
+        val logging = HttpLoggingInterceptor()
+        logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
+        return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
     }
 
     fun buildUserAgentInterceptor(context: Context?): Interceptor {

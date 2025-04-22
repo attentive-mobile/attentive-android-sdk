@@ -12,11 +12,11 @@ data class Order(
     }
 
     @Serializable
-    class Builder(
-        private val orderId: String
-    ) {
-        init {
-            ParameterValidation.verifyNotEmpty(orderId, "orderId")
+    class Builder {
+        private lateinit var orderId: String
+        fun orderId(orderId: String): Builder {
+            this.orderId = orderId
+            return this
         }
 
         fun build(): Order {

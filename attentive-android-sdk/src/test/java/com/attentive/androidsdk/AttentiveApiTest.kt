@@ -405,7 +405,7 @@ class AttentiveApiTest {
                 Item.Builder(
                     "11", "22", Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
                 ).build()
-            ), Order.Builder("5555").build()
+            ), Order.Builder().orderId("5555").build()
         ).build()
     }
 
@@ -423,14 +423,14 @@ class AttentiveApiTest {
                     Price.Builder().price(BigDecimal("20.00")).currency(Currency.getInstance("USD")).build()
                 ).build()
             ),
-            Order.Builder("5555").build()
+            Order.Builder().orderId("5555").build()
         ).build()
     }
 
     private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(buildItemWithAllFields()),
-            Order.Builder("5555").build()
+            Order.Builder().orderId("5555").build()
         ).cart(
             Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build()
         ).build()

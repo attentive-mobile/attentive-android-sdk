@@ -52,7 +52,7 @@ class ProductPageActivity : AppCompatActivity() {
 
         // Construct an "Order", which represents the order for the purchase
         val orderId = "23456"
-        val order = Order.Builder(orderId).build()
+        val order = Order.Builder().orderId(orderId).build()
 
         // (Optional) Construct a "Cart", which represents the cart this Purchase was made from
         val cart = Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build()
