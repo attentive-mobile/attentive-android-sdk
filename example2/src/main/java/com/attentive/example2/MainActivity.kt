@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun GreetingPreview() {
         AttentiveAndroidSDKTheme {
-            Greeting("Android")
+            Greeting()
         }
     }
 }

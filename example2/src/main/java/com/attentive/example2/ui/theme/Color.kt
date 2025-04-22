@@ -12,3 +12,5 @@ val Pink40 = Color(0xFF7D5260)
 
 val AttentiveYellow = Color(0xFFFFF382)
 val AttentiveDarkYellow = Color(0xFFF9D100)
+
+val BonniPink = Color(0xFFFFC5B9)

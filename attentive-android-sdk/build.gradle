@@ -42,9 +42,9 @@ android {
         jvmTarget = JavaVersion.VERSION_11
     }
 
-    kotlin {
-        jvmToolchain(21)
-    }
+//    kotlin {
+//        jvmToolchain(21)
+//    }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_11

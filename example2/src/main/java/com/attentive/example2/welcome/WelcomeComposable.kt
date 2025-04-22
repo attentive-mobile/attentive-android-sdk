@@ -2,12 +2,12 @@ package com.attentive.example2.welcome
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -24,7 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color.Companion.White
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,21 +36,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
-import com.attentive.example2.debug.DebugScreen
+import com.attentive.example2.settings.debug.DebugScreenComposables
+import com.attentive.example2.settings.SettingsScreen
 import com.attentive.example2.product.ProductScreen
 import com.attentive.example2.shipping.ShippingScreen
 import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
-import com.attentive.example2.ui.theme.AttentiveDarkYellow
-import com.attentive.example2.ui.theme.AttentiveYellow
+import com.attentive.example2.ui.theme.BonniPink
 
 @Composable
 fun WelcomeScreenContent(navController: NavHostController) {
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
-    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = AttentiveYellow) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = BonniPink) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -55,43 +57,74 @@ fun WelcomeScreenContent(navController: NavHostController) {
             horizontalAlignment = CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Greeting(
-                name = "Android",
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .weight(.5f)
-            )
-
+            Greeting()
             SignUpForm(isVisible = newAccount, navController)
             SignInForm(isVisible = existingAccount, navController)
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Attentive Logo",
-                modifier = Modifier.size(128.dp)
-            )
             Column(horizontalAlignment = CenterHorizontally) {
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = AttentiveDarkYellow),
-                    onClick = { newAccount = true }) {
-                    Text("Create Account", color = Color.Black)
-                }
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = AttentiveDarkYellow),
-                    onClick = { existingAccount = true }) {
-                    Text("Sign In", color = Color.Black)
-                }
+                SignInButton()
+                ContinueAsGuestButton(navController)
 
-                Button(onClick = { navController.navigate(Routes.ProductScreenRoute.name) }) {
-                    Text("Continue as guest")
-                }
             }
         }
     }
 }
 
+@Preview
+@Composable
+fun SignInButton() {
+    Button(
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+        onClick = {},
+        shape = RectangleShape,
+        modifier = Modifier
+            .width(378.dp)
+            .height(62.dp)
+        //onClick = { existingAccount = true }
+    ) {
+        Text(
+            "SIGN IN",
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Thin
+        )
+    }
+}
+
+@Preview
+@Composable
+fun ContinueAsGuestButton(navController: NavHostController = rememberNavController()) {
+    Button(
+        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+        shape = RectangleShape,
+        onClick = { navController.navigate(Routes.ProductScreenRoute.name) },
+        modifier = Modifier
+            .width(378.dp)
+            .height(62.dp)
+    ) {
+        Text(
+            "CONTINUE AS GUEST",
+            color = Color.Black,
+            fontSize = 22.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Thin
+        )
+    }
+}
+
+@Preview
+@Composable
+fun CreateAccountButton() {
+    Button(
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+        onClick = {}
+        //    onClick = { newAccount = true }
+    ) {
+        Text("Create Account", color = Color.Black)
+    }
+}
+
 @Composable
 fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
-    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = AttentiveYellow) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
         NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
             composable(Routes.WelcomeScreenRoute.name) {
                 WelcomeScreenContent(navController)
@@ -105,8 +138,11 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             composable(Routes.ShippingScreen.name) {
                 ShippingScreen(navController)
             }
+            composable(Routes.SettingsScreen.name) {
+                SettingsScreen(navController)
+            }
             composable(Routes.DebugScreen.name) {
-                DebugScreen(navController)
+                DebugScreenComposables(navController)
             }
         }
     }
@@ -123,21 +159,31 @@ fun AccountNameTextFieldPreview() {
     )
 }
 
-@Preview
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
-fun WelcomeScreenPreview() {
+fun WelcomeScreenContentPreview() {
+    val navController = rememberNavController()
     AttentiveAndroidSDKTheme {
-        WelcomeScreen()
+        WelcomeScreenContent(navController = navController)
     }
 }
 
+@Preview
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Attentive Mobile Sample App!",
-        fontSize = 24.sp,
-        modifier = modifier
-    )
+fun Greeting() {
+    Column() {
+        Text(
+            text = "HEY BESTIE!",
+            fontSize = 38.sp,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "Welcome to Bonni Beauty!",
+            fontWeight = FontWeight.Bold,
+            fontSize = 54.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable

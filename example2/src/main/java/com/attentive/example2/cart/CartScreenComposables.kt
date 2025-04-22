@@ -56,7 +56,7 @@ fun CartScreenContent(
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SimpleToolbar(title = "Cart", actions = {}, navController)
+            SimpleToolbar(title = "Cart", {}, navController)
             LazyColumn {
                 items(cartItems.size + 1) { index ->
                     if (index < cartItems.size) {

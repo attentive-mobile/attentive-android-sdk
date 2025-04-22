@@ -8,5 +8,6 @@ enum class Routes() {
     ShippingScreen,
     DebugScreen,
     PaymentScreen,
-    ThankYouScreen
+    ThankYouScreen,
+    SettingsScreen,
 }

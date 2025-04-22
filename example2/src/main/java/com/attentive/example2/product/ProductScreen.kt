@@ -88,7 +88,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             }
             IconButton(
                 onClick = {
-                    navHostController.navigate(Routes.DebugScreen.name)
+                    navHostController.navigate(Routes.SettingsScreen.name)
                 }
             ) {
                 Icon(imageVector = Icons.Filled.Build, contentDescription = "Debug")
