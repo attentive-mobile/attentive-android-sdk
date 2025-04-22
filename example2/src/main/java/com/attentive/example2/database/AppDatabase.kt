@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     private fun initWithMockProducts() {
         CoroutineScope(Dispatchers.IO).launch {
             val imageIds =
-                listOf(R.drawable.tshirt, R.drawable.cat_tree, R.drawable.beans, R.drawable.vinyl)
+                listOf(R.drawable.superscreen, R.drawable.stick1, R.drawable.balm2, R.drawable.balm3)
             val names = listOf("T-Shirt", "Cat Tree", "Coffee", "Vinyl")
             val prices = listOf(
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))

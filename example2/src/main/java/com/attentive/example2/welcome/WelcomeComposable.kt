@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,12 +69,11 @@ fun WelcomeScreenContent(navController: NavHostController) {
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 64.dp),
                 horizontalAlignment = CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Greeting()
                 SignUpForm(isVisible = newAccount, navController)
                 SignInForm(isVisible = existingAccount, navController)
-                Column(horizontalAlignment = CenterHorizontally) {
+                Column(horizontalAlignment = CenterHorizontally, modifier = Modifier.padding(top = 106.dp)) {
                     SignInButton()
                     ContinueAsGuestButton(navController)
 
@@ -97,9 +98,10 @@ fun SignInButton() {
     ) {
         Text(
             "SIGN IN",
-            color = Color.White,
+            color = White,
             fontSize = 22.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Thin
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+            fontWeight = FontWeight.Normal
         )
     }
 }
@@ -119,7 +121,8 @@ fun ContinueAsGuestButton(navController: NavHostController = rememberNavControll
             "CONTINUE AS GUEST",
             color = Color.Black,
             fontSize = 22.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Thin
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+            fontWeight = FontWeight.Normal
         )
     }
 }
@@ -185,17 +188,19 @@ fun WelcomeScreenContentPreview() {
 @Preview
 @Composable
 fun Greeting() {
-    Column() {
+    Column {
         Text(
             text = "HEY BESTIE!",
             fontSize = 38.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 204.dp),
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             textAlign = TextAlign.Center,
         )
         Text(
             text = "Welcome to Bonni Beauty!",
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Medium,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             lineHeight = 62.sp,
             fontSize = 54.sp,
             textAlign = TextAlign.Center,

@@ -1,6 +1,7 @@
 package com.attentive.example2.product
 
 import android.util.Log
+import android.widget.ImageView.ScaleType
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -11,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -36,6 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +54,9 @@ import com.attentive.example2.Routes
 import com.attentive.example2.SimpleToolbar
 import com.attentive.example2.cart.CartScreenViewModel
 import com.attentive.example2.database.ExampleProduct
+import com.attentive.example2.ui.theme.BonniGreen
+import com.attentive.example2.ui.theme.BonniPink
+import com.attentive.example2.ui.theme.BonniYellow
 import kotlin.random.Random
 
 @Composable
@@ -67,9 +76,10 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
     val prices = LocalContext.current.resources.getIntArray(R.array.prices)
     val items by viewModel.productItemsFlow.collectAsState()
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column() {
         SimpleToolbar(title = "Products", actions = {
-            BadgedBox(modifier = Modifier.padding(4.dp),
+            BadgedBox(
+                modifier = Modifier.padding(4.dp),
                 badge = {
                     if (cartItemCount > 0) {
                         Badge(containerColor = Color.White, contentColor = Color.Black) {
@@ -95,12 +105,14 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             }
         }, navHostController)
         Text(
-            "Products",
-            fontSize = 36.sp,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 32.dp)
+            "All Products",
+            fontSize = 20.sp,
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 16.dp)
         )
 
-        if(items.isNotEmpty()) {
+        if (items.isNotEmpty()) {
             Log.d("pfaff", "items is not empty")
             ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
         } else {
@@ -130,10 +142,12 @@ fun ProductCard(
     onAddToCart: (item: ExampleProduct) -> Unit
 ) {
     val context = LocalContext.current
-    Card(
+    val bonniColors = listOf(BonniPink, BonniYellow, BonniGreen)
+
+    Column(
         modifier = Modifier
+            .fillMaxSize()
             .padding(8.dp)
-            .height(250.dp)
             .clickable(
                 onClick = {
                     onAddToCart(item)
@@ -143,19 +157,40 @@ fun ProductCard(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple()
             ),
-        colors = CardDefaults.cardColors(containerColor = Color(Random(index).nextInt())),
-        elevation = CardDefaults.cardElevation()
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("${item.item.name} \n$${item.item.price.price}")
-            Image(ImageBitmap.imageResource(item.imageId), contentDescription = "T shirt")
-            onProductViewed(item.item)
-        }
+        Image(
+            ImageBitmap.imageResource(item.imageId),
+            contentDescription = "T shirt",
+            modifier = Modifier.fillMaxSize().height(285.dp)
+        )
+        ProductTitle()
+        ProductSubtitle()
+        onProductViewed(item.item)
     }
+}
+
+@Preview
+@Composable
+fun ProductTitle(){
+Text(
+    text = "Product Title",
+    fontSize = 15.sp,
+    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+    textAlign = TextAlign.Start,
+    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
+}
+
+@Preview
+@Composable
+fun ProductSubtitle(){
+    Text(
+        text = "Product Subtitle | $12",
+        fontSize = 12.sp,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        textAlign = TextAlign.Start,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
 }
 
 @Preview
