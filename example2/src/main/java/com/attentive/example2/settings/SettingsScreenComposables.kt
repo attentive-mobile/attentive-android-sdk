@@ -5,6 +5,7 @@ import android.widget.FrameLayout
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -14,8 +15,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
@@ -23,7 +26,7 @@ import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.SimpleToolbar
 
 @Composable
-fun SettingsScreen(navHostController: NavHostController){
+fun SettingsScreen(navHostController: NavHostController) {
     SettingsScreenContent(navHostController)
 }
 
@@ -34,7 +37,10 @@ fun SettingsScreenContent(navHostController: NavHostController) {
     // Create the FrameLayout first
     val frameLayout = remember {
         FrameLayout(activity!!.baseContext).apply {
-            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
     }
 
@@ -43,7 +49,7 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally){
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
         SettingsList(navHostController)
         Button(onClick = {
@@ -63,14 +69,24 @@ fun SettingsList(navHostController: NavHostController) {
     accountSettings.add("Manage Addresses" to {})
 
     val debugSettings = mutableListOf<Pair<String, () -> Unit>>()
-    debugSettings.add("Debug" to {navHostController.navigate("DebugScreen")})
-    debugSettings.add("Show Creatives" to {})
-    debugSettings.add("Identify Users" to {})
-    debugSettings.add("Clear Users" to {})
-    Text("Settings", modifier = Modifier.padding(8.dp))
+    debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
+
+    val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
+    creativeSettings.add("Show Creatives" to {})
+    creativeSettings.add("Identify Users" to {})
+    creativeSettings.add("Clear Users" to {})
+    Text(
+        "Settings",
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth(),
+        textAlign = TextAlign.Start,
+        fontSize = 20.sp
+    )
     Column() {
         SettingGroup(accountSettings)
         SettingGroup(debugSettings)
+        SettingGroup(creativeSettings)
     }
 }
 
@@ -87,11 +103,13 @@ fun SettingGroup(
 }
 
 @Composable
-fun Setting(title: String, onClick: () -> Unit){
-        Text(
-            text = title,
-            modifier = Modifier.padding(8.dp).clickable { onClick() }
-        )
+fun Setting(title: String, onClick: () -> Unit) {
+    Text(
+        text = title,
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable { onClick() }
+    )
 }
 
 @Composable

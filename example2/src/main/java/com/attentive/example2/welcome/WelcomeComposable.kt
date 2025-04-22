@@ -3,8 +3,10 @@ package com.attentive.example2.welcome
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -23,9 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,6 +41,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
 import com.attentive.example2.settings.debug.DebugScreenComposables
@@ -49,25 +55,33 @@ import com.attentive.example2.ui.theme.BonniPink
 fun WelcomeScreenContent(navController: NavHostController) {
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
-    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = BonniPink) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 64.dp),
-            horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Box(
+            modifier = Modifier.paint(
+                painterResource(R.drawable.background),
+                contentScale = ContentScale.FillHeight
+            )
         ) {
-            Greeting()
-            SignUpForm(isVisible = newAccount, navController)
-            SignInForm(isVisible = existingAccount, navController)
-            Column(horizontalAlignment = CenterHorizontally) {
-                SignInButton()
-                ContinueAsGuestButton(navController)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 64.dp),
+                horizontalAlignment = CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Greeting()
+                SignUpForm(isVisible = newAccount, navController)
+                SignInForm(isVisible = existingAccount, navController)
+                Column(horizontalAlignment = CenterHorizontally) {
+                    SignInButton()
+                    ContinueAsGuestButton(navController)
 
+                }
             }
         }
     }
 }
+
 
 @Preview
 @Composable
@@ -175,11 +189,14 @@ fun Greeting() {
         Text(
             text = "HEY BESTIE!",
             fontSize = 38.sp,
+            modifier = Modifier.fillMaxWidth().padding(top = 204.dp),
             textAlign = TextAlign.Center,
         )
         Text(
             text = "Welcome to Bonni Beauty!",
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            lineHeight = 62.sp,
             fontSize = 54.sp,
             textAlign = TextAlign.Center,
         )

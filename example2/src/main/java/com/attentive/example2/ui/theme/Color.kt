@@ -14,3 +14,4 @@ val AttentiveYellow = Color(0xFFFFF382)
 val AttentiveDarkYellow = Color(0xFFF9D100)
 
 val BonniPink = Color(0xFFFFC5B9)
+val BonniYellow = Color(0xFFFFF8B3)
