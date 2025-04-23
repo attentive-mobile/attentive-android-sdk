@@ -103,6 +103,11 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'org.mockito:mockito-android:5.5.0'
+
+//    classpath 'com.google.gms:google-services:4.4.2'
+
+    implementation platform('com.google.firebase:firebase-bom:32.2.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }
 
 ext {

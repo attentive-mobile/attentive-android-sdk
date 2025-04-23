@@ -1,8 +1,17 @@
 package com.attentive.example2.settings
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings.Global.getString
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,15 +24,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
+import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
+import com.attentive.example2.AttentiveApp
+import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -75,6 +98,10 @@ fun SettingsList(navHostController: NavHostController) {
     creativeSettings.add("Show Creatives" to {})
     creativeSettings.add("Identify Users" to {})
     creativeSettings.add("Clear Users" to {})
+
+    val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
+    pushSettings.add("Display current push token" to {getCurrentToken()})
+    pushSettings.add("Share push token" to {sharePushToken()})
     Text(
         "Settings",
         modifier = Modifier
@@ -87,8 +114,52 @@ fun SettingsList(navHostController: NavHostController) {
         SettingGroup(accountSettings)
         SettingGroup(debugSettings)
         SettingGroup(creativeSettings)
+        SettingGroup(pushSettings)
+        FeatureThatRequiresPushPermission()
     }
 }
+
+fun getCurrentToken(){
+    FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+        if (!task.isSuccessful) {
+            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
+            return@OnCompleteListener
+        }
+
+        // Get new FCM registration token
+        val token = task.result
+
+        // Log and toast
+        Log.d("Attentive", "Firebase push token = $token")
+        Toast.makeText(AttentiveApp.getInstance(), token, Toast.LENGTH_SHORT).show()
+    })
+}
+
+fun sharePushToken() {
+    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+        if (!task.isSuccessful) {
+            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
+            return@addOnCompleteListener
+        }
+
+        // Get the push token
+        val token = task.result
+
+        // Create a share intent
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "Push Token: $token")
+        }
+
+        // Start the share intent
+        AttentiveApp.getInstance().startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
+
+        // Notify the user
+        Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
+        Log.d("Attentive", "Push token shared: $token")
+    }
+}
+
 
 @Composable
 fun SettingGroup(
@@ -103,13 +174,42 @@ fun SettingGroup(
 }
 
 @Composable
+fun SettingGroupInvokableComposable(
+    titlesToDestinations: List<Pair<String, @Composable () -> Unit>>,
+) {
+    Column() {
+        for (titleToDestination in titlesToDestinations) {
+            SettingInvokableComposable(
+                title = titleToDestination.first,
+                content = titleToDestination.second
+            )
+        }
+    }
+    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
+}
+
+
+@Composable
 fun Setting(title: String, onClick: () -> Unit) {
     Text(
         text = title,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         modifier = Modifier
             .padding(8.dp)
             .clickable { onClick() }
     )
+}
+
+@Composable
+fun SettingInvokableComposable(title: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable { /* Handle click if needed */ }
+    ) {
+        Text(text = title)
+        content()
+    }
 }
 
 @Composable
@@ -128,4 +228,41 @@ fun HorizontalLine(
 @Composable
 fun AdvertisementView(frameLayout: FrameLayout) {
     AndroidView(factory = { frameLayout })
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun FeatureThatRequiresPushPermission() {
+
+    // Camera permission state
+    val pushPermissionState = rememberPermissionState(
+        android.Manifest.permission.POST_NOTIFICATIONS
+    )
+
+    if (pushPermissionState.status.isGranted) {
+        Text(
+            "Push permission Granted",
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+            modifier = Modifier
+                .padding(8.dp)
+        )
+    } else {
+        Column {
+            val textToShow = if (pushPermissionState.status.shouldShowRationale) {
+                // If the user has denied the permission but the rationale can be shown,
+                // then gently explain why the app requires this permission
+                "Push is important for this app. Please grant the permission."
+            } else {
+                // If it's the first time the user lands on this feature, or the user
+                // doesn't want to be asked again for this permission, explain that the
+                // permission is required
+                "Push permission required for this feature to be available. " +
+                        "Please grant the permission"
+            }
+            Text(textToShow)
+            Button(onClick = { pushPermissionState.launchPermissionRequest() }) {
+                Text("Request permission")
+            }
+        }
+    }
 }
