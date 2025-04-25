@@ -44,11 +44,11 @@ fun SimpleToolbar(
                     .padding(start = 56.dp, end = 56.dp), // Add padding to account for navigationIcon and actions
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.bonni_logo),
-                    contentDescription = "Toolbar Image",
-                    modifier = Modifier.size(40.dp) // Adjust size as needed
-                )
+//                androidx.compose.foundation.Image(
+//                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.bonni_logo),
+//                    contentDescription = "Toolbar Image",
+//                    modifier = Modifier.size(40.dp) // Adjust size as needed
+//                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

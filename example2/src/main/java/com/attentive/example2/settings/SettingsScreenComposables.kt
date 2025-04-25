@@ -74,19 +74,12 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        SettingsList(navHostController)
-        Button(onClick = {
-            creative.trigger() // Call the trigger method
-        }) {
-            Text("Trigger creative")
-        }
-
-        AdvertisementView(frameLayout)
+        SettingsList(creative, navHostController)
     }
 }
 
 @Composable
-fun SettingsList(navHostController: NavHostController) {
+fun SettingsList(creative: Creative, navHostController: NavHostController) {
     val accountSettings = mutableListOf<Pair<String, () -> Unit>>()
     accountSettings.add("Switch Account" to {})
     accountSettings.add("Manage Addresses" to {})
@@ -95,13 +88,14 @@ fun SettingsList(navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to {})
+    creativeSettings.add("Show Creatives" to {creative.trigger()})
     creativeSettings.add("Identify Users" to {})
     creativeSettings.add("Clear Users" to {})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {getCurrentToken()})
-    pushSettings.add("Share push token" to {sharePushToken()})
+    val context = LocalContext.current
+    pushSettings.add("Share push token" to {sharePushToken(context)})
     Text(
         "Settings",
         modifier = Modifier
@@ -133,9 +127,10 @@ fun getCurrentToken(){
         Log.d("Attentive", "Firebase push token = $token")
         Toast.makeText(AttentiveApp.getInstance(), token, Toast.LENGTH_SHORT).show()
     })
+
 }
 
-fun sharePushToken() {
+fun sharePushToken(context: Context) {
     FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
         if (!task.isSuccessful) {
             Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
@@ -145,14 +140,17 @@ fun sharePushToken() {
         // Get the push token
         val token = task.result
 
+
+
         // Create a share intent
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, "Push Token: $token")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
         }
 
         // Start the share intent
-        AttentiveApp.getInstance().startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
+        context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
 
         // Notify the user
         Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
@@ -225,11 +223,6 @@ fun HorizontalLine(
     )
 }
 
-@Composable
-fun AdvertisementView(frameLayout: FrameLayout) {
-    AndroidView(factory = { frameLayout })
-}
-
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun FeatureThatRequiresPushPermission() {
@@ -248,21 +241,12 @@ private fun FeatureThatRequiresPushPermission() {
         )
     } else {
         Column {
-            val textToShow = if (pushPermissionState.status.shouldShowRationale) {
-                // If the user has denied the permission but the rationale can be shown,
-                // then gently explain why the app requires this permission
-                "Push is important for this app. Please grant the permission."
-            } else {
-                // If it's the first time the user lands on this feature, or the user
-                // doesn't want to be asked again for this permission, explain that the
-                // permission is required
-                "Push permission required for this feature to be available. " +
-                        "Please grant the permission"
-            }
-            Text(textToShow)
-            Button(onClick = { pushPermissionState.launchPermissionRequest() }) {
-                Text("Request permission")
-            }
+            val textToShow = "Request push permission"
+            Text(  text = textToShow,
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { pushPermissionState.launchPermissionRequest()  })
         }
     }
 }
