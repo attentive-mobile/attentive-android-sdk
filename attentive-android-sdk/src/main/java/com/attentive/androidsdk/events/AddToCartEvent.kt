@@ -16,7 +16,7 @@ data class AddToCartEvent(
     companion object {
         @Deprecated(
             "As of release 1.0.0-beta01, replaced by standard builder methods",
-            ReplaceWith("AddToCartEvent.Builder().items(items).buildIt()")
+            ReplaceWith("AddToCartEvent.Builder().items(items).build()")
         )
         fun create(items: List<Item>): AddToCartEvent {
             ParameterValidation.verifyNotEmpty(items, "items")
@@ -41,7 +41,7 @@ data class AddToCartEvent(
             return this
         }
 
-        fun buildIt(): AddToCartEvent {
+        fun build(): AddToCartEvent {
             return AddToCartEvent(items, deeplink)
         }
     }

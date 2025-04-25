@@ -19,7 +19,7 @@ class CreativeUrlFormatter @RestrictTo(RestrictTo.Scope.LIBRARY) constructor() {
         val userIdentifiers = attentiveConfig.userIdentifiers
 
         addUserIdentifiersAsParameters(uriBuilder, userIdentifiers)
-
+        Timber.d("Creative URL: %s", uriBuilder.build().toString())
         return uriBuilder.build().toString()
     }
 

@@ -32,7 +32,7 @@ public class ProductPageActivity extends AppCompatActivity {
         final ProductViewEvent productViewEvent = new ProductViewEvent.Builder()
                 .items(List.of(item))
                 .deeplink("https://mydeeplink.com/products/32432423")
-                .buildIt();
+                .build();
         AttentiveEventTracker.getInstance().recordEvent(productViewEvent);
         showToastMessageForEvent("Product View");
     }
@@ -43,7 +43,7 @@ public class ProductPageActivity extends AppCompatActivity {
         final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
                 .items(List.of(item))
                 .deeplink("https://mydeeplink.com/products/32432423")
-                .buildIt();
+                .build();
         AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
         showToastMessageForEvent("Add to Cart");
     }
@@ -70,7 +70,7 @@ public class ProductPageActivity extends AppCompatActivity {
     }
 
     public void customEventButtonClicked(View view) {
-        CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).buildIt();
+        CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).build();
 
         AttentiveEventTracker.getInstance().recordEvent(customEvent);
         showToastMessageForEvent("Custom Event");

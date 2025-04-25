@@ -156,7 +156,7 @@ Item item = new Item.Builder("11111", "222", price).quantity(1).build();
 final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
                 .items(List.of(item))
                 .deeplink("https://mydeeplink.com/products/32432423")
-                .buildIt();
+                .build();
 
 AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
 ```
