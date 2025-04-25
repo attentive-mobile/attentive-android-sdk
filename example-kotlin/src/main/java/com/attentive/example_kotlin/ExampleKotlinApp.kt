@@ -9,7 +9,7 @@ import com.example.example_kotlin.R
 
 class ExampleKotlinApp : Application() {
     // The mode in which to run the Attentive Android SDK
-    private val mode = AttentiveConfig.Mode.PRODUCTION
+    private val mode = AttentiveConfig.Mode.DEBUG
 
     lateinit var attentiveConfig: AttentiveConfig
 
@@ -25,7 +25,7 @@ class ExampleKotlinApp : Application() {
                 .domain(attentiveDomain)
                 .mode(mode)
                 .context(this)
-//                .skipFatigueOnCreatives(true)
+                .skipFatigueOnCreatives(true)
                 .logLevel(AttentiveLogLevel.VERBOSE)
                 .build()
 
@@ -34,7 +34,7 @@ class ExampleKotlinApp : Application() {
         AttentiveEventTracker.instance.initialize(attentiveConfig)
 
         // Register the current user with the Attentive SDK. This should be done as early as possible.
-        //attentiveConfig.identify(buildUserIdentifiers())
+        attentiveConfig.identify(buildUserIdentifiers())
     }
 
     companion object {
