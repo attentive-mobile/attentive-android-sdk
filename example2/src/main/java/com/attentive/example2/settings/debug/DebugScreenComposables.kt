@@ -109,10 +109,11 @@ fun DebugScreenContent(navHostController: NavHostController) {
         }
     }
 
+
     // Configure AttentiveConfig once
     val config = remember {
         AttentiveConfig.Builder()
-            .domain("76ers")
+            .domain("YOUR_ATTENTIVE_DOMAIN")
             .mode(AttentiveConfig.Mode.DEBUG)
             .context(context)
             .build()

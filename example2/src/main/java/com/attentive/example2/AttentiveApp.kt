@@ -24,7 +24,7 @@ class AttentiveApp : Application() {
             AttentiveConfig
                 .Builder()
                 .context(this)
-                .domain("games")
+                .domain("YOUR_ATTENTIVE_DOMAIN")
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 

@@ -2,6 +2,7 @@ package com.attentive.androidsdk.events
 
 import android.util.Log
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 
 @Serializable
 data class PurchaseEvent(
@@ -23,7 +24,7 @@ data class PurchaseEvent(
         }
 
         fun build(): PurchaseEvent {
-            Log.e("pfaff", "PurchaseEvent: items: $items, order: $order, cart: $cart")
+            Timber.d("PurchaseEvent: items: $items, order: $order, cart: $cart")
             return PurchaseEvent(items, order, cart)
         }
     }
