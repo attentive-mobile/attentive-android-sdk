@@ -316,11 +316,11 @@ class AttentiveApiTestIT {
         }
 
         private fun buildAddToCartEventWithAllFields(): AddToCartEvent {
-            return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
+            return AddToCartEvent.Builder().items(listOf(buildItemWithAllFields())).build()
         }
 
         private fun buildProductViewEventWithAllFields(): ProductViewEvent {
-            return ProductViewEvent.Builder().items(listOf(buildItemWithAllFields())).buildIt()
+            return ProductViewEvent.Builder().items(listOf(buildItemWithAllFields())).build()
         }
 
         private fun buildItemWithAllFields(): Item {
@@ -339,7 +339,7 @@ class AttentiveApiTestIT {
             return CustomEvent.Builder(
                 "typeValue",
                 mapOf("propertyKey1" to "propertyValue1")
-            ).buildIt()
+            ).build()
         }
     }
 }

@@ -27,3 +27,4 @@ rootProject.name = "Attentive Android SDK"
 include ':attentive-android-sdk'
 include ':example'
 include ':example-kotlin'
+include ':example2'

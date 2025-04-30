@@ -12,12 +12,12 @@ if (project.rootProject.file('local.properties').exists()) {
 
 android {
     namespace 'com.example.example_kotlin'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.example.example_kotlin"
         minSdk 21
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -43,10 +43,12 @@ android {
 
 dependencies {
 
-    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+   // implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
 
     // Use the attentive-android-sdk package from your local attentive-android-sdk folder
     implementation project(path: ':attentive-android-sdk')

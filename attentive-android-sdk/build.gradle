@@ -13,11 +13,11 @@ android {
 
     android.buildFeatures.buildConfig true
 
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdk 21
-        targetSdk 34
+        targetSdk 35
 
         buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
@@ -34,21 +34,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    kotlin {
-        jvmToolchain(21)
-    }
+//    kotlin {
+//        jvmToolchain(21)
+//    }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     testFixtures {
@@ -75,29 +75,41 @@ android {
 
 dependencies {
     // build errors in unity for appcompat 1.1.0+
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'com.google.android.material:material:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.webkit:webkit:1.5.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
     // Timber for logging - Upgrading to 5.+ versions causes compilation errors
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
     api 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.activity:activity:1.8.0'
     implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
+    implementation 'androidx.activity:activity-ktx:1.10.0'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.5.0'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
     testImplementation "org.mockito.kotlin:mockito-kotlin:5.4.0"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
 
 
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'org.mockito:mockito-android:5.5.0'
+
+//    classpath 'com.google.gms:google-services:4.4.2'
+
+    implementation platform('com.google.firebase:firebase-bom:32.2.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }
 
 ext {

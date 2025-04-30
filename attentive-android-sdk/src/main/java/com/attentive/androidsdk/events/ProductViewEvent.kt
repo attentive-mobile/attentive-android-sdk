@@ -15,7 +15,7 @@ data class ProductViewEvent(
     companion object {
         @Deprecated(
             "As of release 1.0.0-beta01, replaced by standard builder methods",
-            ReplaceWith("ProductViewEvent.Builder().items(items).buildIt()")
+            ReplaceWith("ProductViewEvent.Builder().items(items).build()")
         )
         fun create(items: List<Item>): ProductViewEvent {
             ParameterValidation.verifyNotEmpty(items, "items")
@@ -40,7 +40,7 @@ data class ProductViewEvent(
             return this
         }
 
-        fun buildIt(): ProductViewEvent {
+        fun build(): ProductViewEvent {
             return ProductViewEvent(items, deeplink)
         }
     }

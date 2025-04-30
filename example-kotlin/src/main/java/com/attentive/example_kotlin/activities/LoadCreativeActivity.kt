@@ -20,7 +20,7 @@ class LoadCreativeActivity : AppCompatActivity() {
         val attentiveConfig: AttentiveConfig = (this.application as ExampleKotlinApp).attentiveConfig;
 
         // Attach the creative to the provided parentView
-        val parentView = findViewById<View>(R.id.loadCreative).parent as View
+        val parentView = findViewById<View>(R.id.webview_container).parent as View
         this.creative = Creative(attentiveConfig, parentView, this)
     }
 

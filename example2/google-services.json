@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "225073893107",
+    "project_id": "poc-import-tokens",
+    "storage_bucket": "poc-import-tokens.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:225073893107:android:58c76970a18f265fda7186",
+        "android_client_info": {
+          "package_name": "com.attentive.example2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1_OO92px9F0DW28qOH5Cipgj7sJGnjrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

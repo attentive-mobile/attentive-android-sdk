@@ -123,7 +123,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
-    class Builder {
+    class  Builder {
         internal lateinit var _context: Context
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
