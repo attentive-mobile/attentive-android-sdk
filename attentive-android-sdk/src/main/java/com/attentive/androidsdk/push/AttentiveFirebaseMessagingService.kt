@@ -13,16 +13,18 @@ import com.attentive.androidsdk.R
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import okhttp3.internal.notify
+import timber.log.Timber
 
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
-        Log.d("FCM", "Refreshed token: $token")
+        Timber.d("Refreshed token: $token")
         super.onNewToken(token)
+        //todo: send token to server
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Log.d("FCM", "Message received: ${remoteMessage.data}")
+        Timber.d("Message received: ${remoteMessage.data}")
         sendNotification(remoteMessage.notification!!.title!!, remoteMessage.notification!!.body!!)
     }
 

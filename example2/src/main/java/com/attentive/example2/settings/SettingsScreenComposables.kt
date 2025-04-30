@@ -34,9 +34,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.AttentiveApi
+import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
+import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.example2.AttentiveApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
@@ -114,20 +117,18 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 }
 
 fun getCurrentToken(){
-    FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
-            return@OnCompleteListener
-        }
+    val context: Context = AttentiveApp.getInstance()
+        AttentivePush.getInstance().fetchPushToken(context, object : Result<String> {
+            override fun onSuccess(token: String) {
+                // Handle the success case, e.g., use the token
+                Timber.d("Push token fetched successfully: $token")
+            }
 
-        // Get new FCM registration token
-        val token = task.result
-
-        // Log and toast
-        Log.d("Attentive", "Firebase push token = $token")
-        Toast.makeText(AttentiveApp.getInstance(), token, Toast.LENGTH_SHORT).show()
-    })
-
+            override fun onFailure(exception: Exception) {
+                // Handle the failure case
+                Timber.e("Failed to fetch push token: ${exception.message}")
+            }
+        })
 }
 
 fun sharePushToken(context: Context) {
@@ -246,7 +247,7 @@ private fun FeatureThatRequiresPushPermission() {
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
-                    .clickable { pushPermissionState.launchPermissionRequest()  })
+                    .clickable { AttentivePush.getInstance().fetchPushToken(AttentiveApp.getInstance()) })
         }
     }
 }
