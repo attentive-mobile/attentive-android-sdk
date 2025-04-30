@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Handler
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewParent
 import android.webkit.WebSettings
 import android.webkit.WebView
 import com.attentive.androidsdk.AttentiveConfig
@@ -39,6 +40,7 @@ class CreativeStateTest {
     private lateinit var webView: WebView
     private lateinit var creative: Creative
     private val testDispatcher = StandardTestDispatcher()
+    private val handler: Handler = mock()
 
     companion object {
         @get:ClassRule
@@ -61,46 +63,50 @@ class CreativeStateTest {
         whenever(parentView.viewTreeObserver).thenReturn(mock())
 
 
-        val handler: Handler = mock()
         whenever(handler.post(any())).thenAnswer { invocation ->
             val msg = invocation.getArgument<Runnable>(0)
             msg.run()
             null
         }
 
-        val realCreative = Creative(mock<AttentiveConfig>{}, parentView, mock<Activity>{}, webView, handler)
-        realCreative.webView = webView
-        realCreative.creativeUrlFormatter = mock<CreativeUrlFormatter>{
-            doReturn("https://example.com").whenever(it).buildCompanyCreativeUrl(any(), anyOrNull())
-        }
+        val realCreative = createRealCreative(parentView, webView)
         creative = spy(realCreative)
 
 
         doReturn(webView).whenever(creative).createWebView(any())
     }
 
+    fun createRealCreative(parentView: View, webViewParent: ViewParent): Creative{
+        val realCreative = Creative(mock<AttentiveConfig>{}, parentView, mock<Activity>{}, webView, handler)
+        realCreative.webView = webView
+        realCreative.creativeUrlFormatter = mock<CreativeUrlFormatter>{
+            doReturn("https://example.com").whenever(it).buildCompanyCreativeUrl(any(), anyOrNull())
+        }
+        return realCreative
+    }
+
     @After
     fun tearDown() {
-        Creative.isCreativeOpening.set(false)
-        Creative.isCreativeDestroyed.set(false)
-        Creative.isCreativeOpen.set(false)
+        creative.isCreativeOpening.set(false)
+        creative.isCreativeDestroyed.set(false)
+        creative.isCreativeOpen.set(false)
         Dispatchers.resetMain() // Reset the main dispatcher
     }
 
     @Test
     fun testCreativeIsInitiallyClosed() {
-        assertFalse(Creative.isCreativeOpen())
-        assertFalse(Creative.isCreativeOpening())
-        assertFalse(Creative.isCreativeDestroyed())
+        assertFalse(creative.isCreativeOpen.get())
+        assertFalse(creative.isCreativeOpening.get())
+        assertFalse(creative.isCreativeDestroyed.get())
     }
 
     @Test
     fun testCreativeStartsOpeningCorrectly() {
         creative.isWebViewReady = true
         creative.trigger()
-        assertTrue(Creative.isCreativeOpening())
-        assertFalse(Creative.isCreativeOpen())
-        assertFalse(Creative.isCreativeDestroyed())
+        assertTrue(creative.isCreativeOpening.get())
+        assertFalse(creative.isCreativeOpen.get())
+        assertFalse(creative.isCreativeDestroyed.get())
     }
 
     @Test
@@ -108,25 +114,35 @@ class CreativeStateTest {
         creative.isWebViewReady = true
         creative.openCreative()
         testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
-        assertTrue(Creative.isCreativeOpen())
-        assertFalse(Creative.isCreativeOpening())
-        assertFalse(Creative.isCreativeDestroyed())
+        assertTrue(creative.isCreativeOpen.get())
+        assertFalse(creative.isCreativeOpening.get())
+        assertFalse(creative.isCreativeDestroyed.get())
     }
 
     @Test
     fun testCreativeClosesCorrectly() {
         creative.trigger()
         creative.closeCreative()
-        assertFalse(Creative.isCreativeOpen())
-        assertFalse(Creative.isCreativeOpening())
-        assertFalse(Creative.isCreativeDestroyed())
+        assertFalse(creative.isCreativeOpen.get())
+        assertFalse(creative.isCreativeOpening.get())
+        assertFalse(creative.isCreativeDestroyed.get())
     }
 
     @Test
     fun testCreativeDestroysCorrectly() {
         creative.destroy()
-        assertFalse(Creative.isCreativeOpen())
-        assertFalse(Creative.isCreativeOpening())
-        assertTrue(Creative.isCreativeDestroyed())
+        assertFalse(creative.isCreativeOpen.get())
+        assertFalse(creative.isCreativeOpening.get())
+        assertTrue(creative.isCreativeDestroyed.get())
+    }
+
+    @Test
+    fun testNewCreativeCanBeOpenedAfterPreviousCreativeDestroyed(){
+        creative.openCreative()
+        creative.destroy()
+        creative = spy(createRealCreative(parentView, webView ))
+        creative.openCreative()
+        testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
+        assertTrue(creative.isCreativeOpen.get())
     }
 }

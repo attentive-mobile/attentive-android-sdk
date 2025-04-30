@@ -71,6 +71,12 @@ class Creative internal constructor(
     @VisibleForTesting
     internal var isWebViewReady = false
 
+    // Making this atomic to make sure it doesn't run into any race conditions
+    internal val isCreativeOpen = AtomicBoolean(false)
+    internal val isCreativeOpening = AtomicBoolean(false)
+    internal val isCreativeDestroyed = AtomicBoolean(false)
+
+
     init {
         Timber.d(
             "Calling constructor of Creative with parameters: %s, %s, %s, %s, %s",
@@ -459,21 +465,6 @@ class Creative internal constructor(
                 "\n" +
                 "})()"
 
-        // Making this atomic to make sure it doesn't run into any race conditions
-        internal val isCreativeOpen = AtomicBoolean(false)
-        internal val isCreativeOpening = AtomicBoolean(false)
-        internal val isCreativeDestroyed = AtomicBoolean(false)
 
-        internal fun isCreativeOpen(): Boolean {
-            return isCreativeOpen.get()
-        }
-
-        internal fun isCreativeDestroyed(): Boolean {
-            return isCreativeDestroyed.get()
-        }
-
-        internal fun isCreativeOpening(): Boolean {
-            return isCreativeOpening.get()
-        }
     }
 }
