@@ -1,51 +1,73 @@
 package com.attentive.androidsdk.push
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.attentive.androidsdk.AttentiveApi
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class AttentivePush {
 
-    fun fetchPushToken(context: Context, callback: Result<String>) {
-        if(!checkPushPermission(context)){
-            requestPushPermission(context, callback)
+    suspend fun fetchPushToken(context: Context): Result<TokenFetchResult> {
+        return if (!checkPushPermission(context)) {
+            requestPushPermission(context)
+        } else {
+            getTokenFromFirebase()
         }
     }
 
-    fun checkPushPermission(context: Context): Boolean {
+    private fun checkPushPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
-            android.Manifest.permission.POST_NOTIFICATIONS
+            Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun requestPushPermission(context: Context, callback: Result<String>) {
-        PermissionRequestActivity.request(context, callback)
-    }
-
-    private fun getTokenFromFirebase(callback: Result<String>){
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                return@addOnCompleteListener
+    private suspend fun requestPushPermission(context: Context): Result<TokenFetchResult> {
+        Timber.d("requestPushPermission")
+        return suspendCancellableCoroutine { continuation ->
+            PermissionRequestActivity.request(context) { isGranted ->
+                Timber.d("Permission granted: $isGranted")
+                if (isGranted) {
+                    CoroutineScope(Dispatchers.Default).launch {
+                        continuation.resume(getTokenFromFirebase())
+                    }
+                } else {
+                    continuation.resume(Result.failure(Exception("Permission denied")))
+                }
             }
-            val token = task.result
-            Timber.d("Token: $token")
-            callback.onSuccess({ token })
         }
     }
 
-    companion object{
+    private suspend fun getTokenFromFirebase(): Result<TokenFetchResult> {
+        Timber.d("getTokenFromFirebase")
+        return suspendCancellableCoroutine { continuation ->
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    Timber.d("Token: $token")
+                    continuation.resume(Result.success(TokenFetchResult(token)))
+                } else {
+                    continuation.resumeWithException(
+                        task.exception ?: Exception("Token fetch failed")
+                    )
+                }
+            }
+        }
+    }
+
+    companion object {
         lateinit var INSTANCE: AttentivePush
         fun getInstance(): AttentivePush {
             if (!::INSTANCE.isInitialized) {
@@ -58,33 +80,21 @@ class AttentivePush {
     class PermissionRequestActivity : AppCompatActivity() {
 
         override fun onCreate(savedInstanceState: Bundle?) {
-            Timber.d("PermissionRequestActivity onCreate")
             super.onCreate(savedInstanceState)
             activityResultLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         private val activityResultLauncher =
-            registerForActivityResult(
-                ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                Timber.d("PermissionRequestActivity isGranted: $isGranted")
-                // Handle Permission granted/rejected
-                if (isGranted) {
-                    // Permission is granted
-                    Timber.d("Push permission granted")
-                    AttentivePush.getInstance().getTokenFromFirebase(callback!!)
-                } else {
-                    Timber.d("Push permission denied")
-                    callback?.onFailure { "" }
-                }
-
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                callback?.invoke(isGranted)
                 finish()
             }
 
         companion object {
-            private var callback: Result<String>? = null
-            fun request(context: Context, callback: Result<String>) {
-                Timber.d("PermissionRequestActivity request")
+            private var callback: ((Boolean) -> Unit)? = null
+
+            fun request(context: Context, callback: (Boolean) -> Unit) {
+                this.callback = callback
                 val intent = Intent(context, PermissionRequestActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
@@ -93,3 +103,4 @@ class AttentivePush {
         }
     }
 }
+

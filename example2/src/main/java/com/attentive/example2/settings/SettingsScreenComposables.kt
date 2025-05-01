@@ -40,6 +40,7 @@ import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
 import com.attentive.androidsdk.push.AttentivePush
+import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.example2.AttentiveApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
@@ -50,6 +51,9 @@ import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -91,14 +95,18 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to {creative.trigger()})
+    creativeSettings.add("Show Creatives" to { creative.trigger() })
     creativeSettings.add("Identify Users" to {})
     creativeSettings.add("Clear Users" to {})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
-    pushSettings.add("Display current push token" to {getCurrentToken()})
+    pushSettings.add("Display current push token" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            getCurrentToken()
+        }
+    })
     val context = LocalContext.current
-    pushSettings.add("Share push token" to {sharePushToken(context)})
+    pushSettings.add("Share push token" to { sharePushToken(context) })
     Text(
         "Settings",
         modifier = Modifier
@@ -116,19 +124,13 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     }
 }
 
-fun getCurrentToken(){
+suspend fun getCurrentToken() {
     val context: Context = AttentiveApp.getInstance()
-        AttentivePush.getInstance().fetchPushToken(context, object : Result<String> {
-            override fun onSuccess(token: String) {
-                // Handle the success case, e.g., use the token
-                Timber.d("Push token fetched successfully: $token")
-            }
-
-            override fun onFailure(exception: Exception) {
-                // Handle the failure case
-                Timber.e("Failed to fetch push token: ${exception.message}")
-            }
-        })
+    AttentivePush.getInstance().fetchPushToken(context).onSuccess { result ->
+        CoroutineScope(Dispatchers.Main).launch {
+            Toast.makeText(context, "Push token: ${result.token}", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
 
 fun sharePushToken(context: Context) {
@@ -142,11 +144,10 @@ fun sharePushToken(context: Context) {
         val token = task.result
 
 
-
         // Create a share intent
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "Push Token: $token")
+            putExtra(Intent.EXTRA_TEXT, "$token")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
         }
 
@@ -154,7 +155,8 @@ fun sharePushToken(context: Context) {
         context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
 
         // Notify the user
-        Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT)
+            .show()
         Log.d("Attentive", "Push token shared: $token")
     }
 }
@@ -227,6 +229,7 @@ fun HorizontalLine(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun FeatureThatRequiresPushPermission() {
+    val context =  LocalContext.current
 
     // Camera permission state
     val pushPermissionState = rememberPermissionState(
@@ -234,20 +237,37 @@ private fun FeatureThatRequiresPushPermission() {
     )
 
     if (pushPermissionState.status.isGranted) {
-        Text(
-            "Push permission Granted",
-            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            modifier = Modifier
-                .padding(8.dp)
-        )
-    } else {
         Column {
-            val textToShow = "Request push permission"
-            Text(  text = textToShow,
+            Text(
+                "Push permission Granted",
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
-                    .clickable { AttentivePush.getInstance().fetchPushToken(AttentiveApp.getInstance()) })
+            )
+            Text(
+                "Revoke push permission after app restart",
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable{
+                       context.revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+            )
+        }
+    } else {
+        Column {
+            val textToShow = "Request push permission"
+            Text(
+                text = textToShow,
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            AttentivePush.getInstance().fetchPushToken(AttentiveApp.getInstance())
+                        }
+                    }
+            )
         }
     }
 }
