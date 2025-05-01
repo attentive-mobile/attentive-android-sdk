@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessaging
@@ -28,10 +30,14 @@ class AttentivePush {
     }
 
     private fun checkPushPermission(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Permission is not required for APIs below 33
+        }
     }
 
     private suspend fun requestPushPermission(context: Context): Result<TokenFetchResult> {
@@ -79,6 +85,7 @@ class AttentivePush {
 
     class PermissionRequestActivity : AppCompatActivity() {
 
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
             activityResultLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -93,7 +100,7 @@ class AttentivePush {
         companion object {
             private var callback: ((Boolean) -> Unit)? = null
 
-            fun request(context: Context, callback: (Boolean) -> Unit) {
+            internal fun request(context: Context, callback: (Boolean) -> Unit) {
                 this.callback = callback
                 val intent = Intent(context, PermissionRequestActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

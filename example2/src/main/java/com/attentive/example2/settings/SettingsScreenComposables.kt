@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings.Global.getString
 import android.util.Log
 import android.view.ViewGroup
@@ -244,15 +245,17 @@ private fun FeatureThatRequiresPushPermission() {
                 modifier = Modifier
                     .padding(8.dp)
             )
-            Text(
-                "Revoke push permission after app restart",
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier = Modifier
-                    .padding(8.dp)
-                    .clickable{
-                       context.revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Text(
+                    "Revoke push permission after app restart",
+                    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clickable {
+                            context.revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                )
+            }
         }
     } else {
         Column {
