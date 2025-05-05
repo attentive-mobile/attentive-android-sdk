@@ -1,6 +1,5 @@
 package com.attentive.example2.database
 
-import android.content.Context
 import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
@@ -8,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.Price
-import com.attentive.example2.AttentiveApp
+import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +56,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getInstance(): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    AttentiveApp.getInstance().applicationContext,
+                    BonniApp.getInstance().applicationContext,
                     AppDatabase::class.java,
                     "app_database"
                 ).build()

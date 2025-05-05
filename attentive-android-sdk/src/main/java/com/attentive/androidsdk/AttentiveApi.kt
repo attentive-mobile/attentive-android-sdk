@@ -20,11 +20,13 @@ import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.OkHttpClient.Builder.*
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
@@ -34,10 +36,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
 import java.util.regex.Pattern
-
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
-
 
 
 class AttentiveApi(private val httpClient: OkHttpClient) {
@@ -115,6 +113,72 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         })
     }
 
+    //TODO fix how we get the domain from the config
+    internal fun registerPushToken(token: String, userIdentifiers: UserIdentifiers, domain: String) {
+        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                registerPushToken(geoAdjustedDomain = domain, token = token, userIdentifiers = userIdentifiers)
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                registerPushToken(geoAdjustedDomain = geoAdjustedDomain, token = token, userIdentifiers  = userIdentifiers)
+            }
+        })
+    }
+
+    internal fun registerPushToken(geoAdjustedDomain: String, token: String, userIdentifiers: UserIdentifiers){
+        val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+        val metadataJson: String
+        val metadata: Metadata
+        try {
+           metadata = buildMetadata(userIdentifiers)
+            metadataJson = json.encodeToString(metadata)
+        } catch (e: SerializationException) {
+                Timber.e(
+                    "Could not serialize metadata. Message: '%s'",
+                    e.message
+                )
+            return
+        }
+
+        val jsonBody = """
+    {
+        "pt": "$token",
+        "tp": "fcm",
+        "st": "true",
+        "v": "mobile-app",
+        "lt": "0",
+        "tag": "modern",
+        "evs": [],
+        "c": "$geoAdjustedDomain",
+        "u": "${userIdentifiers.visitorId}"
+    }
+""".trimIndent()
+
+        val pushUrl = pushUrlEndpointBuilder.build()
+
+        val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+
+        val request = Request.Builder()
+            .url("https://mobile.attentivemobile.com:443/token")
+            .addHeader("x-datadog-sampling-priority", "1")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+
+        httpClient.newCall(request).enqueue(object: Callback{
+            override fun onFailure(call: Call, e: IOException) {
+                Timber.e("Push request failed with exception ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                Timber.d("Push request success with response ${response.message}")
+            }
+        })
+    }
+
     @VisibleForTesting
     internal interface GetGeoAdjustedDomainCallback {
         fun onFailure(reason: String?)
@@ -175,25 +239,26 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         })
     }
 
+    private fun buildExternalVendorIdsJson(userIdentifiers: UserIdentifiers): String {
+        val externalVendorIds = buildExternalVendorIds(userIdentifiers)
+        return try {
+            json.encodeToString(externalVendorIds)
+        } catch (e: SerializationException) {
+            Timber.w(
+                "Could not serialize external vendor ids. Using empty array. Error: %s",
+                e.message
+            )
+            "[]"
+        }
+    }
+
     // TODO replace with the generic 'sendEvent' code
     private fun internalSendUserIdentifiersCollectedEventAsync(
         geoAdjustedDomain: String,
         userIdentifiers: UserIdentifiers,
         callback: AttentiveApiCallback
     ) {
-        val externalVendorIdsJson: String
-        try {
-            val externalVendorIds = buildExternalVendorIds(userIdentifiers)
-            externalVendorIdsJson = json.encodeToString(externalVendorIds)
-        } catch (e: SerializationException) {
-            callback.onFailure(
-                String.format(
-                    "Could not serialize the UserIdentifiers. Message: '%s'",
-                    e.message
-                )
-            )
-            return
-        }
+        val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
 
         val metadataJson: String
         try {
@@ -258,6 +323,14 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .scheme("https")
             .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
             .addPathSegment("e")
+
+
+    private val pushUrlEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_PUSH_ENDPOINT)
+            .port(443)
+            .addPathSegment("token")
 
     private fun parseAttentiveDomainFromTag(tag: String): String? {
         val pattern = Pattern.compile("='([a-z0-9-]+)[.]attn[.]tv'")
@@ -563,6 +636,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     companion object {
         const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
         const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
+        const val ATTENTIVE_PUSH_ENDPOINT: String = "mobile.attentivemobile.com"
 
         private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
             val productViewMetadata = ProductViewMetadataDto()
