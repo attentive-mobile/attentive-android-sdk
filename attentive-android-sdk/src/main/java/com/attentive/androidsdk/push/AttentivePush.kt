@@ -29,7 +29,7 @@ class AttentivePush {
         }
     }
 
-    private fun checkPushPermission(context: Context): Boolean {
+    internal fun checkPushPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,

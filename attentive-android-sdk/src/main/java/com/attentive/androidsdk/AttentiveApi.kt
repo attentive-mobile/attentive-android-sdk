@@ -44,7 +44,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         private set
 
 
-
     val metadataModule = SerializersModule {
         polymorphic(Metadata::class) {
             subclass(Metadata::class)
@@ -56,11 +55,11 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             subclass(PurchaseMetadataDto::class)
         }
     }
-        val json = Json {
-            serializersModule = metadataModule
-            classDiscriminator = "className" // Helps identify the subclass
-            ignoreUnknownKeys = true
-        }
+    val json = Json {
+        serializersModule = metadataModule
+        classDiscriminator = "className" // Helps identify the subclass
+        ignoreUnknownKeys = true
+    }
 
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
@@ -114,45 +113,68 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     }
 
     //TODO fix how we get the domain from the config
-    internal fun registerPushToken(token: String, userIdentifiers: UserIdentifiers, domain: String) {
+    internal fun registerPushToken(
+        token: String,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers,
+        domain: String
+    ) {
         getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
             override fun onFailure(reason: String?) {
                 Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-                registerPushToken(geoAdjustedDomain = domain, token = token, userIdentifiers = userIdentifiers)
+                registerPushToken(
+                    geoAdjustedDomain = domain,
+                    token = token,
+                    permissionGranted = permissionGranted,
+                    userIdentifiers = userIdentifiers
+                )
             }
 
             override fun onSuccess(geoAdjustedDomain: String) {
-                registerPushToken(geoAdjustedDomain = geoAdjustedDomain, token = token, userIdentifiers  = userIdentifiers)
+                registerPushToken(
+                    geoAdjustedDomain = geoAdjustedDomain,
+                    token = token,
+                    permissionGranted = permissionGranted,
+                    userIdentifiers = userIdentifiers
+                )
             }
         })
     }
 
-    internal fun registerPushToken(geoAdjustedDomain: String, token: String, userIdentifiers: UserIdentifiers){
+    internal fun registerPushToken(
+        geoAdjustedDomain: String,
+        token: String,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers
+    ) {
         val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
         val metadataJson: String
         val metadata: Metadata
         try {
-           metadata = buildMetadata(userIdentifiers)
+            metadata = buildMetadata(userIdentifiers)
             metadataJson = json.encodeToString(metadata)
         } catch (e: SerializationException) {
-                Timber.e(
-                    "Could not serialize metadata. Message: '%s'",
-                    e.message
-                )
+            Timber.e(
+                "Could not serialize metadata. Message: '%s'",
+                e.message
+            )
             return
         }
 
+        //        "pd": "${buildExtraParametersWithDeeplink()}",
+
+
+
         val jsonBody = """
     {
-        "pt": "$token",
-        "tp": "fcm",
-        "st": "true",
-        "v": "mobile-app",
-        "lt": "0",
-        "tag": "modern",
-        "evs": [],
         "c": "$geoAdjustedDomain",
-        "u": "${userIdentifiers.visitorId}"
+        "v": "mobile-app",
+        "u": "${userIdentifiers.visitorId}",
+        "evs": ${externalVendorIdsJson},
+        "m": $metadataJson,
+        "pt": "$token",
+        "st": "$permissionGranted",
+        "tp": "fcm"
     }
 """.trimIndent()
 
@@ -161,14 +183,14 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
 
         val request = Request.Builder()
-            .url("https://mobile.attentivemobile.com:443/token")
+            .url(pushUrl)
             .addHeader("x-datadog-sampling-priority", "1")
             .addHeader("Content-Type", "application/json")
             .post(requestBody)
             .build()
 
 
-        httpClient.newCall(request).enqueue(object: Callback{
+        httpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Timber.e("Push request failed with exception ${e.message}")
             }
@@ -329,7 +351,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         get() = HttpUrl.Builder()
             .scheme("https")
             .host(ATTENTIVE_PUSH_ENDPOINT)
-            .port(443)
             .addPathSegment("token")
 
     private fun parseAttentiveDomainFromTag(tag: String): String? {
@@ -446,8 +467,10 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                 purchaseMetadataDto.subProductId = item?.productVariantId
                 purchaseMetadataDto.category = item?.category
                 purchaseMetadataDto.quantity = item?.quantity?.toString()
-                purchaseMetadataDto.orderId = purchaseEvent.order.orderId // Assuming orderId is non-nullable
-                purchaseMetadataDto.cartTotal = cartTotalString // Assuming cartTotalString is non-nullable
+                purchaseMetadataDto.orderId =
+                    purchaseEvent.order.orderId // Assuming orderId is non-nullable
+                purchaseMetadataDto.cartTotal =
+                    cartTotalString // Assuming cartTotalString is non-nullable
 
                 if (purchaseEvent.cart != null) {
                     purchaseMetadataDto.cartId = purchaseEvent.cart.cartId
@@ -579,7 +602,10 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .addQueryParameter("c", domain)
             .addQueryParameter("t", eventRequest.type.abbreviation)
             .addQueryParameter("u", userIdentifiers.visitorId)
-            .addQueryParameter("m", json.encodeToString(PolymorphicSerializer(Metadata::class), metadata))
+            .addQueryParameter(
+                "m",
+                json.encodeToString(PolymorphicSerializer(Metadata::class), metadata)
+            )
 
         if (eventRequest.extraParameters != null) {
             for ((key, value) in eventRequest.extraParameters.entries) {

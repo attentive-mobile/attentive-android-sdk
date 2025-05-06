@@ -93,7 +93,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
     val context = LocalContext.current
     pushSettings.add("Share push token" to { sharePushToken(context) })
-    pushSettings.add("Send push token" to {sendPushToken()})
+    pushSettings.add("Send push token" to { sendPushToken(context) })
     Text(
         "Settings",
         modifier = Modifier
@@ -148,8 +148,8 @@ fun sharePushToken(context: Context) {
     }
 }
 
-fun sendPushToken() {
-    AttentiveEventTracker.instance.registerPushToken()
+fun sendPushToken(context: Context) {
+    AttentiveEventTracker.instance.registerPushToken(context)
 }
 
 
@@ -221,7 +221,7 @@ fun HorizontalLine(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun FeatureThatRequiresPushPermission() {
-    val context =  LocalContext.current
+    val context = LocalContext.current
 
     // Camera permission state
     val pushPermissionState = rememberPermissionState(
