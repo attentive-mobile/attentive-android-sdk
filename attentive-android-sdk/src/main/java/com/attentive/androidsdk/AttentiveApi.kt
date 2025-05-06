@@ -112,7 +112,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         })
     }
 
-    //TODO fix how we get the domain from the config
     internal fun registerPushToken(
         token: String,
         permissionGranted: Boolean,

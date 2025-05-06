@@ -49,6 +49,7 @@ class FactoryMocks private constructor(
             val okHttpClient = Mockito.mock(OkHttpClient::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildOkHttpClient(
+                    any(),
                     any()
                 )
             }.thenReturn(okHttpClient)

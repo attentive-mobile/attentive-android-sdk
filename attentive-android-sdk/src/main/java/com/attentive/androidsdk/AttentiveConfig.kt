@@ -21,12 +21,14 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
+    private var logLevel: AttentiveLogLevel? = null
 
     init {
-        configureLogging(builder.logLevel, settingsService, builder._context)
+        logLevel = builder.logLevel
+        configureLogging(logLevel, settingsService, builder._context)
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(builder.logLevel,
+        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
         attentiveApi =
@@ -123,7 +125,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _domain: String
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
-        internal var logLevel: AttentiveLogLevel? = null
+        internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
         fun context(context: Context) = apply {
             ParameterValidation.verifyNotNull(context, "context")
