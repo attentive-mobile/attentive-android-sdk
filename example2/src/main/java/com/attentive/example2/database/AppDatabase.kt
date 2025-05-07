@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
         CoroutineScope(Dispatchers.IO).launch {
             val imageIds =
                 listOf(R.drawable.superscreen, R.drawable.stick1, R.drawable.balm2, R.drawable.balm3)
-            val names = listOf("T-Shirt", "Cat Tree", "Coffee", "Vinyl")
+            val names = listOf("Protective Sunscreen","The Stick", "The Balm", "The Balm")
             val prices = listOf(
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
                     .price(BigDecimal(20.0)).build(),

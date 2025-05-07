@@ -165,21 +165,21 @@ fun ProductCard(
             contentDescription = "T shirt",
             modifier = Modifier.fillMaxSize().height(285.dp)
         )
-        ProductTitle()
+        ProductTitle(item.item.name!!)
         ProductSubtitle()
         onProductViewed(item.item)
     }
 }
 
-@Preview
+
 @Composable
-fun ProductTitle(){
+fun ProductTitle(title: String){
 Text(
-    text = "Product Title",
+    text = title,
     fontSize = 15.sp,
     fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
     textAlign = TextAlign.Start,
-    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
+    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
 }
 
 @Preview
@@ -190,7 +190,7 @@ fun ProductSubtitle(){
         fontSize = 12.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
 }
 
 @Preview
