@@ -52,7 +52,6 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
             .build()
 
         // Assert
@@ -84,7 +83,6 @@ class AttentiveConfigTest {
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
             .skipFatigueOnCreatives(true)
-            .appLaunchTracker(appLaunchTracker)
             .build()
 
         // Assert
@@ -110,8 +108,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -134,7 +131,6 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
             .build()
         Assert.assertEquals(VISITOR_ID, config.userIdentifiers.visitorId)
 
@@ -153,8 +149,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
+                       .build()
         config.identify(buildUserIdentifiers())
 
         // Act
@@ -186,8 +181,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -208,8 +202,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -227,8 +220,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -237,23 +229,6 @@ class AttentiveConfigTest {
 
         // Assert
         Assert.assertEquals(DOMAIN, config.domain)
-    }
-
-    @Test
-    fun initialzeAppOpenTrackingOnBuild() {
-        // Arrange
-        val appLaunchTracker = Mockito.mock(AppLaunchTracker::class.java)
-
-        //Act
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .context(Mockito.mock(Context::class.java))
-            .appLaunchTracker(appLaunchTracker)
-            .build()
-
-        //Assert
-        verify(config.appLaunchTracker).registerAppLaunchTracker()
     }
 
     private fun buildUserIdentifiers(): UserIdentifiers {

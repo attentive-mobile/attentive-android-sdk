@@ -10,7 +10,7 @@ import timber.log.Timber
 
 class AttentiveEventTracker private constructor() {
     var config: AttentiveConfig? = null
-    lateinit var launchTracker: AppLaunchTracker
+    internal lateinit var launchTracker: AppLaunchTracker
 
     fun initialize(config: AttentiveConfig) {
         Timber.i(
@@ -39,6 +39,7 @@ class AttentiveEventTracker private constructor() {
     }
 
     fun registerPushToken(context: Context){
+        Timber.d("registerPushToken")
         verifyInitialized()
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if(task.isSuccessful) {
