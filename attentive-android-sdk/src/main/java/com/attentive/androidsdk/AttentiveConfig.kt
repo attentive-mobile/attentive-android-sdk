@@ -20,12 +20,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
-    internal val appLaunchTracker: AppLaunchTracker = builder._launchTracker
-        ?: AppLaunchTracker()
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
     private var logLevel: AttentiveLogLevel? = null
+
+    internal val context = builder._context
 
     init {
         logLevel = builder.logLevel
@@ -38,8 +38,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         attentiveApi =
             ClassFactory.buildAttentiveApi(okHttpClient)
         sendInfoEvent()
-
-        appLaunchTracker.registerAppLaunchTracker()
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
@@ -129,7 +127,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _context: Context
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
-        internal var _launchTracker: AppLaunchTracker? = null
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
@@ -147,11 +144,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun domain(domain: String) = apply {
             ParameterValidation.verifyNotEmpty(domain, "domain")
             _domain = domain
-        }
-
-        @VisibleForTesting
-        internal fun appLaunchTracker(appLaunchTracker: AppLaunchTracker) = apply {
-            _launchTracker = appLaunchTracker
         }
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {

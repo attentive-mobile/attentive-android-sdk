@@ -1,17 +1,22 @@
 package com.attentive.androidsdk.tracking
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import timber.log.Timber
 
-class AppLaunchTracker() : DefaultLifecycleObserver {
+class AppLaunchTracker( ) : DefaultLifecycleObserver {
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
         Timber.d("App moved to foreground")
+        AttentiveEventTracker.instance.config?.context?.let {
+            AttentiveEventTracker.instance.registerPushToken(it)
+        }
     }
 
     fun registerAppLaunchTracker() {

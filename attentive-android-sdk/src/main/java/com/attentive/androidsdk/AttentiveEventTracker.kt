@@ -4,11 +4,13 @@ import android.content.Context
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.FirebaseMessaging
 import timber.log.Timber
 
 class AttentiveEventTracker private constructor() {
     var config: AttentiveConfig? = null
+    lateinit var launchTracker: AppLaunchTracker
 
     fun initialize(config: AttentiveConfig) {
         Timber.i(
@@ -23,6 +25,9 @@ class AttentiveEventTracker private constructor() {
             }
             this.config = config
         }
+
+        launchTracker = AppLaunchTracker()
+        launchTracker.registerAppLaunchTracker()
     }
 
     fun recordEvent(event: Event) {
