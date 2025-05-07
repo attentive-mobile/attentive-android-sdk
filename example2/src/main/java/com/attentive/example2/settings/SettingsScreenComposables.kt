@@ -40,6 +40,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -138,7 +139,7 @@ fun sharePushToken(context: Context) {
                 // Notify the user
                 Toast.makeText(BonniApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT)
                     .show()
-                Log.d("Attentive", "Push token shared: $token")
+                Timber.d("Push token shared: $token")
             } else {
                 Toast.makeText(context, "Failed to fetch push token", Toast.LENGTH_SHORT).show()
             }

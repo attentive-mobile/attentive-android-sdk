@@ -12,6 +12,7 @@ import com.attentive.example2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
@@ -42,7 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
                 val product = ExampleProduct("$i", item, imageIds[i])
-                Log.d("pfaff", "initWithMockProducts: $product")
+                Timber.d("initWithMockProducts: $product")
                 productItemDao().insert(product)
             }
         }

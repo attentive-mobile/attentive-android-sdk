@@ -57,6 +57,7 @@ import com.attentive.example2.database.ExampleProduct
 import com.attentive.example2.ui.theme.BonniGreen
 import com.attentive.example2.ui.theme.BonniPink
 import com.attentive.example2.ui.theme.BonniYellow
+import timber.log.Timber
 import kotlin.random.Random
 
 @Composable
@@ -113,10 +114,10 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
         )
 
         if (items.isNotEmpty()) {
-            Log.d("pfaff", "items is not empty")
+            Timber.d("items is not empty")
             ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
         } else {
-            Log.d("pfaff", "items is empty")
+            Timber.d("items is empty")
         }
     }
 }
