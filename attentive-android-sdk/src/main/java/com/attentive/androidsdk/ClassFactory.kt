@@ -2,6 +2,7 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
+import com.attentive.androidsdk.internal.util.AppInfo
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -21,9 +22,15 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildOkHttpClient(interceptor: Interceptor): OkHttpClient {
+    fun buildOkHttpClient(logLevel: AttentiveLogLevel?, interceptor: Interceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor()
-        logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
+        if(logLevel == AttentiveLogLevel.VERBOSE){
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY)
+        } else if(logLevel == AttentiveLogLevel.STANDARD){
+            logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
+        } else if(logLevel == AttentiveLogLevel.LIGHT){
+            logging.setLevel(HttpLoggingInterceptor.Level.NONE)
+        }
         return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
     }
 

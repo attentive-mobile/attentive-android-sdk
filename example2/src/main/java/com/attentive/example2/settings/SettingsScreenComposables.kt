@@ -3,20 +3,16 @@ package com.attentive.example2.settings
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Settings.Global.getString
+import android.os.Build
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,22 +27,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
-import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
-import com.attentive.example2.AttentiveApp
+import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -88,14 +81,23 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to {creative.trigger()})
+    creativeSettings.add("Show Creatives" to { creative.trigger() })
     creativeSettings.add("Identify Users" to {})
     creativeSettings.add("Clear Users" to {})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
-    pushSettings.add("Display current push token" to {getCurrentToken()})
+    pushSettings.add("Display current push token" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            getCurrentToken()
+        }
+    })
     val context = LocalContext.current
-    pushSettings.add("Share push token" to {sharePushToken(context)})
+    pushSettings.add("Share push token" to {
+        CoroutineScope(Dispatchers.Main).launch {
+            sharePushToken(context)
+        }
+    })
+    pushSettings.add("Send push token" to { sendPushToken(context) })
     Text(
         "Settings",
         modifier = Modifier
@@ -113,49 +115,48 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     }
 }
 
-fun getCurrentToken(){
-    FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
-            return@OnCompleteListener
+suspend fun getCurrentToken() {
+    val context: Context = BonniApp.getInstance()
+    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
+        if (it.isSuccess) {
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
-
-        // Get new FCM registration token
-        val token = task.result
-
-        // Log and toast
-        Log.d("Attentive", "Firebase push token = $token")
-        Toast.makeText(AttentiveApp.getInstance(), token, Toast.LENGTH_SHORT).show()
-    })
-
+    }
 }
 
-fun sharePushToken(context: Context) {
-    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
-            return@addOnCompleteListener
+suspend fun sharePushToken(context: Context) {
+    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
+        if (it.isSuccess) {
+            val token = it.getOrNull()?.token
+            if (token != null) {
+                // Create a share intent
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, token)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
+                }
+
+                // Start the share intent
+                context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
+
+                // Notify the user
+                Toast.makeText(BonniApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT)
+                    .show()
+                Timber.d("Push token shared: $token")
+            } else {
+                Toast.makeText(context, "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Failed to fetch push token", Toast.LENGTH_SHORT).show()
         }
-
-        // Get the push token
-        val token = task.result
-
-
-
-        // Create a share intent
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "Push Token: $token")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
-        }
-
-        // Start the share intent
-        context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
-
-        // Notify the user
-        Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
-        Log.d("Attentive", "Push token shared: $token")
     }
+}
+
+fun sendPushToken(context: Context) {
+    AttentiveEventTracker.instance.registerPushToken(context)
 }
 
 
@@ -170,6 +171,7 @@ fun SettingGroup(
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
 }
+
 
 @Composable
 fun SettingGroupInvokableComposable(
@@ -226,6 +228,7 @@ fun HorizontalLine(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun FeatureThatRequiresPushPermission() {
+    val context = LocalContext.current
 
     // Camera permission state
     val pushPermissionState = rememberPermissionState(
@@ -233,20 +236,39 @@ private fun FeatureThatRequiresPushPermission() {
     )
 
     if (pushPermissionState.status.isGranted) {
-        Text(
-            "Push permission Granted",
-            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            modifier = Modifier
-                .padding(8.dp)
-        )
-    } else {
         Column {
-            val textToShow = "Request push permission"
-            Text(  text = textToShow,
+            Text(
+                "Push permission Granted",
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
-                    .clickable { pushPermissionState.launchPermissionRequest()  })
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Text(
+                    "Revoke push permission after app restart",
+                    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clickable {
+                            context.revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                )
+            }
+        }
+    } else {
+        Column {
+            val textToShow = "Request push permission"
+            Text(
+                text = textToShow,
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            AttentiveEventTracker.instance.getPushToken(requestPermission = true)
+                        }
+                    }
+            )
         }
     }
 }

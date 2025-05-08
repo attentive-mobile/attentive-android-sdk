@@ -3,11 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-def attentiveDomain = "YOUR_ATTENTIVE_DOMAIN"
+def attentiveDomain = "games"
 if (project.rootProject.file('local.properties').exists()) {
     Properties properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    attentiveDomain = properties.getProperty('attentiveDomain') ?: "YOUR_ATTENTIVE_DOMAIN"
+    attentiveDomain = properties.getProperty('attentiveDomain') ?: "games"
 }
 
 android {

@@ -5,6 +5,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,6 +76,7 @@ fun WelcomeScreenContent(navController: NavHostController) {
                 SignInForm(isVisible = existingAccount, navController)
                 Column(horizontalAlignment = CenterHorizontally, modifier = Modifier.padding(top = 106.dp)) {
                     SignInButton()
+                    Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
 
                 }
