@@ -5,10 +5,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application>
+        <activity android:name=".push.AttentivePush$PermissionRequestActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            />
         <service
             android:name="com.attentive.androidsdk.AttentiveSettingsService"
             android:exported="true"
             tools:ignore="ExportedService" />
     </application>
+
 
 </manifest>

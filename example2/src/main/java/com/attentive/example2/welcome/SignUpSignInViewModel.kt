@@ -4,21 +4,18 @@ import android.app.Application
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
-import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.UserIdentifiers
-import com.attentive.example2.AttentiveApp
+import com.attentive.example2.BonniApp
 import com.attentive.example2.database.Account
 import com.attentive.example2.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-class SignUpSignInViewModel(application: Application): AndroidViewModel(AttentiveApp.getInstance()) {
+class SignUpSignInViewModel(application: Application): AndroidViewModel(BonniApp.getInstance()) {
 
 
     private val _signedIn = MutableStateFlow(false)
