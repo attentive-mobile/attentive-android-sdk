@@ -117,7 +117,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
 suspend fun getCurrentToken() {
     val context: Context = BonniApp.getInstance()
-    AttentiveEventTracker.instance.getPushToken().let {
+    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
         if (it.isSuccess) {
             CoroutineScope(Dispatchers.Main).launch {
                 Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
@@ -128,7 +128,7 @@ suspend fun getCurrentToken() {
 }
 
 suspend fun sharePushToken(context: Context) {
-    AttentiveEventTracker.instance.getPushToken().let {
+    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
         if (it.isSuccess) {
             val token = it.getOrNull()?.token
             if (token != null) {

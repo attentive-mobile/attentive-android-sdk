@@ -21,7 +21,7 @@ import kotlin.coroutines.resumeWithException
 
 internal class AttentivePush {
 
-    internal suspend fun fetchPushToken(context: Context, requestPermissionIfNotGranted: Boolean = false): Result<TokenFetchResult> {
+    internal suspend fun fetchPushToken(context: Context, requestPermissionIfNotGranted: Boolean): Result<TokenFetchResult> {
         return if (requestPermissionIfNotGranted && !checkPushPermission(context)) {
             requestPushPermission(context)
         } else {
