@@ -50,14 +50,8 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    fun getPushToken(callback: (Result<TokenFetchResult>) -> Unit) {
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                callback(Result.success(TokenFetchResult(task.result)))
-            } else {
-                callback(Result.failure(Exception("Failed to fetch token")))
-            }
-        }
+    suspend fun getPushToken(requestPermission: Boolean = false): Result<TokenFetchResult> {
+        return AttentivePush.getInstance().fetchPushToken(config!!.context, requestPermission)
     }
 
     private fun verifyInitialized() {

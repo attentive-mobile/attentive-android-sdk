@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
-import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
@@ -93,7 +92,11 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     })
     val context = LocalContext.current
-    pushSettings.add("Share push token" to { sharePushToken(context) })
+    pushSettings.add("Share push token" to {
+        CoroutineScope(Dispatchers.Main).launch {
+            sharePushToken(context)
+        }
+    })
     pushSettings.add("Send push token" to { sendPushToken(context) })
     Text(
         "Settings",
@@ -114,15 +117,18 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
 suspend fun getCurrentToken() {
     val context: Context = BonniApp.getInstance()
-    AttentivePush.getInstance().fetchPushToken(context).onSuccess { result ->
-        CoroutineScope(Dispatchers.Main).launch {
-            Toast.makeText(context, "Push token: ${result.token}", Toast.LENGTH_SHORT).show()
+    AttentiveEventTracker.instance.getPushToken().let {
+        if (it.isSuccess) {
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     }
 }
 
-fun sharePushToken(context: Context) {
-    AttentiveEventTracker.instance.getPushToken {
+suspend fun sharePushToken(context: Context) {
+    AttentiveEventTracker.instance.getPushToken().let {
         if (it.isSuccess) {
             val token = it.getOrNull()?.token
             if (token != null) {
@@ -259,7 +265,7 @@ private fun FeatureThatRequiresPushPermission() {
                     .padding(8.dp)
                     .clickable {
                         CoroutineScope(Dispatchers.Main).launch {
-                            AttentivePush.getInstance().fetchPushToken(BonniApp.getInstance())
+                            AttentiveEventTracker.instance.getPushToken(requestPermission = true)
                         }
                     }
             )

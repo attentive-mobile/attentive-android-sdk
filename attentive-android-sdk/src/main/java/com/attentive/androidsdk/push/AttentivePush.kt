@@ -19,10 +19,10 @@ import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AttentivePush {
+internal class AttentivePush {
 
-    suspend fun fetchPushToken(context: Context): Result<TokenFetchResult> {
-        return if (!checkPushPermission(context)) {
+    internal suspend fun fetchPushToken(context: Context, requestPermissionIfNotGranted: Boolean = false): Result<TokenFetchResult> {
+        return if (requestPermissionIfNotGranted && !checkPushPermission(context)) {
             requestPushPermission(context)
         } else {
             getTokenFromFirebase()
