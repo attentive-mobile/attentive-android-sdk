@@ -5,6 +5,7 @@ import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -16,9 +17,11 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 
 class AttentiveConfigTest {
     private lateinit var factoryMocks: FactoryMocks
+    private var appLaunchTracker = Mockito.mock(AppLaunchTracker::class.java)
 
     @Before
     fun setup() {
@@ -105,7 +108,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -146,7 +149,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .build()
+                       .build()
         config.identify(buildUserIdentifiers())
 
         // Act
@@ -178,7 +181,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -199,7 +202,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -217,7 +220,7 @@ class AttentiveConfigTest {
             .domain(DOMAIN)
             .mode(MODE)
             .context(Mockito.mock(Context::class.java))
-            .build()
+                       .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 

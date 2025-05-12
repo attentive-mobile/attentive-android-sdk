@@ -1,10 +1,16 @@
 package com.attentive.androidsdk
 
+import android.content.Context
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.push.AttentivePush
+import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.tracking.AppLaunchTracker
+import com.google.firebase.messaging.FirebaseMessaging
 import timber.log.Timber
 
 class AttentiveEventTracker private constructor() {
     var config: AttentiveConfig? = null
+    internal lateinit var launchTracker: AppLaunchTracker
 
     fun initialize(config: AttentiveConfig) {
         Timber.i(
@@ -19,6 +25,9 @@ class AttentiveEventTracker private constructor() {
             }
             this.config = config
         }
+
+        launchTracker = AppLaunchTracker()
+        launchTracker.registerAppLaunchTracker()
     }
 
     fun recordEvent(event: Event) {
@@ -27,6 +36,32 @@ class AttentiveEventTracker private constructor() {
         config?.let {
             it.attentiveApi.sendEvent(event, it.userIdentifiers, it.domain)
         }
+    }
+
+    fun registerPushToken(context: Context){
+        Timber.d("registerPushToken")
+        verifyInitialized()
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if(task.isSuccessful) {
+                config?.let {
+                    it.attentiveApi.registerPushToken(token = task.result, permissionGranted = AttentivePush.getInstance().checkPushPermission(context),  it.userIdentifiers, it.domain)
+                }
+            }
+        }
+    }
+
+    /***
+     * Fetches the push token from Firebase and optionally shows a permission if permission is not granted.
+     * @param requestPermission A boolean indicating whether to request permission if not granted.
+     *                          - `true`: Requests permission if not already granted.
+     *                          - `false`: Skips permission request and directly fetches the token.
+     *                          */
+    suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
+        config?.let {
+            return AttentivePush.getInstance().fetchPushToken(it.context, requestPermission)
+        }
+
+        throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
     }
 
     private fun verifyInitialized() {

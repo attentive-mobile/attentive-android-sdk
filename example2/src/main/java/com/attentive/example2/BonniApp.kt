@@ -1,22 +1,18 @@
 package com.attentive.example2
 
 import android.app.Application
-import android.util.Log
-import androidx.room.Room
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
-import com.attentive.example2.database.AppDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import timber.log.Timber
 
-class AttentiveApp : Application() {
+class BonniApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
         appInstance = this
         initAttentiveTracker()
+        Timber.plant(Timber.DebugTree())
     }
 
     private fun initAttentiveTracker() {
@@ -24,7 +20,7 @@ class AttentiveApp : Application() {
             AttentiveConfig
                 .Builder()
                 .context(this)
-                .domain("YOUR_ATTENTIVE_DOMAIN")
+                .domain("games")
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 
@@ -32,8 +28,8 @@ class AttentiveApp : Application() {
     }
 
     companion object {
-        private lateinit var appInstance: AttentiveApp
-        fun getInstance(): AttentiveApp {
+        private lateinit var appInstance: BonniApp
+        fun getInstance(): BonniApp {
             return appInstance
         }
     }

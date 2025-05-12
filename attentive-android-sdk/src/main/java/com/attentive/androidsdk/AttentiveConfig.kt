@@ -1,11 +1,13 @@
 package com.attentive.androidsdk
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
@@ -21,12 +23,16 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
+    private var logLevel: AttentiveLogLevel? = null
+
+    internal val context = builder._context
 
     init {
-        configureLogging(builder.logLevel, settingsService, builder._context)
+        logLevel = builder.logLevel
+        configureLogging(logLevel, settingsService, builder._context)
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
         attentiveApi =
@@ -123,7 +129,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _domain: String
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
-        internal var logLevel: AttentiveLogLevel? = null
+        internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
         fun context(context: Context) = apply {
             ParameterValidation.verifyNotNull(context, "context")
@@ -152,6 +158,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun logLevel(logLevel: AttentiveLogLevel) = apply {
             this.logLevel = logLevel
         }
+
+
 
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {

@@ -9,20 +9,23 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import okhttp3.internal.notify
+import timber.log.Timber
 
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
-        Log.d("FCM", "Refreshed token: $token")
+        Timber.d("onNewToken: $token")
         super.onNewToken(token)
+        AttentiveEventTracker.instance.registerPushToken(this)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Log.d("FCM", "Message received: ${remoteMessage.data}")
+        Timber.d("Message received: ${remoteMessage.data}")
         sendNotification(remoteMessage.notification!!.title!!, remoteMessage.notification!!.body!!)
     }
 
@@ -49,7 +52,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
 
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         // Since android Oreo notification channel is needed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

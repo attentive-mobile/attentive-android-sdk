@@ -57,6 +57,7 @@ import com.attentive.example2.database.ExampleProduct
 import com.attentive.example2.ui.theme.BonniGreen
 import com.attentive.example2.ui.theme.BonniPink
 import com.attentive.example2.ui.theme.BonniYellow
+import timber.log.Timber
 import kotlin.random.Random
 
 @Composable
@@ -113,10 +114,10 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
         )
 
         if (items.isNotEmpty()) {
-            Log.d("pfaff", "items is not empty")
+            Timber.d("items is not empty")
             ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
         } else {
-            Log.d("pfaff", "items is empty")
+            Timber.d("items is empty")
         }
     }
 }
@@ -165,21 +166,21 @@ fun ProductCard(
             contentDescription = "T shirt",
             modifier = Modifier.fillMaxSize().height(285.dp)
         )
-        ProductTitle()
+        ProductTitle(item.item.name!!)
         ProductSubtitle()
         onProductViewed(item.item)
     }
 }
 
-@Preview
+
 @Composable
-fun ProductTitle(){
+fun ProductTitle(title: String){
 Text(
-    text = "Product Title",
+    text = title,
     fontSize = 15.sp,
     fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
     textAlign = TextAlign.Start,
-    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
+    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
 }
 
 @Preview
@@ -190,7 +191,7 @@ fun ProductSubtitle(){
         fontSize = 12.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth())
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
 }
 
 @Preview
