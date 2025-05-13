@@ -38,52 +38,80 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    fun registerPushToken(context: Context){
+    fun registerPushToken(context: Context) {
         Timber.d("registerPushToken")
         verifyInitialized()
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if(task.isSuccessful) {
+            if (task.isSuccessful) {
                 config?.let {
-                    it.attentiveApi.registerPushToken(token = task.result, permissionGranted = AttentivePush.getInstance().checkPushPermission(context),  it.userIdentifiers, it.domain)
+                    it.attentiveApi.registerPushToken(token = task.result,
+                        permissionGranted = AttentivePush.getInstance()
+                            .checkPushPermission(context),
+                        it.userIdentifiers,
+                        it.domain
+                    )
                 }
             }
         }
     }
 
     /***
-     * Fetches the push token from Firebase and optionally shows a permission if permission is not granted.
-     * @param requestPermission A boolean indicating whether to request permission if not granted.
-     *                          - `true`: Requests permission if not already granted.
-     *                          - `false`: Skips permission request and directly fetches the token.
-     *                          */
-    suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
-        config?.let {
-            return AttentivePush.getInstance().fetchPushToken(it.context, requestPermission)
-        }
-
-        throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
-    }
-
-    private fun verifyInitialized() {
-        synchronized(AttentiveEventTracker::class.java) {
-            if (config == null) {
-                Timber.e("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
+     * If LaunchType is DIRECT_OPEN then we will send both the direct open and app launch events.
+     */
+    suspend fun sendAppLaunchEvent(launchType: AttentiveApi.LaunchType) {
+        verifyInitialized()
+        config?.let { config ->
+            AttentivePush.getInstance().fetchPushToken(config.context, false).let {
+                if (it.isSuccess) {
+                    val token = it.getOrNull()?.token!!
+                    if (token == null) Timber.e("TokenFetchResult is null")
+                    val permissionGranted = it.getOrNull()?.permissionGranted!!
+                        config.attentiveApi.sendDirectOpenStatus(
+                            launchType,
+                            token,
+                            permissionGranted,
+                            config.userIdentifiers,
+                            config.domain
+                        )
+                    }
             }
         }
     }
 
-    companion object {
-        private var INSTANCE: AttentiveEventTracker? = null
+        /***
+         * Fetches the push token from Firebase and optionally shows a permission if permission is not granted.
+         * @param requestPermission A boolean indicating whether to request permission if not granted.
+         *                          - `true`: Requests permission if not already granted.
+         *                          - `false`: Skips permission request and directly fetches the token.
+         *                          */
+        suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
+            config?.let {
+                return AttentivePush.getInstance().fetchPushToken(it.context, requestPermission)
+            }
 
-        @JvmStatic
-        val instance: AttentiveEventTracker
-            get() {
-                synchronized(AttentiveEventTracker::class.java) {
-                    if (INSTANCE == null) {
-                        INSTANCE = AttentiveEventTracker()
-                    }
-                    return INSTANCE!!
+            throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
+        }
+
+        private fun verifyInitialized() {
+            synchronized(AttentiveEventTracker::class.java) {
+                if (config == null) {
+                    Timber.e("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
                 }
             }
+        }
+
+        companion object {
+            private var INSTANCE: AttentiveEventTracker? = null
+
+            @JvmStatic
+            val instance: AttentiveEventTracker
+                get() {
+                    synchronized(AttentiveEventTracker::class.java) {
+                        if (INSTANCE == null) {
+                            INSTANCE = AttentiveEventTracker()
+                        }
+                        return INSTANCE!!
+                    }
+                }
+        }
     }
-}

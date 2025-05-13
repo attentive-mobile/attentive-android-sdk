@@ -4,7 +4,9 @@ import android.app.Application
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
+import com.attentive.androidsdk.UserIdentifiers
 import timber.log.Timber
+
 
 class BonniApp : Application() {
 
@@ -23,6 +25,11 @@ class BonniApp : Application() {
                 .domain("games")
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
+
+        val userIdentifiers =
+            UserIdentifiers.Builder().withClientUserId("BonniAndroid").withPhone("+15556667777").withEmail("bonni@bonnibeauty.com")
+                .build()
+        attentiveConfig.identify(userIdentifiers)
 
         AttentiveEventTracker.instance.initialize(attentiveConfig)
     }

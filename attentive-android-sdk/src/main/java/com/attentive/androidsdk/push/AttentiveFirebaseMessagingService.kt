@@ -18,15 +18,17 @@ import timber.log.Timber
 
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
-        Timber.d("onNewToken: $token")
+        Timber.d("Refreshed token: $token")
         super.onNewToken(token)
         AttentiveEventTracker.instance.registerPushToken(this)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Timber.d("Message received: ${remoteMessage.data}")
-        sendNotification(remoteMessage.notification!!.title!!, remoteMessage.notification!!.body!!)
+        Timber.d("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
+        val title = remoteMessage.notification?.title ?: ""
+        val body = remoteMessage.notification?.body ?: ""
+        sendNotification(title, body)
     }
 
 
