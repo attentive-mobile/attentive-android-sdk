@@ -4,7 +4,6 @@ import android.app.Application;
 import com.attentive.androidsdk.AttentiveConfig;
 import com.attentive.androidsdk.AttentiveEventTracker;
 import com.attentive.androidsdk.AttentiveLogLevel;
-import com.attentive.androidsdk.BuildConfig;
 import com.attentive.androidsdk.UserIdentifiers;
 import java.util.Map;
 
@@ -23,7 +22,7 @@ public class ExampleApp extends Application {
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         this.attentiveConfig = new AttentiveConfig.Builder()
-                .context(getApplicationContext())
+                .applicationContext(getApplicationContext())
                 .domain(attentiveDomain)
                 .mode(MODE)
                 .logLevel(AttentiveLogLevel.LIGHT)

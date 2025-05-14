@@ -687,7 +687,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         userIdentifiers: UserIdentifiers,
         geoAdjustedDomain: String,
     ) {
-        Timber.d("sendDirectOpenStatusInternal called with launchType: %s", launchType.value)
+        Timber.d("sendDirectOpenStatusInternal called with alaunchType: %s", launchType.value)
         val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
         val metadataJson: String
         val metadata: Metadata
@@ -702,15 +702,33 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             return
         }
 
-        val pd = "${buildExtraParametersWithDeeplink("")}"
+        //TODO
+        //val pd = "${buildExtraParametersWithDeeplink("")}"
 
-        val eventsArray = """{
+        var eventsArray = ""
+
+        if (launchType == LaunchType.APP_LAUNCHED) {
+            eventsArray = """{
       "events":[
         {
             "ist": "${launchType.value}",
             "data": {"message_id": "0"}
         }
         ]""".trimIndent()
+
+        } else {
+            eventsArray = """{
+      "events":[
+        {
+            "ist": "${launchType.value}",
+            "data": {"message_id": "0"}
+        },
+        {
+            "ist": "${LaunchType.APP_LAUNCHED.value}",
+            "data": {"message_id": "0"}
+        }
+        ]""".trimIndent()
+        }
 
 
         val jsonBody = """

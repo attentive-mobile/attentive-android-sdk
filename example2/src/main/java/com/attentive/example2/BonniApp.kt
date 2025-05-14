@@ -21,7 +21,7 @@ class BonniApp : Application() {
         val attentiveConfig =
             AttentiveConfig
                 .Builder()
-                .context(this)
+                .applicationContext(this)
                 .domain("games")
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()

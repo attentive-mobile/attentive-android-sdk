@@ -77,7 +77,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
     val prices = LocalContext.current.resources.getIntArray(R.array.prices)
     val items by viewModel.productItemsFlow.collectAsState()
 
-    Column() {
+    Column {
         SimpleToolbar(title = "Products", actions = {
             BadgedBox(
                 modifier = Modifier.padding(4.dp),

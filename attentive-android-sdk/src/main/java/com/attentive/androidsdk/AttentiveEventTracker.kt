@@ -26,8 +26,7 @@ class AttentiveEventTracker private constructor() {
             this.config = config
         }
 
-        launchTracker = AppLaunchTracker()
-        launchTracker.registerAppLaunchTracker()
+        launchTracker = AppLaunchTracker(config.applicationContext)
     }
 
     fun recordEvent(event: Event) {
@@ -61,12 +60,15 @@ class AttentiveEventTracker private constructor() {
     suspend fun sendAppLaunchEvent(launchType: AttentiveApi.LaunchType) {
         verifyInitialized()
         config?.let { config ->
-            AttentivePush.getInstance().fetchPushToken(config.context, false).let {
+            AttentivePush.getInstance().fetchPushToken(config.applicationContext, false).let {
                 if (it.isSuccess) {
-                    val token = it.getOrNull()?.token!!
-                    if (token == null) Timber.e("TokenFetchResult is null")
+                    var token = it.getOrNull()?.token
+                    if (token == null){
+                        Timber.e("TokenFetchResult is null")
+                        token = ""
+                    }
                     val permissionGranted = it.getOrNull()?.permissionGranted!!
-                        config.attentiveApi.sendDirectOpenStatus(
+                    config.attentiveApi.sendDirectOpenStatus(
                             launchType,
                             token,
                             permissionGranted,
@@ -86,7 +88,7 @@ class AttentiveEventTracker private constructor() {
          *                          */
         suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
             config?.let {
-                return AttentivePush.getInstance().fetchPushToken(it.context, requestPermission)
+                return AttentivePush.getInstance().fetchPushToken(it.applicationContext, requestPermission)
             }
 
             throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")

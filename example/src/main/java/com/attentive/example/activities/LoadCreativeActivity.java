@@ -94,7 +94,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
 
         if (domain != null && mode != null) {
             AttentiveConfig config = new AttentiveConfig.Builder()
-                    .context(getApplicationContext())
+                    .applicationContext(getApplicationContext())
                     .domain(domain)
                     .mode(AttentiveConfig.Mode.valueOf(mode))
                     .skipFatigueOnCreatives(skipFatigue)
