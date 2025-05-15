@@ -39,28 +39,30 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val context = applicationContext
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        // Launch intent to open the host app's main launcher activity
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         launchIntent?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("sdk_from_notification", true)
         }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, launchIntent,
+        val contentPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // 3. Build the notification
+        // Build the notification
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
-            .setContentIntent(pendingIntent) // Main tap opens app
+            .setContentIntent(contentPendingIntent) // Main tap opens app
 
-        // 4. Create channel if needed
+        // Create channel
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
