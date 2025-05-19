@@ -164,7 +164,9 @@ fun ProductCard(
         Image(
             ImageBitmap.imageResource(item.imageId),
             contentDescription = "T shirt",
-            modifier = Modifier.fillMaxSize().height(285.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .height(285.dp)
         )
         ProductTitle(item.item.name!!)
         ProductSubtitle()
@@ -174,24 +176,30 @@ fun ProductCard(
 
 
 @Composable
-fun ProductTitle(title: String){
-Text(
-    text = title,
-    fontSize = 15.sp,
-    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-    textAlign = TextAlign.Start,
-    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
+fun ProductTitle(title: String) {
+    Text(
+        text = title,
+        fontSize = 15.sp,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        textAlign = TextAlign.Start,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+    )
 }
 
 @Preview
 @Composable
-fun ProductSubtitle(){
+fun ProductSubtitle() {
     Text(
         text = "Product Subtitle | $12",
         fontSize = 12.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+    )
 }
 
 @Preview
