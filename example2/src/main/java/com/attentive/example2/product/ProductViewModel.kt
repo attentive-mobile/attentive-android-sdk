@@ -1,6 +1,5 @@
 package com.attentive.example2.product
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveEventTracker

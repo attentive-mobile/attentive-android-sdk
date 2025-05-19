@@ -1,5 +1,6 @@
 package com.attentive.example.activities;
 
+import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -94,7 +95,7 @@ public class LoadCreativeActivity extends AppCompatActivity {
 
         if (domain != null && mode != null) {
             AttentiveConfig config = new AttentiveConfig.Builder()
-                    .applicationContext(getApplicationContext())
+                    .applicationContext((Application) getApplicationContext())
                     .domain(domain)
                     .mode(AttentiveConfig.Mode.valueOf(mode))
                     .skipFatigueOnCreatives(skipFatigue)

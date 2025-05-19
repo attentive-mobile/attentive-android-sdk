@@ -22,7 +22,7 @@ public class ExampleApp extends Application {
 
         // Initialize the Attentive SDK. This only has to be done once per application lifecycle.
         this.attentiveConfig = new AttentiveConfig.Builder()
-                .applicationContext(getApplicationContext())
+                .applicationContext(this)
                 .domain(attentiveDomain)
                 .mode(MODE)
                 .logLevel(AttentiveLogLevel.LIGHT)
