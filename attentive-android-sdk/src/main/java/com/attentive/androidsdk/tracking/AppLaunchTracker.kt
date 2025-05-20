@@ -50,16 +50,14 @@ class AppLaunchTracker(
             Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 Timber.d("Activity created: ${activity.localClassName}")
-                wasLaunchedFromNotification = activity.intent?.extras?.run {
-                    getBoolean("sdk_from_notification", false)
+                var wasLaunchedFromNotification = activity.intent?.extras?.run {
+                    getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
                 } == true
 
                 Timber.d("Launched from notification: $wasLaunchedFromNotification")
 
                 if (wasLaunchedFromNotification) {
                     Timber.d("Launched from notification")
-                    // Reset flag after handling
-                    wasLaunchedFromNotification = false
                     launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
                 } else {
                     Timber.d("Launched normally")
@@ -73,7 +71,16 @@ class AppLaunchTracker(
                 Timber.d("Activity started: ${activity.localClassName}")
                 CoroutineScope(Dispatchers.IO).launch {
                     if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
-                        AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.DIRECT_OPEN)
+                        activity.intent.extras.run {
+                            if (this != null) {
+                                for (key in keySet()) {
+                                    if(key != LAUNCHED_FROM_NOTIFICATION) {
+                                        dataMap[key] = getString(key).toString()
+                                    }
+                                }
+                            }
+                        }
+                        AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.DIRECT_OPEN, dataMap)
                     } else {
                         AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
 
@@ -105,6 +112,6 @@ class AppLaunchTracker(
     }
 
     companion object {
-        var wasLaunchedFromNotification = false
+        val LAUNCHED_FROM_NOTIFICATION = "launched_from_notification"
     }
 }

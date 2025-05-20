@@ -651,6 +651,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     internal fun sendDirectOpenStatus(
         launchTypes: LaunchType,
         pushToken: String,
+        callbackMap: Map<String, String>,
         permissionGranted: Boolean,
         userIdentifiers: UserIdentifiers,
         domain: String
@@ -661,6 +662,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                 sendDirectOpenStatusInternal(
                     launchTypes,
                     pushToken,
+                    callbackMap,
                     permissionGranted,
                     userIdentifiers,
                     domain
@@ -672,6 +674,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                 sendDirectOpenStatusInternal(
                     launchTypes,
                     pushToken,
+                    callbackMap,
                     permissionGranted,
                     userIdentifiers,
                     geoAdjustedDomain
@@ -683,6 +686,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     private fun sendDirectOpenStatusInternal(
         launchType: LaunchType,
         pushToken: String,
+        callbackMap: Map<String, String>,
         permissionGranted: Boolean,
         userIdentifiers: UserIdentifiers,
         geoAdjustedDomain: String,
@@ -705,30 +709,35 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         //TODO
         //val pd = "${buildExtraParametersWithDeeplink("")}"
 
-        var eventsArray = ""
-
-        if (launchType == LaunchType.APP_LAUNCHED) {
-            eventsArray = """{
-      "events":[
-        {
-            "ist": "${launchType.value}",
-            "data": {"message_id": "0"}
+        // Build the data array from callbackMap
+        val dataArray = callbackMap.entries.joinToString(separator = ",") { entry ->
+            """"${entry.key}" : "${entry.value}""""
         }
-        ]""".trimIndent()
 
+        val eventsArray = if (launchType == LaunchType.APP_LAUNCHED) {
+            """{
+          "events":[
+            {
+                "ist": "${launchType.value}",
+                "data": [$dataArray]
+            }
+          ]
+        }"""
         } else {
-            eventsArray = """{
-      "events":[
-        {
-            "ist": "${launchType.value}",
-            "data": {"message_id": "0"}
-        },
-        {
-            "ist": "${LaunchType.APP_LAUNCHED.value}",
-            "data": {"message_id": "0"}
+            """{
+          "events":[
+            {
+                "ist": "${launchType.value}",
+                "data": [$dataArray]
+            },
+            {
+                "ist": "${LaunchType.APP_LAUNCHED.value}",
+                "data": [$dataArray]
+            }
+          ]
+        }"""
         }
-        ]""".trimIndent()
-        }
+
 
 
         val jsonBody = """

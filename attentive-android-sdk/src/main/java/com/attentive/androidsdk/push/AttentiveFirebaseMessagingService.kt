@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import okhttp3.internal.notify
@@ -32,14 +33,13 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
         val title = remoteMessage.data.getValue("message_title")
         val body  = remoteMessage.data.getValue("message_body")
-        val dataMap = mutableMapOf<String, String>()
 
-        sendNotification(title, body)
+        sendNotification(title, body, remoteMessage.data)
     }
 
 
     //TODO make private
-    fun sendNotification(messageTitle: String, messageBody: String) {
+    fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>) {
         val channelId = "fcm_default_channel"
         val notificationId = 0
 
@@ -49,7 +49,13 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         launchIntent?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("sdk_from_notification", true)
+            putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
+
+
+            // Add dataMap as extras
+            for ((key, value) in dataMap) {
+                putExtra(key, value)
+            }
         }
 
         val contentPendingIntent = PendingIntent.getActivity(
