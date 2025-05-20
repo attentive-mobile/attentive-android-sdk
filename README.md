@@ -241,7 +241,7 @@ If you pass true and permissions are already granted, the token will simply be r
 
 
 Fetch a push token and optionally show permission request:
-```
+```kotlin
     AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
         if (it.isSuccess) {
             CoroutineScope(Dispatchers.Main).launch {
