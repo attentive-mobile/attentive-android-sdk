@@ -235,7 +235,7 @@ __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the des
 
 Push tokens will automatically be sent to Attentive when your app is launched. Push notifications can only be shown if your user has granted push permissions.
 
-To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ``AttentiveEventTracker.instance.getPushToken()```
+To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveEventTracker.instance.getPushToken(requestPermission = true)```
 To only query for a token pass false.
 If you pass true and permissions are already granted, the token will simply be retrieved.
 
