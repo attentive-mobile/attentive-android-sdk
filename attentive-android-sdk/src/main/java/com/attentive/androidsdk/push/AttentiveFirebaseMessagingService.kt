@@ -3,7 +3,6 @@ package com.attentive.androidsdk.push
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
@@ -27,13 +26,20 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
         Timber.d("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
-        val title = remoteMessage.notification?.title ?: ""
-        val body = remoteMessage.notification?.body ?: ""
+
+
+        Timber.d(remoteMessage.data.toString())
+
+        val title = remoteMessage.data.getValue("message_title")
+        val body  = remoteMessage.data.getValue("message_body")
+        val dataMap = mutableMapOf<String, String>()
+
         sendNotification(title, body)
     }
 
 
-    private fun sendNotification(messageTitle: String, messageBody: String) {
+    //TODO make private
+    fun sendNotification(messageTitle: String, messageBody: String) {
         val channelId = "fcm_default_channel"
         val notificationId = 0
 
@@ -73,7 +79,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // 5. Show notification
+        //Show notification
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 }
