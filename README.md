@@ -33,7 +33,7 @@ __*** NOTE: Please refrain from using any private or undocumented classes or met
 ```java
 // Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
 AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
-        .context(getApplicationContext())
+        .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
         .logLevel(AttentiveLogLevel.VERBOSE)
@@ -41,7 +41,7 @@ AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
-        .context(getApplicationContext())
+        .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.DEBUG)
         .logLevel(AttentiveLogLevel.VERBOSE)
@@ -51,14 +51,14 @@ AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
 ```kotlin
 // Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
 val attentiveConfig = AttentiveConfig.Builder()
-        .context(getApplicationContext())
+        .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
         .build()
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 val attentiveConfig = AttentiveConfig.Builder()
-        .context(getApplicationContext())
+        .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.DEBUG)
         .build()
@@ -132,7 +132,7 @@ Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("U
 Item item = new Item.Builder("11111", "222", price).quantity(1).build();
 
 // Construct an "Order", which represents the order for the purchase
-Order order = new Order.Builder("23456").build();
+Order order = new Order.Builder().orderId("23456").build();
 
 // (Optional) Construct a "Cart", which represents the cart this Purchase was made from
 Cart cart = new Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build();
@@ -229,6 +229,28 @@ creative.destroy();
 ```
 __*** NOTE 1: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources.***__
 __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the destroy lifecycle callback of the activity if the activity is provided to automatically clear up resources and avoid memory leaks.***__
+
+
+## Step 4 - Integrate With Push
+
+Push tokens will automatically be sent to Attentive when your app is launched. Push notifications can only be shown if your user has granted push permissions.
+
+To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveEventTracker.instance.getPushToken(requestPermission = true)```
+To only query for a token pass false.
+If you pass true and permissions are already granted, the token will simply be retrieved.
+
+
+Fetch a push token and optionally show permission request:
+```kotlin
+    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
+        if (it.isSuccess) {
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+    }
+```
 
 ## Other functionality
 
