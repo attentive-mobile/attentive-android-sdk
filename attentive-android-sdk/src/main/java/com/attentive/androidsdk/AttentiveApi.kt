@@ -719,29 +719,27 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
           "events":[
             {
                 "ist": "${launchType.value}",
-                "data": [$dataArray]
+                "data": {$dataArray}
             }
-          ]
-        }"""
+          ],"""
         } else {
             """{
           "events":[
             {
                 "ist": "${launchType.value}",
-                "data": [$dataArray]
+                "data": {$dataArray}
             },
             {
                 "ist": "${LaunchType.APP_LAUNCHED.value}",
-                "data": [$dataArray]
+                "data": {$dataArray}
             }
-          ]
-        }"""
+          ],"""
         }
 
 
 
         val jsonBody = """
-    $eventsArray,
+    $eventsArray
     "device":{
         "c": "$geoAdjustedDomain",
         "v": "mobile-app",
@@ -751,7 +749,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         "pt": "$pushToken",
         "st": "$permissionGranted",
         "tp": "fcm"
-    }
+        }
     }
 """.trimIndent()
 

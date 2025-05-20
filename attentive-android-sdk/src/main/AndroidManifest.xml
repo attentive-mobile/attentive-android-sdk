@@ -13,13 +13,6 @@
             android:exported="true"
             tools:ignore="ExportedService" />
 
-        <receiver android:name=".push.NotificationTapReceiver" android:exported="true">
-
-        <intent-filter>
-            <action android:name="com.attentive.androidsdk.push.TAPPED" />
-        </intent-filter>
-        </receiver>
-
         <service
             android:name="com.attentive.androidsdk.push.AttentiveFirebaseMessagingService"
             android:exported="false">
