@@ -69,38 +69,38 @@ When you have information about the current user (user ID, email, phone, etc), y
 Examples:
 
 ```kotlin
-        val userIdentifiers =
+val userIdentifiers =
             UserIdentifiers
                 .Builder()
                 .withClientUserId("APP_USER_ID")
                 .withPhone("+15556667777")
                 .build()
 
-        attentiveConfig.identify(userIdentifiers)
+attentiveConfig.identify(userIdentifiers)
 ```
 
 ```kotlin
 // If new identifiers are available for the user, register them with the existing AttentiveConfig instance
- val userIdentifiers =
+val userIdentifiers =
             UserIdentifiers
                 .Builder()
                 .withEmail("theusersemail@gmail.com")
                 .withPhone("+15556667777")
                 .build()
 
-        attentiveConfig.identify(userIdentifiers)
+attentiveConfig.identify(userIdentifiers)
 ```
 
 ```kotlin
 // Calling `identify` multiple times will combine the identifiers.
  val userIdentifiers = UserIdentifiers.Builder().withShopifyId("555").build()
-        attentiveConfig.identify(userIdentifers)
-        userIdentifiers = UserIdentifiers.Builder().withKlaviyoId("777").build()
-        attentiveConfig.identify(userIdentifers)
+attentiveConfig.identify(userIdentifers)
+userIdentifiers = UserIdentifiers.Builder().withKlaviyoId("777").build()
+attentiveConfig.identify(userIdentifers)
 
-        val allIdentifiers = attentiveConfig.userIdentifiers
-        allIdentifiers.shopifyId // == 555
-        allIdentifiers.klaviyoId // == 777
+val allIdentifiers = attentiveConfig.userIdentifiers
+allIdentifiers.shopifyId // == 555
+allIdentifiers.klaviyoId // == 777
 ```
 
 ### Clearing user data
