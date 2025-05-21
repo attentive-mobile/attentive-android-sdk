@@ -29,25 +29,6 @@ for a sample of how the Attentive Android SDK is used.
 __*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
 ## Step 1 - SDK initialization
-### In Java:
-```java
-// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
-AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
-        .applicationContext(getApplicationContext())
-        .domain("YOUR_ATTENTIVE_DOMAIN")
-        .mode(AttentiveConfig.Mode.PRODUCTION)
-        .logLevel(AttentiveLogLevel.VERBOSE)
-        .build();
-
-// Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
-AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
-        .applicationContext(getApplicationContext())
-        .domain("YOUR_ATTENTIVE_DOMAIN")
-        .mode(AttentiveConfig.Mode.DEBUG)
-        .logLevel(AttentiveLogLevel.VERBOSE)
-        .build();
-```
-### In Kotlin:
 ```kotlin
 // Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
 val attentiveConfig = AttentiveConfig.Builder()
@@ -67,7 +48,7 @@ val attentiveConfig = AttentiveConfig.Builder()
 \* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)
 
 ### Initialize the Event Tracker
-```java
+```kotlin
 // Right after defining the config, initialize the Event Tracker in order to send ecommerce and identification events *
 AttentiveEventTracker.getInstance().initialize(attentiveConfig);
 ```
@@ -87,34 +68,46 @@ When you have information about the current user (user ID, email, phone, etc), y
 
 Examples:
 
-```java
-UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withClientUserId("APP_USER_ID").withPhone("+15556667777").build();
-attentiveConfig.identify(userIdentifiers);
+```kotlin
+        val userIdentifiers =
+            UserIdentifiers
+                .Builder()
+                .withClientUserId("APP_USER_ID")
+                .withPhone("+15556667777")
+                .build()
+
+        attentiveConfig.identify(userIdentifiers)
 ```
 
-```java
+```kotlin
 // If new identifiers are available for the user, register them with the existing AttentiveConfig instance
-UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withEmail("theusersemail@gmail.com").build();
-attentiveConfig.identify(userIdentifers);
+ val userIdentifiers =
+            UserIdentifiers
+                .Builder()
+                .withEmail("theusersemail@gmail.com")
+                .withPhone("+15556667777")
+                .build()
+
+        attentiveConfig.identify(userIdentifiers)
 ```
 
-```java
+```kotlin
 // Calling `identify` multiple times will combine the identifiers.
-UserIdentifiers userIdentifiers = new UserIdentifiers.Builder().withShopifyId("555").build();
-attentiveConfig.identify(userIdentifers);
-userIdentifiers = new UserIdentifiers.Builder().withKlaviyoId("777").build();
-attentiveConfig.identify(userIdentifers);
+ val userIdentifiers = UserIdentifiers.Builder().withShopifyId("555").build()
+        attentiveConfig.identify(userIdentifers)
+        userIdentifiers = UserIdentifiers.Builder().withKlaviyoId("777").build()
+        attentiveConfig.identify(userIdentifers)
 
-UserIdentifiers allIdentifiers = attentiveConfig.getUserIdentifiers();
-allIdentifiers.getShopifyId(); // == 555
-allIdentifiers.getKlaviyoId(); // == 777
+        val allIdentifiers = attentiveConfig.userIdentifiers
+        allIdentifiers.shopifyId // == 555
+        allIdentifiers.klaviyoId // == 777
 ```
 
 ### Clearing user data
 
 If the user "logs out" of your application, you can call `clearUser` to remove all current identifiers.
 
-```java
+```kotlin
 // If the user logs out then the current user identifiers should be deleted
 attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
