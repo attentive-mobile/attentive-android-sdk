@@ -31,10 +31,16 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
         Timber.d(remoteMessage.data.toString())
 
-        val title = remoteMessage.data.getValue("message_title")
-        val body  = remoteMessage.data.getValue("message_body")
+        val title = remoteMessage.data.getOrElse("attentive_message_title") {
+            null
+        }
+        val body  = remoteMessage.data.getOrElse("attentive_message_body") { null }
 
-        sendNotification(title, body, remoteMessage.data)
+        if(title != null && body != null) {
+            sendNotification(title, body, remoteMessage.data)
+        } else {
+            Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
+        }
     }
 
 
