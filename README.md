@@ -122,8 +122,7 @@ The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`
 ```kotlin
 // Construct one or more "Item"s, which represents the product(s) purchased
  val price: Price = Price.Builder().price(BigDecimal("19.99")).currency(Currency.getInstance("USD")).build()
-        val item: Item = Item.Builder(productId = "111", productVariantId = "3235", price = price)
-            .name("Product Name").quantity(1).build()
+val item: Item = Item.Builder(productId = "111", productVariantId = "3235", price = price).name("Product Name").quantity(1).build()
 
 
 // Construct an "Order", which represents the order for the purchase
@@ -146,27 +145,29 @@ For the ProductViewEvent and AddToCartEvent you can build the event with a deepl
 the user is seeing to complete a customer journey in case the user drops off the flow. To give an 
 example on how this looks like, check the following code snippet:
 
-```java
+```kotlin
 // Construct one or more "Item"s, which represents the product(s) purchased
-Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
-Item item = new Item.Builder("11111", "222", price).quantity(1).build();
+val price: Price = Price.Builder().price(BigDecimal("19.99")).currency(Currency.getInstance("USD")).build()
+val item: Item = Item.Builder(productId = "111", productVariantId = "3235", price = price)
+            .name("Product Name").quantity(1).build()
+val addToCartEvent = AddToCartEvent.Builder()
+            .items(listOf(item))
+            .deeplink("https://mydeeplink.com/products/32432423")
+            .build()
 
-final AddToCartEvent addToCartEvent =  new AddToCartEvent.Builder()
-                .items(List.of(item))
-                .deeplink("https://mydeeplink.com/products/32432423")
-                .build();
-
-AttentiveEventTracker.getInstance().recordEvent(addToCartEvent);
+AttentiveEventTracker.instance.recordEvent(addToCartEvent)
 ```
 
 You can also implement `CustomEvent` to send application-specific event schemas. These are simply key/value pairs which will be transmitted and stores in Attentive's systems for later use. Please discuss with your CSM to understand how and where these events can be use in orchestration.
 
 Custom event implementation example:
 
-```java
-CustomEvent customEvent = new CustomEvent.Builder("Concert Viewed", Map.of("band", "The Beatles")).build();
+```kotlin
+val customEvent =
+            CustomEvent.Builder("Concert Viewed", mapOf("band" to "The Beatles"))
+                .build()
 
-AttentiveEventTracker.getInstance().recordEvent(customEvent);
+AttentiveEventTracker.instance.recordEvent(customEvent)
 ```
 
 
@@ -176,52 +177,50 @@ A "creative" is a popup display init that can collect email or SMS signups. Thes
 
 #### 1. Create the Creative
 
-```java
+```kotlin
 // Create a new creative and attach it to a parent View. This will not render the creative.
-Creative creative = new Creative(attentiveConfig, parentView);
+val creative = Creative(attentiveConfig, parentView)
+
 
 // Alternatively, attach the creative lifecycle to the activity lifecycle to
 // automatically clear up resources. Recommended implementation if
 // targeting only users above Build.VERSION_CODES.Q.
-Creative creative = new Creative(attentiveConfig, parentView, activity);
+val creative = Creative(attentiveConfig, parentView, activity)
 ```
 
 #### 2. Trigger the Creative
 
 When you've reached the point in the app where you'd like to show the creative, call the `trigger` function to display it. Note: the creative may not display if it's not enabled or configured properly via Attentive admin UI.
 
-```java
+```kotlin
 // Load and render the creative, with a callback handler. 
 // You may choose which of these methods to implement, they are all optional.
-creative.trigger(new CreativeTriggerCallback() {
-    @Override
-    public void onCreativeNotOpened() {
-        Log.e(this.getClass().getName(), "Couldn't open the creative!");
-    }
+creative.trigger(object : CreativeTriggerCallback {
+            override fun onCreativeNotOpened() {
+                Log.e(this.javaClass.getName(), "Couldn't open the creative!")
+            }
 
-    @Override
-    public void onOpen() {
-        Log.i(this.getClass().getName(), "Opened the creative!");
-    }
+            override fun onOpen() {
+                Log.i(this.javaClass.getName(), "Opened the creative!")
+            }
 
-    @Override
-    public void onCreativeNotClosed() {
-        Log.e(this.getClass().getName(), "Couldn't close the creative!");
-    }
+            override fun onCreativeNotClosed() {
+                Log.e(this.javaClass.getName(), "Couldn't close the creative!")
+            }
 
-    @Override
-    public void onClose() {
-        Log.i(this.getClass().getName(), "Closed the creative!");
-    }
-});
+            override fun onClose() {
+                Log.i(this.javaClass.getName(), "Closed the creative!")
+            }
+        })
+
 
 // Alternatively, you can trigger the creative without a callback handler:
-creative.trigger();
+creative.trigger()
 ```
 See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/attentive-android-sdk/src/main/java/com/attentive/androidsdk/creatives/CreativeTriggerCallback.java) for more information on the callback handler methods.
 
 #### 3. Destroy the Creative
-```java
+```kotlin
 // Destroy the creative and it's associated WebView.
 creative.destroy();
 ```
@@ -254,7 +253,7 @@ Fetch a push token and optionally show permission request:
 
 ### Change domain
 
-```java
+```kotlin
 // If you want to change domain to handle some user flow, you can do so changing the domain on attentive config. Please contact your CSM before using this use case.
 attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 // Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
@@ -263,9 +262,10 @@ attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 
 ### Log Level
 We currently support 3 log levels. Each level is more verbose than the next one.
+The log levels will dictate sdk and network logging levels
 You can configure the log level on the Builder for the AttentiveConfig. Please keep 
 in mind that this configuration only works for debuggable builds.
-```java
+```kotlin
     VERBOSE(1),
     STANDARD(2),
     LIGHT(3);
