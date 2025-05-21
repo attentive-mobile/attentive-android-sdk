@@ -119,22 +119,27 @@ Next, call Attentive's event functions when each important event happens in your
 
 The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`, and `CustomEvent`.
 
-```java
+```kotlin
 // Construct one or more "Item"s, which represents the product(s) purchased
-Price price = new Price.Builder(new BigDecimal("19.99"), Currency.getInstance("USD")).build();
-Item item = new Item.Builder("11111", "222", price).quantity(1).build();
+ val price: Price = Price.Builder().price(BigDecimal("19.99")).currency(Currency.getInstance("USD")).build()
+        val item: Item = Item.Builder(productId = "111", productVariantId = "3235", price = price)
+            .name("Product Name").quantity(1).build()
+
 
 // Construct an "Order", which represents the order for the purchase
-Order order = new Order.Builder().orderId("23456").build();
+val order: Order = Order.Builder().orderId("23456").build()
+
 
 // (Optional) Construct a "Cart", which represents the cart this Purchase was made from
-Cart cart = new Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build();
+val cart = Cart.Builder().cartId("7878").cartCoupon("SomeCoupon").build()
+
 
 // Construct a PurchaseEvent, which ties together the preceding objects
-PurchaseEvent purchaseEvent = new PurchaseEvent.Builder(List.of(item), order).cart(cart).build();
+val purchaseEvent = PurchaseEvent.Builder(listOf(item), order).cart(cart).build()
+
 
 // Record the PurchaseEvent
-AttentiveEventTracker.getInstance().recordEvent(purchaseEvent);
+AttentiveEventTracker.instance.recordEvent(purchaseEvent)
 ```
 
 For the ProductViewEvent and AddToCartEvent you can build the event with a deeplink to the product/products 
