@@ -121,7 +121,12 @@ class Creative internal constructor(
         changeWebViewVisibility(false)
         val width = parentView.width
         val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width, height)
+        val layoutParams = ViewGroup.LayoutParams(width,height)
+        webView?.let {
+            it.setBackgroundColor(Color.TRANSPARENT)
+            Timber.d("Set webview background color to transparent")
+        }
+
         (parentView as ViewGroup).addView(webView, layoutParams)
     }
 
