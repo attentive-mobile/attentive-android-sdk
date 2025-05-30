@@ -229,6 +229,10 @@ __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the des
 
 
 ## Step 4 - Integrate With Push
+You need to add your google-services.json file to your project, and apply the Goole Services plugin as detailed here before push will work.
+
+https://firebase.google.com/docs/android/setup
+
 
 Push tokens will automatically be sent to Attentive when your app is launched. Users do not need to enable push notifications for a push token to be sent to us. Push notifications can only be shown if your user has granted push permissions. Push notifications are handled internally by the ```AttentiveFirebaseMessageService.kt``` class. Right now, the launcher activity is launched when a notification is tapped.
 
