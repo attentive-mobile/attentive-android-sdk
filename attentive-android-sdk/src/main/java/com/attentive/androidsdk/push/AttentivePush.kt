@@ -25,7 +25,7 @@ internal class AttentivePush {
         return if (requestPermissionIfNotGranted && !checkPushPermission(context)) {
             requestPushPermission(context)
         } else {
-            getTokenFromFirebase()
+            getTokenFromFirebase(context)
         }
     }
 
@@ -47,7 +47,7 @@ internal class AttentivePush {
                 Timber.d("Permission granted: $isGranted")
                 if (isGranted) {
                     CoroutineScope(Dispatchers.Default).launch {
-                        continuation.resume(getTokenFromFirebase())
+                        continuation.resume(getTokenFromFirebase(context))
                     }
                 } else {
                     continuation.resume(Result.failure(Exception("Permission denied")))
@@ -56,14 +56,14 @@ internal class AttentivePush {
         }
     }
 
-    private suspend fun getTokenFromFirebase(): Result<TokenFetchResult> {
+    internal suspend fun getTokenFromFirebase(context: Context): Result<TokenFetchResult> {
         Timber.d("getTokenFromFirebase")
         return suspendCancellableCoroutine { continuation ->
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val token = task.result
                     Timber.d("Token: $token")
-                    continuation.resume(Result.success(TokenFetchResult(token)))
+                    continuation.resume(Result.success(TokenFetchResult(token, permissionGranted = checkPushPermission(context))))
                 } else {
                     continuation.resumeWithException(
                         task.exception ?: Exception("Token fetch failed")

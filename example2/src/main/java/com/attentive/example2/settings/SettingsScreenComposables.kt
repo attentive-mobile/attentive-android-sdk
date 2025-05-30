@@ -156,7 +156,7 @@ suspend fun sharePushToken(context: Context) {
 }
 
 fun sendPushToken(context: Context) {
-    AttentiveEventTracker.instance.registerPushToken(context)
+    //AttentiveEventTracker.instance.registerPushToken(context)
 }
 
 

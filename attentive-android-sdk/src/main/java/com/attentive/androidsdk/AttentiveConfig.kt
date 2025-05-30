@@ -1,13 +1,12 @@
 package com.attentive.androidsdk
 
+import android.app.Application
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
-import com.attentive.androidsdk.tracking.AppLaunchTracker
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
@@ -25,7 +24,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
     private var logLevel: AttentiveLogLevel? = null
 
-    internal val context = builder._context
+    internal val applicationContext = builder._context
 
     init {
         logLevel = builder.logLevel
@@ -124,14 +123,14 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     class  Builder {
-        internal lateinit var _context: Context
+        internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
-        fun context(context: Context) = apply {
+        fun applicationContext(context: Application) = apply {
             ParameterValidation.verifyNotNull(context, "context")
             _context = context
         }

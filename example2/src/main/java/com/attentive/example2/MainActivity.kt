@@ -6,10 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.AttentiveEventTracker
-import com.attentive.androidsdk.AttentiveLogLevel
-import com.attentive.androidsdk.UserIdentifiers
+import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
 import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
 import com.attentive.example2.welcome.Greeting
 import com.attentive.example2.welcome.WelcomeScreen

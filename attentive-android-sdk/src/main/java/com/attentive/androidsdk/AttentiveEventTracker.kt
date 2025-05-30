@@ -26,8 +26,7 @@ class AttentiveEventTracker private constructor() {
             this.config = config
         }
 
-        launchTracker = AppLaunchTracker()
-        launchTracker.registerAppLaunchTracker()
+        launchTracker = AppLaunchTracker(config.applicationContext)
     }
 
     fun recordEvent(event: Event) {
@@ -38,13 +37,49 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    fun registerPushToken(context: Context){
+    internal fun registerPushToken(context: Context) {
         Timber.d("registerPushToken")
         verifyInitialized()
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if(task.isSuccessful) {
+            if (task.isSuccessful) {
                 config?.let {
-                    it.attentiveApi.registerPushToken(token = task.result, permissionGranted = AttentivePush.getInstance().checkPushPermission(context),  it.userIdentifiers, it.domain)
+                    it.attentiveApi.registerPushToken(
+                        token = task.result,
+                        permissionGranted = AttentivePush.getInstance()
+                            .checkPushPermission(context),
+                        it.userIdentifiers,
+                        it.domain
+                    )
+                }
+            }
+        }
+    }
+
+    /***
+     * If LaunchType is DIRECT_OPEN then we will send both the direct open and app launch events.
+     */
+    internal suspend fun sendAppLaunchEvent(
+        launchType: AttentiveApi.LaunchType,
+        callbackMap: Map<String, String> = emptyMap()
+    ) {
+        verifyInitialized()
+        config?.let { config ->
+            AttentivePush.getInstance().fetchPushToken(config.applicationContext, false).let {
+                if (it.isSuccess) {
+                    var token = it.getOrNull()?.token
+                    if (token == null) {
+                        Timber.e("TokenFetchResult is null")
+                        token = ""
+                    }
+                    val permissionGranted = it.getOrNull()?.permissionGranted!!
+                    config.attentiveApi.sendDirectOpenStatus(
+                        launchType,
+                        token,
+                        callbackMap,
+                        permissionGranted,
+                        config.userIdentifiers,
+                        config.domain
+                    )
                 }
             }
         }
@@ -58,7 +93,8 @@ class AttentiveEventTracker private constructor() {
      *                          */
     suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
         config?.let {
-            return AttentivePush.getInstance().fetchPushToken(it.context, requestPermission)
+            return AttentivePush.getInstance()
+                .fetchPushToken(it.applicationContext, requestPermission)
         }
 
         throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")

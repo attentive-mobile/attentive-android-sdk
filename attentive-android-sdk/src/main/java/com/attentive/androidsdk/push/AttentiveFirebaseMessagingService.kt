@@ -3,7 +3,6 @@ package com.attentive.androidsdk.push
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
@@ -11,60 +10,88 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
+import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import okhttp3.internal.notify
 import timber.log.Timber
 
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
+    val REQUEST_CODE = 4773713
     override fun onNewToken(token: String) {
-        Timber.d("onNewToken: $token")
+        Timber.d("Refreshed token: $token")
         super.onNewToken(token)
         AttentiveEventTracker.instance.registerPushToken(this)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Timber.d("Message received: ${remoteMessage.data}")
-        sendNotification(remoteMessage.notification!!.title!!, remoteMessage.notification!!.body!!)
+        Timber.d("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
+
+
+        Timber.d(remoteMessage.data.toString())
+
+        val title = remoteMessage.data.getOrElse("attentive_message_title") {
+            null
+        }
+        val body  = remoteMessage.data.getOrElse("attentive_message_body") { null }
+
+        if(title != null && body != null) {
+            sendNotification(title, body, remoteMessage.data)
+        } else {
+            Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
+        }
     }
 
 
-    private fun sendNotification(messageTitle: String, messageBody: String) {
-        val requestCode = 0
-        val intent = Intent(this, AttentiveFirebaseMessagingService::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        val pendingIntent = PendingIntent.getActivity(
+    //TODO make private
+    fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>) {
+        val channelId = "fcm_default_channel"
+        val notificationId = 0
+
+        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+        // Launch intent to open the host app's main launcher activity
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
+
+
+            // Add dataMap as extras
+            for ((key, value) in dataMap) {
+                putExtra(key, value)
+            }
+        }
+
+        val contentPendingIntent = PendingIntent.getActivity(
             this,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val channelId = "fcm_default_channel"
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        // Build the notification
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(contentPendingIntent) // Main tap opens app
 
-        val notificationManager =
-            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        // Since android Oreo notification channel is needed.
+        // Create channel
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
                 "Channel human readable title",
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManager.createNotificationChannel(channel)
         }
 
-        val notificationId = 0
+        //Show notification
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 }
