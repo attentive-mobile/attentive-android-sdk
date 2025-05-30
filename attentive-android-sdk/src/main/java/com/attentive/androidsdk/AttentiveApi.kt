@@ -16,6 +16,7 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -232,7 +233,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
 
         val urlBuilder = httpUrlEventsEndpointBuilder
             .addQueryParameter("tag", "modern")
-            .addQueryParameter("v", "mobile-app")
+            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
             .addQueryParameter("c", geoAdjustedDomain)
             .addQueryParameter("t", "idn")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -516,7 +517,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         }
 
         val urlBuilder = httpUrlEventsEndpointBuilder
-            .addQueryParameter("v", "mobile-app")
+            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
             .addQueryParameter("lt", "0")
             .addQueryParameter("tag", "modern")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -615,7 +616,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         val jsonBody = """
     {
         "c": "$geoAdjustedDomain",
-        "v": "mobile-app",
+        "v": "${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
         "m": $metadataJson,
@@ -742,7 +743,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     $eventsArray
     "device":{
         "c": "$geoAdjustedDomain",
-        "v": "mobile-app",
+        "v": "${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
         "m": $metadataJson,
