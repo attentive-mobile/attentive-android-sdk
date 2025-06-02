@@ -1,6 +1,8 @@
 package com.attentive.example2.settings
 
 import android.Manifest
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.BonniApp
 import com.attentive.example2.R
@@ -50,7 +53,6 @@ fun SettingsScreen(navHostController: NavHostController) {
 fun SettingsScreenContent(navHostController: NavHostController) {
     val activity = LocalActivity.current
 
-    // Create the FrameLayout first
     val frameLayout = remember {
         FrameLayout(activity!!.baseContext).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -60,7 +62,6 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         }
     }
 
-    // Remember the Creative instance
     val creative = remember {
         Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
     }
@@ -91,13 +92,13 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
             getCurrentToken()
         }
     })
-    val context = LocalContext.current
+    val context = LocalActivity.current
     pushSettings.add("Share push token" to {
         CoroutineScope(Dispatchers.Main).launch {
-            sharePushToken(context)
+            sharePushToken(context!!)
         }
     })
-    pushSettings.add("Send push token" to { sendPushToken(context) })
+
     Text(
         "Settings",
         modifier = Modifier
@@ -116,8 +117,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 }
 
 suspend fun getCurrentToken() {
-    val context: Context = BonniApp.getInstance()
-    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
+    val context = BonniApp.getInstance()
+    AttentiveSdk.getPushToken(context, requestPermission = false).let {
         if (it.isSuccess) {
             CoroutineScope(Dispatchers.Main).launch {
                 Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
@@ -127,8 +128,8 @@ suspend fun getCurrentToken() {
     }
 }
 
-suspend fun sharePushToken(context: Context) {
-    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
+suspend fun sharePushToken(activity: Activity) {
+    AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = false).let {
         if (it.isSuccess) {
             val token = it.getOrNull()?.token
             if (token != null) {
@@ -136,29 +137,24 @@ suspend fun sharePushToken(context: Context) {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, token)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
-                // Start the share intent
-                context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
 
-                // Notify the user
+                activity.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
+
                 Toast.makeText(BonniApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT)
                     .show()
+
                 Timber.d("Push token shared: $token")
             } else {
-                Toast.makeText(context, "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+                Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
             }
         } else {
-            Toast.makeText(context, "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+            Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
         }
     }
 }
-
-fun sendPushToken(context: Context) {
-    //AttentiveEventTracker.instance.registerPushToken(context)
-}
-
 
 @Composable
 fun SettingGroup(
@@ -265,7 +261,7 @@ private fun FeatureThatRequiresPushPermission() {
                     .padding(8.dp)
                     .clickable {
                         CoroutineScope(Dispatchers.Main).launch {
-                            AttentiveEventTracker.instance.getPushToken(requestPermission = true)
+                            AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = true)
                         }
                     }
             )

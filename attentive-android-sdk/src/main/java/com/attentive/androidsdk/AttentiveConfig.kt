@@ -134,6 +134,12 @@ import timber.log.Timber
             _context = context
         }
 
+        @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
+        fun context(context: Application) = apply {
+            ParameterValidation.verifyNotNull(context, "context")
+            _context = context
+        }
+
         fun mode(mode: Mode) = apply {
             ParameterValidation.verifyNotNull(mode, "mode")
             _mode = mode

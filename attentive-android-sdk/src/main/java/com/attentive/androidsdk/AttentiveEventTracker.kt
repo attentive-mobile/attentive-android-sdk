@@ -106,20 +106,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    /***
-     * Fetches the push token from Firebase and optionally shows a permission if permission is not granted.
-     * @param requestPermission A boolean indicating whether to request permission if not granted.
-     *                          - `true`: Requests permission if not already granted.
-     *                          - `false`: Skips permission request and directly fetches the token.
-     *                          */
-    suspend fun getPushToken(requestPermission: Boolean): Result<TokenFetchResult> {
-        config?.let {
-            return AttentivePush.getInstance()
-                .fetchPushToken(it.applicationContext, requestPermission)
-        }
 
-        throw IllegalStateException("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
-    }
 
     private fun verifyInitialized() {
         synchronized(AttentiveEventTracker::class.java) {

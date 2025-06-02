@@ -86,7 +86,7 @@ internal class AttentivePush {
     }
 
     //TODO make private
-    fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>, context: Context) {
+    internal fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>, context: Context) {
         val channelId = "fcm_default_channel"
         val notificationId = 0
 
