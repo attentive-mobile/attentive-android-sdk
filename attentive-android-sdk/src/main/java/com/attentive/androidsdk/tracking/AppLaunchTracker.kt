@@ -32,7 +32,9 @@ class AppLaunchTracker(
         Timber.d("App moved to foreground")
 
         AttentiveEventTracker.instance.config?.applicationContext?.let {
-            AttentiveEventTracker.instance.registerPushToken(it)
+            CoroutineScope(Dispatchers.IO).launch {
+                AttentiveEventTracker.instance.registerPushToken(it)
+            }
         }
     }
 
@@ -66,7 +68,6 @@ class AppLaunchTracker(
 
             }
 
-
             override fun onActivityStarted(activity: Activity) {
                 Timber.d("Activity started: ${activity.localClassName}")
                 CoroutineScope(Dispatchers.IO).launch {
@@ -74,13 +75,16 @@ class AppLaunchTracker(
                         activity.intent.extras.run {
                             if (this != null) {
                                 for (key in keySet()) {
-                                    if(key != LAUNCHED_FROM_NOTIFICATION) {
+                                    if (key != LAUNCHED_FROM_NOTIFICATION) {
                                         dataMap[key] = getString(key).toString()
                                     }
                                 }
                             }
                         }
-                        AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.DIRECT_OPEN, dataMap)
+                        AttentiveEventTracker.instance.sendAppLaunchEvent(
+                            AttentiveApi.LaunchType.DIRECT_OPEN,
+                            dataMap
+                        )
                     } else {
                         AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
 

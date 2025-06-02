@@ -1,5 +1,6 @@
 package com.attentive.androidsdk
 
+import android.app.Application
 import android.os.Looper
 import androidx.lifecycle.Lifecycle
 import com.attentive.androidsdk.AttentiveApi
@@ -36,6 +37,7 @@ class AttentiveEventTrackerTest {
         Mockito.doReturn(USER_IDENTIFIERS).`when`(config)?.userIdentifiers
         Mockito.doReturn(mockLifecycle).`when`(launchTracker)?.lifecycle
         Mockito.doReturn(launchTracker).whenever(instance).launchTracker
+        whenever(config.applicationContext).thenReturn(Mockito.mock(Application::class.java))
     }
 
     @Test

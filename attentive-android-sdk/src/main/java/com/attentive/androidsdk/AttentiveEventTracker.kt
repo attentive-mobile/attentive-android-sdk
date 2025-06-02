@@ -4,6 +4,7 @@ import android.content.Context
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.push.TokenProvider
 import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.FirebaseMessaging
 import timber.log.Timber
@@ -37,21 +38,33 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal fun registerPushToken(context: Context) {
+    internal suspend fun registerPushToken(context: Context) {
         Timber.d("registerPushToken")
         verifyInitialized()
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                config?.let {
-                    it.attentiveApi.registerPushToken(
-                        token = task.result,
-                        permissionGranted = AttentivePush.getInstance()
-                            .checkPushPermission(context),
-                        it.userIdentifiers,
-                        it.domain
-                    )
-                }
+        var token = ""
+
+        TokenProvider.getInstance().getToken(context).run {
+            if (isSuccess) {
+                token = getOrNull()?.token ?: ""
+                Timber.d("Push token fetched successfully: $token")
+            } else {
+                Timber.e("Failed to fetch push token: ${exceptionOrNull()?.message}")
             }
+        }
+
+        if (token.isNotEmpty()) {
+            Timber.d("A push token exists, will register with a non empty token")
+            config?.let {
+                it.attentiveApi.registerPushToken(
+                    token = token,
+                    permissionGranted = AttentivePush.getInstance()
+                        .checkPushPermission(context),
+                    it.userIdentifiers,
+                    it.domain
+                )
+            }
+        } else {
+            Timber.d("No push token exists, will not register")
         }
     }
 
@@ -64,22 +77,30 @@ class AttentiveEventTracker private constructor() {
     ) {
         verifyInitialized()
         config?.let { config ->
-            AttentivePush.getInstance().fetchPushToken(config.applicationContext, false).let {
-                if (it.isSuccess) {
-                    var token = it.getOrNull()?.token
-                    if (token == null) {
+            TokenProvider.getInstance().getToken(config.applicationContext).run {
+                if (isSuccess) {
+                    var token = getOrNull()?.token ?: ""
+                    if (token.isEmpty()) {
                         Timber.e("TokenFetchResult is null")
-                        token = ""
                     }
-                    val permissionGranted = it.getOrNull()?.permissionGranted!!
-                    config.attentiveApi.sendDirectOpenStatus(
-                        launchType,
-                        token,
-                        callbackMap,
-                        permissionGranted,
-                        config.userIdentifiers,
-                        config.domain
-                    )
+                }
+                TokenProvider.getInstance().getToken(config.applicationContext).let {
+                    if (it.isSuccess) {
+                        var token = it.getOrNull()?.token
+                        if (token == null) {
+                            Timber.e("TokenFetchResult is null")
+                            token = ""
+                        }
+                        val permissionGranted = it.getOrNull()?.permissionGranted!!
+                        config.attentiveApi.sendDirectOpenStatus(
+                            launchType,
+                            token,
+                            callbackMap,
+                            permissionGranted,
+                            config.userIdentifiers,
+                            config.domain
+                        )
+                    }
                 }
             }
         }
@@ -123,3 +144,4 @@ class AttentiveEventTracker private constructor() {
             }
     }
 }
+

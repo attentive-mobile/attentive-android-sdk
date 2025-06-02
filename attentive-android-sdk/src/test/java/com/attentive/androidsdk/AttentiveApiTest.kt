@@ -15,6 +15,7 @@ import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import com.attentive.androidsdk.internal.util.AppInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -548,7 +549,7 @@ class AttentiveApiTest {
 
         private fun verifyCommonEventFields(url: HttpUrl, eventType: String, m: Metadata) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
-            Assert.assertEquals("mobile-app", url.queryParameter("v"))
+            Assert.assertEquals(AppInfo.attentiveSDKVersion, url.queryParameter("v"))
             Assert.assertEquals("0", url.queryParameter("lt"))
             Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))

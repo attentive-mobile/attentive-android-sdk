@@ -10,32 +10,30 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
-class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
+ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
-    private val visitorService =
-        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
-    override var userIdentifiers =
-        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+    override val applicationContext = builder._context
+    override var clientWillHandlePushToken: Boolean = builder._clientWillProvidePushToken
+    var logLevel: AttentiveLogLevel? = null
+
+    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
-    private val settingsService: SettingsService =
-        ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
-    private var logLevel: AttentiveLogLevel? = null
+    private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
-    internal val applicationContext = builder._context
 
     init {
+        Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
         logLevel = builder.logLevel
         configureLogging(logLevel, settingsService, builder._context)
-        Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
 
         val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
-        attentiveApi =
-            ClassFactory.buildAttentiveApi(okHttpClient)
+        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient)
         sendInfoEvent()
     }
 
@@ -126,6 +124,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
+        internal var _clientWillProvidePushToken: Boolean = false
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
@@ -143,6 +142,15 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun domain(domain: String) = apply {
             ParameterValidation.verifyNotEmpty(domain, "domain")
             _domain = domain
+        }
+
+        /**
+         * For host apps that already implement a subclass of FirebaseMessagingService
+         * Set this to true to avoid a conflict with the Attentive SDK's AttentiveFirebaseMessagingService.
+         * Once you have a token, you must call AttentiveEventTracker.instance.setPushToken(token)
+         */
+        fun clientWillProvidePushToken(clientWillProvidePushToken: Boolean) = apply {
+            _clientWillProvidePushToken = clientWillProvidePushToken
         }
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {

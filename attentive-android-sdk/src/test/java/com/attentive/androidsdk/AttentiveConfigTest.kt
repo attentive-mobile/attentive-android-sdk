@@ -1,5 +1,6 @@
 package com.attentive.androidsdk
 
+import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.internal.events.InfoEvent
@@ -50,7 +51,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
             .build()
 
         // Assert
@@ -80,7 +81,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
             .skipFatigueOnCreatives(true)
             .build()
 
@@ -106,7 +107,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
                        .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
@@ -129,7 +130,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
             .build()
         Assert.assertEquals(VISITOR_ID, config.userIdentifiers.visitorId)
 
@@ -147,7 +148,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
                        .build()
         config.identify(buildUserIdentifiers())
 
@@ -179,7 +180,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
                        .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
@@ -200,7 +201,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
                        .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
@@ -218,7 +219,7 @@ class AttentiveConfigTest {
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(MODE)
-            .applicationContext(Mockito.mock(Context::class.java))
+            .applicationContext(Mockito.mock(Application::class.java))
                        .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
