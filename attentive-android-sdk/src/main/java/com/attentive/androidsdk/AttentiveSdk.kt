@@ -1,7 +1,6 @@
 package com.attentive.androidsdk
 
 import android.app.Application
-import android.content.Context
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.androidsdk.push.TokenProvider
@@ -30,27 +29,35 @@ object AttentiveSdk {
 
     /**
      * Sets the push token and registers it using the SDK.
-     * Caller must provide a CoroutineScope (e.g., lifecycleScope or viewModelScope).
      */
-    fun setAndRegisterPushToken(token: String) {
-        TokenProvider.getInstance().token = token
-        val context = AttentiveEventTracker.instance.config?.applicationContext
-
-        if (context != null) {
-            Timber.d("Setting push token: $token")
-            CoroutineScope(Dispatchers.IO).launch {
-                AttentiveEventTracker.instance.registerPushToken(context)
-            }
-        } else {
-            Timber.w("Unable to register push token - context is null")
-        }
-    }
+//    fun setAndRegisterPushToken(token: String) {
+//        TokenProvider.getInstance().token = token
+//        val context = AttentiveEventTracker.instance.config?.applicationContext
+//
+//        if (context != null) {
+//            Timber.d("Setting push token: $token")
+//            CoroutineScope(Dispatchers.IO).launch {
+//                AttentiveEventTracker.instance.registerPushToken(context)
+//            }
+//        } else {
+//            Timber.w("Unable to register push token - context is null")
+//        }
+//    }
 
     /**
      * Forwards a push message to the SDK to display the notification.
      */
-    fun sendNotification(remoteMessage: RemoteMessage) {
-        AttentivePush.getInstance().sendNotification(remoteMessage)
+    fun sendNotification(remoteMessage: RemoteMessage, notificationIconId: Int = 0) {
+        AttentivePush.getInstance().sendNotification(remoteMessage, notificationIconId)
+    }
+
+    private fun sendMockNotification(
+        title: String,
+        body: String,
+        notificationIconId: Int = 0,
+        context: Application
+    ) {
+//        AttentivePush.getInstance().sendMockNotification(title, body, notificationIconId, context)
     }
 
     /**

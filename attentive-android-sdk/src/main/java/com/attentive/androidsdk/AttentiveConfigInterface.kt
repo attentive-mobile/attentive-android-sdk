@@ -8,7 +8,9 @@ interface AttentiveConfigInterface {
     val domain: String
     var userIdentifiers: UserIdentifiers
     val applicationContext: Application
-    var clientWillHandlePushToken: Boolean
+
+    var notificationIconId: Int
+//    var clientWillHandlePushToken: Boolean
 
     fun skipFatigueOnCreatives(): Boolean
     fun identify(clientUserId: String)

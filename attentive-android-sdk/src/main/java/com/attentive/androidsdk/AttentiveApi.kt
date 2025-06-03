@@ -17,10 +17,6 @@ import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
-import com.attentive.androidsdk.push.AttentivePush
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -60,6 +56,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             subclass(PurchaseMetadataDto::class)
         }
     }
+
     val json = Json {
         serializersModule = metadataModule
         classDiscriminator = "className" // Helps identify the subclass
@@ -76,13 +73,13 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     private val pushUrlEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
-            .host(ATTENTIVE_PUSH_ENDPOINT)
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
             .addPathSegment("token")
 
     private val httpUrlDevEventsEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
-            .host(ATTENTIVE_DEV_MOBILE_ENDPOINT)
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
             .addPathSegment("mtctrl")
 
     // TODO refactor to use the 'sendEvent' method
@@ -784,8 +781,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     companion object {
         const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
         const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
-        const val ATTENTIVE_PUSH_ENDPOINT: String = "mobile.attentivemobile.com"
-        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.attentivemobile.com"
+        const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
+        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "dev.mobile.attentivemobile.com"
 
         private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
             val productViewMetadata = ProductViewMetadataDto()

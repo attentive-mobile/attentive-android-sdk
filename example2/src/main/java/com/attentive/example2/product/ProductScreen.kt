@@ -149,13 +149,13 @@ fun ProductCard(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            ImageBitmap.imageResource(item.imageId),
-            contentDescription = "T shirt",
-            modifier = Modifier
-                .fillMaxSize()
-                .height(285.dp)
-        )
+//        Image(
+//            ImageBitmap.imageResource(item.imageId),
+//            contentDescription = "T shirt",
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .height(285.dp)
+//        )
         ProductTitle(item.item.name!!)
         ProductSubtitle(item.item.price)
         onProductViewed(item.item)

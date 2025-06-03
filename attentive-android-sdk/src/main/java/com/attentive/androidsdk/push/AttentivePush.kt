@@ -16,18 +16,20 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
 import com.attentive.androidsdk.tracking.AppLaunchTracker
-import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.iterator
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 internal class AttentivePush {
 
@@ -66,7 +68,7 @@ internal class AttentivePush {
         }
     }
 
-    internal fun sendNotification(remoteMessage: RemoteMessage) {
+    internal fun sendNotification(remoteMessage: RemoteMessage, notificationIconId: Int) {
         Timber.d("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
@@ -79,16 +81,70 @@ internal class AttentivePush {
         if(title != null && body != null) {
             //todo nullability check
             val context = AttentiveEventTracker.instance.config?.applicationContext!!
-            sendNotification(title, body, remoteMessage.data, context)
+            sendNotification(title, body, remoteMessage.data, notificationIconId, context)
         } else {
             Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
         }
     }
 
-    //TODO make private
-    internal fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>, context: Context) {
+    private fun sendMockNotification(
+        title: String,
+        body: String,
+        notificationIconId: Int = 0,
+        context: Context
+    ) {
+        Timber.d("sendMockNotification with title: $title, body: $body")
         val channelId = "fcm_default_channel"
-        val notificationId = 0
+        val notificationId = 47732113
+
+        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+        // Launch intent to open the host app's main launcher activity
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        launchIntent?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
+        }
+
+        val contentPendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // Build the notification
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setSound(defaultSoundUri)
+            .setContentIntent(contentPendingIntent) // Main tap opens app
+
+        if(notificationIconId == 0){
+            notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
+        } else {
+            notificationBuilder.setSmallIcon(notificationIconId)
+        }
+
+        // Create channel
+        val notificationManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Marketing",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        //Show notification
+        notificationManager.notify(notificationId, notificationBuilder.build())
+    }
+    //TODO make private
+    internal fun sendNotification(messageTitle: String, messageBody: String, dataMap: Map<String, String>, notificationIconId: Int, context: Context) {
+        val channelId = "fcm_default_channel"
+        val notificationId = 47732113
 
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
@@ -114,12 +170,17 @@ internal class AttentivePush {
 
         // Build the notification
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setContentIntent(contentPendingIntent) // Main tap opens app
+
+        if(notificationIconId == 0){
+            notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
+        } else {
+            notificationBuilder.setSmallIcon(notificationIconId)
+        }
 
         // Create channel
         val notificationManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager

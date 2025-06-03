@@ -19,9 +19,9 @@ class TokenProvider {
     internal suspend fun getToken(context: Context): Result<TokenFetchResult> {
         Timber.d("getToken")
         var clientWillHandlePushToken = false
-        AttentiveEventTracker.instance.config?.clientWillHandlePushToken?.let {
-            clientWillHandlePushToken = it
-        }
+//        AttentiveEventTracker.instance.config?.clientWillHandlePushToken?.let {
+//            clientWillHandlePushToken = it
+//        }
 
         if (clientWillHandlePushToken.not()) {
             return getTokenFromFirebase(context)
