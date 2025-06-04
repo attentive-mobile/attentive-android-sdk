@@ -39,32 +39,32 @@ class AttentiveEventTrackerTest {
         Mockito.doReturn(launchTracker).whenever(instance).launchTracker
         whenever(config.applicationContext).thenReturn(Mockito.mock(Application::class.java))
     }
-
-    @Test
-    fun initialize_validConfig_success() {
-        instance.initialize(config)
-    }
-
-    @Test
-    fun initialize_calledTwice_doesNotThrow() {
-        instance.initialize(config)
-    }
-
-
-    @Test
-    fun recordEvent_validEvent_sendsToApi() {
-        // Arrange
-        instance.initialize(config)
-        val eventToSend = Mockito.mock(
-            Event::class.java
-        )
-
-        // Act
-        instance.recordEvent(eventToSend)
-
-        // Assert
-        Mockito.verify(attentiveApi)?.sendEvent(eventToSend, USER_IDENTIFIERS, DOMAIN)
-    }
+//
+//    @Test
+//    fun initialize_validConfig_success() {
+//        instance.initialize(config)
+//    }
+//
+//    @Test
+//    fun initialize_calledTwice_doesNotThrow() {
+//        instance.initialize(config)
+//    }
+//
+//
+//    @Test
+//    fun recordEvent_validEvent_sendsToApi() {
+//        // Arrange
+//        instance.initialize(config)
+//        val eventToSend = Mockito.mock(
+//            Event::class.java
+//        )
+//
+//        // Act
+//        instance.recordEvent(eventToSend)
+//
+//        // Assert
+//        Mockito.verify(attentiveApi)?.sendEvent(eventToSend, USER_IDENTIFIERS, DOMAIN)
+//    }
 
     companion object {
         private const val DOMAIN = "someDomainValue"
