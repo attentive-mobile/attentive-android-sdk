@@ -248,7 +248,8 @@ Fetch a push token and optionally show permission request:
         }
 ```
 
-If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK
+If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK.
+
 First check that is a message from Attentive, then send it over.
 
 ```kotlin
