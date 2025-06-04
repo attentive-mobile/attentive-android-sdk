@@ -22,8 +22,6 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
         Timber.d("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
-
-
         Timber.d(remoteMessage.data.toString())
 
         if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {

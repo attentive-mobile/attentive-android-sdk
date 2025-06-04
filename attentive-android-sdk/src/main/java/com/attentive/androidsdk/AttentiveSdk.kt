@@ -8,6 +8,7 @@ import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
 
 object AttentiveSdk {
@@ -51,13 +52,13 @@ object AttentiveSdk {
         AttentivePush.getInstance().sendNotification(remoteMessage, notificationIconId)
     }
 
-    private fun sendMockNotification(
+    fun sendMockNotification(
         title: String,
         body: String,
-        notificationIconId: Int = 0,
-        context: Application
+        dataMap: Map<String, String>,
+        application: Application
     ) {
-//        AttentivePush.getInstance().sendMockNotification(title, body, notificationIconId, context)
+        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, context = application)
     }
 
     /**

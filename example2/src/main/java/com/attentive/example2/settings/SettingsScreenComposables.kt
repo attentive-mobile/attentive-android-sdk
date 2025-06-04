@@ -89,12 +89,16 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
             getCurrentToken()
         }
     })
+
     val context = LocalActivity.current
     pushSettings.add("Share push token" to {
         CoroutineScope(Dispatchers.Main).launch {
             sharePushToken(context!!)
         }
     })
+
+    val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
+    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {triggerMockDeepLinkNotification()})
 
     Text(
         "Settings",
@@ -109,6 +113,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         SettingGroup(debugSettings)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
+        SettingGroup(deepLinkSettings)
         FeatureThatRequiresPushPermission()
     }
 }
@@ -123,6 +128,13 @@ suspend fun getCurrentToken() {
             }
         }
     }
+}
+
+fun triggerMockDeepLinkNotification() {
+    Timber.d("Triggering mock deep link notification")
+    // Here you would implement the logic to trigger a mock deep link notification
+    // For example, using a specific method from your SDK or a custom implementation
+    AttentiveSdk.sendMockNotification("Bonni Cart", "Your cart is ready!", mapOf("attentive_deep_link" to "bonni://cart"), BonniApp.getInstance())
 }
 
 suspend fun sharePushToken(activity: Activity) {
@@ -157,7 +169,7 @@ suspend fun sharePushToken(activity: Activity) {
 fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
 ) {
-    Column() {
+    Column {
         for (titleToDestination in titlesToDestinations) {
             Setting(title = titleToDestination.first, onClick = titleToDestination.second)
         }
