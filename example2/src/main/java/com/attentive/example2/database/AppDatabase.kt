@@ -31,13 +31,13 @@ abstract class AppDatabase : RoomDatabase() {
             val names = listOf("Protective Sunscreen","The Stick", "The Balm", "The Balm")
             val prices = listOf(
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(20.0)).build(),
+                    .price(BigDecimal(12)).build(),
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(100.0)).build(),
+                    .price(BigDecimal(20)).build(),
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(15.0)).build(),
+                    .price(BigDecimal(15)).build(),
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(37.50)).build()
+                    .price(BigDecimal(13)).build()
             )
             for (i in 0..3) {
                 val item =

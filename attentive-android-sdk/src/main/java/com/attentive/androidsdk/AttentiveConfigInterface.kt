@@ -1,9 +1,16 @@
 package com.attentive.androidsdk
 
+import android.app.Application
+
+
 interface AttentiveConfigInterface {
     val mode: AttentiveConfig.Mode
     val domain: String
     var userIdentifiers: UserIdentifiers
+    val applicationContext: Application
+
+    var notificationIconId: Int
+//    var clientWillHandlePushToken: Boolean
 
     fun skipFatigueOnCreatives(): Boolean
     fun identify(clientUserId: String)

@@ -1,7 +1,5 @@
 package com.attentive.example2.product
 
-import android.util.Log
-import android.widget.ImageView.ScaleType
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -22,8 +20,6 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -46,19 +42,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.events.Item
+import com.attentive.androidsdk.events.Price
 import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.SimpleToolbar
-import com.attentive.example2.cart.CartScreenViewModel
 import com.attentive.example2.database.ExampleProduct
-import com.attentive.example2.ui.theme.BonniGreen
-import com.attentive.example2.ui.theme.BonniPink
-import com.attentive.example2.ui.theme.BonniYellow
 import timber.log.Timber
-import kotlin.random.Random
 
 @Composable
 fun ProductScreen(
@@ -74,10 +65,9 @@ fun ProductScreen(
 @Composable
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
-    val prices = LocalContext.current.resources.getIntArray(R.array.prices)
     val items by viewModel.productItemsFlow.collectAsState()
 
-    Column() {
+    Column {
         SimpleToolbar(title = "Products", actions = {
             BadgedBox(
                 modifier = Modifier.padding(4.dp),
@@ -143,8 +133,6 @@ fun ProductCard(
     onAddToCart: (item: ExampleProduct) -> Unit
 ) {
     val context = LocalContext.current
-    val bonniColors = listOf(BonniPink, BonniYellow, BonniGreen)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -161,37 +149,45 @@ fun ProductCard(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            ImageBitmap.imageResource(item.imageId),
-            contentDescription = "T shirt",
-            modifier = Modifier.fillMaxSize().height(285.dp)
-        )
+//        Image(
+//            ImageBitmap.imageResource(item.imageId),
+//            contentDescription = "T shirt",
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .height(285.dp)
+//        )
         ProductTitle(item.item.name!!)
-        ProductSubtitle()
+        ProductSubtitle(item.item.price)
         onProductViewed(item.item)
     }
 }
 
 
 @Composable
-fun ProductTitle(title: String){
-Text(
-    text = title,
-    fontSize = 15.sp,
-    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-    textAlign = TextAlign.Start,
-    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
+fun ProductTitle(title: String) {
+    Text(
+        text = title,
+        fontSize = 15.sp,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        textAlign = TextAlign.Start,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+    )
 }
 
-@Preview
 @Composable
-fun ProductSubtitle(){
+fun ProductSubtitle(price: Price) {
+    val price = "$ ${price.price}"
     Text(
-        text = "Product Subtitle | $12",
+        text = "Product Subtitle | $price",
         fontSize = 12.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth())
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+    )
 }
 
 @Preview

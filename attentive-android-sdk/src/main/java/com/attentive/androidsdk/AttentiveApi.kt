@@ -16,6 +16,7 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import com.attentive.androidsdk.internal.util.AppInfo
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -55,11 +56,31 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             subclass(PurchaseMetadataDto::class)
         }
     }
+
     val json = Json {
         serializersModule = metadataModule
         classDiscriminator = "className" // Helps identify the subclass
         ignoreUnknownKeys = true
     }
+
+    private val httpUrlEventsEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
+            .addPathSegment("e")
+
+
+    private val pushUrlEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+            .addPathSegment("token")
+
+    private val httpUrlDevEventsEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+            .addPathSegment("mtctrl")
 
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
@@ -108,94 +129,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                     domain,
                     callback
                 )
-            }
-        })
-    }
-
-    internal fun registerPushToken(
-        token: String,
-        permissionGranted: Boolean,
-        userIdentifiers: UserIdentifiers,
-        domain: String
-    ) {
-        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-            override fun onFailure(reason: String?) {
-                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-                registerPushToken(
-                    geoAdjustedDomain = domain,
-                    token = token,
-                    permissionGranted = permissionGranted,
-                    userIdentifiers = userIdentifiers
-                )
-            }
-
-            override fun onSuccess(geoAdjustedDomain: String) {
-                registerPushToken(
-                    geoAdjustedDomain = geoAdjustedDomain,
-                    token = token,
-                    permissionGranted = permissionGranted,
-                    userIdentifiers = userIdentifiers
-                )
-            }
-        })
-    }
-
-    internal fun registerPushToken(
-        geoAdjustedDomain: String,
-        token: String,
-        permissionGranted: Boolean,
-        userIdentifiers: UserIdentifiers
-    ) {
-        val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
-        val metadataJson: String
-        val metadata: Metadata
-        try {
-            metadata = buildMetadata(userIdentifiers)
-            metadataJson = json.encodeToString(metadata)
-        } catch (e: SerializationException) {
-            Timber.e(
-                "Could not serialize metadata. Message: '%s'",
-                e.message
-            )
-            return
-        }
-
-        //        "pd": "${buildExtraParametersWithDeeplink()}",
-
-
-
-        val jsonBody = """
-    {
-        "c": "$geoAdjustedDomain",
-        "v": "mobile-app",
-        "u": "${userIdentifiers.visitorId}",
-        "evs": ${externalVendorIdsJson},
-        "m": $metadataJson,
-        "pt": "$token",
-        "st": "$permissionGranted",
-        "tp": "fcm"
-    }
-""".trimIndent()
-
-        val pushUrl = pushUrlEndpointBuilder.build()
-
-        val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
-
-        val request = Request.Builder()
-            .url(pushUrl)
-            .addHeader("x-datadog-sampling-priority", "1")
-            .addHeader("Content-Type", "application/json")
-            .post(requestBody)
-            .build()
-
-
-        httpClient.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Timber.e("Push request failed with exception ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                Timber.d("Push request success with response ${response.message}")
             }
         })
     }
@@ -297,7 +230,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
 
         val urlBuilder = httpUrlEventsEndpointBuilder
             .addQueryParameter("tag", "modern")
-            .addQueryParameter("v", "mobile-app")
+            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
             .addQueryParameter("c", geoAdjustedDomain)
             .addQueryParameter("t", "idn")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -338,19 +271,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             }
         })
     }
-
-    private val httpUrlEventsEndpointBuilder: HttpUrl.Builder
-        get() = HttpUrl.Builder()
-            .scheme("https")
-            .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
-            .addPathSegment("e")
-
-
-    private val pushUrlEndpointBuilder: HttpUrl.Builder
-        get() = HttpUrl.Builder()
-            .scheme("https")
-            .host(ATTENTIVE_PUSH_ENDPOINT)
-            .addPathSegment("token")
 
     private fun parseAttentiveDomainFromTag(tag: String): String? {
         val pattern = Pattern.compile("='([a-z0-9-]+)[.]attn[.]tv'")
@@ -594,7 +514,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         }
 
         val urlBuilder = httpUrlEventsEndpointBuilder
-            .addQueryParameter("v", "mobile-app")
+            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
             .addQueryParameter("lt", "0")
             .addQueryParameter("tag", "modern")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -638,20 +558,220 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         })
     }
 
-    private fun serialize(`object`: Any): String? {
+
+    internal fun registerPushToken(
+        token: String,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers,
+        domain: String
+    ) {
+        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                registerPushToken(
+                    geoAdjustedDomain = domain,
+                    token = token,
+                    permissionGranted = permissionGranted,
+                    userIdentifiers = userIdentifiers
+                )
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                registerPushToken(
+                    geoAdjustedDomain = geoAdjustedDomain,
+                    token = token,
+                    permissionGranted = permissionGranted,
+                    userIdentifiers = userIdentifiers
+                )
+            }
+        })
+    }
+
+    internal fun registerPushToken(
+        geoAdjustedDomain: String,
+        token: String,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers
+    ) {
+        val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+        val metadataJson: String
+        val metadata: Metadata
         try {
-            return Json.encodeToString(`object`)
+            metadata = buildMetadata(userIdentifiers)
+            metadataJson = json.encodeToString(metadata)
         } catch (e: SerializationException) {
-            throw RuntimeException("Could not serialize. Error: " + e.message, e)
-        } catch (e: IllegalArgumentException) {
-            throw RuntimeException(
-                """
-                    Could not serialize. If it's due to no default constructor, consider changing proguard rules to avoid changing the class that's causing the error. If you are not sure how to do so, consider adding the following:
-                    -keep class com.attentive.androidsdk.** { *; }
-                    Error: ${e.message}
-                    """.trimIndent(), e
+            Timber.e(
+                "Could not serialize metadata. Message: '%s'",
+                e.message
             )
+            return
         }
+
+        //        "pd": "${buildExtraParametersWithDeeplink()}",
+
+
+        val jsonBody = """
+    {
+        "c": "$geoAdjustedDomain",
+        "v": "${AppInfo.attentiveSDKVersion}",
+        "u": "${userIdentifiers.visitorId}",
+        "evs": ${externalVendorIdsJson},
+        "m": $metadataJson,
+        "pt": "$token",
+        "st": "$permissionGranted",
+        "tp": "fcm"
+    }
+""".trimIndent()
+
+        val pushUrl = pushUrlEndpointBuilder.build()
+
+        val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+
+        val request = Request.Builder()
+            .url(pushUrl)
+            .addHeader("x-datadog-sampling-priority", "1")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+
+        httpClient.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Timber.e("Push request failed with exception ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                Timber.d("Push request success with response ${response.message}")
+            }
+        })
+    }
+
+    internal fun sendDirectOpenStatus(
+        launchTypes: LaunchType,
+        pushToken: String,
+        callbackMap: Map<String, String>,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers,
+        domain: String
+    ) {
+        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                sendDirectOpenStatusInternal(
+                    launchTypes,
+                    pushToken,
+                    callbackMap,
+                    permissionGranted,
+                    userIdentifiers,
+                    domain
+                )
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                Timber.d("Geo adjusted domain: $geoAdjustedDomain")
+                sendDirectOpenStatusInternal(
+                    launchTypes,
+                    pushToken,
+                    callbackMap,
+                    permissionGranted,
+                    userIdentifiers,
+                    geoAdjustedDomain
+                )
+            }
+        })
+    }
+
+    private fun sendDirectOpenStatusInternal(
+        launchType: LaunchType,
+        pushToken: String,
+        callbackMap: Map<String, String>,
+        permissionGranted: Boolean,
+        userIdentifiers: UserIdentifiers,
+        geoAdjustedDomain: String,
+    ) {
+        Timber.d("sendDirectOpenStatusInternal called with alaunchType: %s", launchType.value)
+        val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+        val metadataJson: String
+        val metadata: Metadata
+        try {
+            metadata = buildMetadata(userIdentifiers)
+            metadataJson = json.encodeToString(metadata)
+        } catch (e: SerializationException) {
+            Timber.e(
+                "Could not serialize metadata. Message: '%s'",
+                e.message
+            )
+            return
+        }
+
+        //TODO
+        //val pd = "${buildExtraParametersWithDeeplink("")}"
+
+        // Build the data array from callbackMap
+        val dataArray = callbackMap.entries.joinToString(separator = ",") { entry ->
+            """"${entry.key}" : "${entry.value}""""
+        }
+
+        val eventsArray = if (launchType == LaunchType.APP_LAUNCHED) {
+            """{
+          "events":[
+            {
+                "ist": "${launchType.value}",
+                "data": {$dataArray}
+            }
+          ],"""
+        } else {
+            """{
+          "events":[
+            {
+                "ist": "${launchType.value}",
+                "data": {$dataArray}
+            },
+            {
+                "ist": "${LaunchType.APP_LAUNCHED.value}",
+                "data": {$dataArray}
+            }
+          ],"""
+        }
+
+
+
+        val jsonBody = """
+    $eventsArray
+    "device":{
+        "c": "$geoAdjustedDomain",
+        "v": "${AppInfo.attentiveSDKVersion}",
+        "u": "${userIdentifiers.visitorId}",
+        "evs": ${externalVendorIdsJson},
+        "m": $metadataJson,
+        "pt": "$pushToken",
+        "st": "$permissionGranted",
+        "tp": "fcm"
+        }
+    }
+""".trimIndent()
+
+        val openStatusUrl = httpUrlDevEventsEndpointBuilder.build()
+
+        val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+
+        val request = Request.Builder()
+            .url(openStatusUrl)
+//            .addHeader("x-datadog-sampling-priority", "1")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+
+        httpClient.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Timber.e("Push request failed with exception ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                Timber.d("Push request success with response ${response.message}")
+            }
+        })
     }
 
     private fun buildEmptyRequest(): RequestBody {
@@ -661,7 +781,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     companion object {
         const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
         const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
-        const val ATTENTIVE_PUSH_ENDPOINT: String = "mobile.attentivemobile.com"
+        const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
+        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "dev.mobile.attentivemobile.com"
 
         private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
             val productViewMetadata = ProductViewMetadataDto()
@@ -682,6 +803,21 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                 val extraParameters = HashMap<String, String>()
                 extraParameters["pd"] = deeplink
                 return extraParameters
+            }
+        }
+    }
+
+    /***
+     * Represents whether the app was launched directly or through a push notification.
+     */
+    enum class LaunchType(val value: String) {
+        DIRECT_OPEN("o"),
+        APP_LAUNCHED("al");
+
+        companion object {
+            fun fromValue(value: String): LaunchType {
+                return LaunchType.entries.firstOrNull { it.value == value }
+                    ?: throw IllegalArgumentException("Unknown LaunchType value: $value")
             }
         }
     }

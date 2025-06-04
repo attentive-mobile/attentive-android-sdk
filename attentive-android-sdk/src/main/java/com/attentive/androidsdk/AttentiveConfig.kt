@@ -1,42 +1,40 @@
 package com.attentive.androidsdk
 
+import android.app.Application
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
-import com.attentive.androidsdk.tracking.AppLaunchTracker
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
-class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
+ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
-    private val visitorService =
-        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
-    override var userIdentifiers =
-        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+    override val applicationContext = builder._context
+     override var notificationIconId: Int = 0
+//    override var clientWillHandlePushToken: Boolean = builder._clientWillProvidePushToken
+    var logLevel: AttentiveLogLevel? = null
+
+    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
-    private val settingsService: SettingsService =
-        ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
-    private var logLevel: AttentiveLogLevel? = null
+    private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
-    internal val context = builder._context
 
     init {
+        Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
         logLevel = builder.logLevel
         configureLogging(logLevel, settingsService, builder._context)
-        Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
 
         val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
-        attentiveApi =
-            ClassFactory.buildAttentiveApi(okHttpClient)
+        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient)
         sendInfoEvent()
     }
 
@@ -124,14 +122,21 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     class  Builder {
-        internal lateinit var _context: Context
+        internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
+//        internal var _clientWillProvidePushToken: Boolean = false
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
-        fun context(context: Context) = apply {
+        fun applicationContext(context: Application) = apply {
+            ParameterValidation.verifyNotNull(context, "context")
+            _context = context
+        }
+
+        @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
+        fun context(context: Application) = apply {
             ParameterValidation.verifyNotNull(context, "context")
             _context = context
         }
@@ -145,6 +150,15 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             ParameterValidation.verifyNotEmpty(domain, "domain")
             _domain = domain
         }
+
+        /**
+         * For host apps that already implement a subclass of FirebaseMessagingService
+         * Set this to true to avoid a conflict with the Attentive SDK's AttentiveFirebaseMessagingService.
+         * Once you have a token, you must call AttentiveEventTracker.instance.setPushToken(token)
+         */
+//        fun clientWillProvidePushToken(clientWillProvidePushToken: Boolean) = apply {
+//            _clientWillProvidePushToken = clientWillProvidePushToken
+//        }
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")

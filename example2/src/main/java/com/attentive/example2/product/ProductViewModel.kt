@@ -1,6 +1,5 @@
 package com.attentive.example2.product
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveEventTracker
@@ -8,6 +7,7 @@ import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.example2.database.AppDatabase
+import com.attentive.example2.database.CartRepository
 import com.attentive.example2.database.ExampleCartItem
 import com.attentive.example2.database.ExampleProduct
 import kotlinx.coroutines.CoroutineScope
@@ -24,9 +24,9 @@ class ProductViewModel : ViewModel() {
     private val cartItems = mutableListOf<Item>()
     private val _productItemsFlow = MutableStateFlow<List<ExampleProduct>>(emptyList())
     val productItemsFlow: StateFlow<List<ExampleProduct>> = _productItemsFlow.asStateFlow()
-
+    private val cartRepo = CartRepository
     private val _cartItemCount = MutableStateFlow(0)
-    val cartItemCount: StateFlow<Int> = _cartItemCount
+    val cartItemCount: StateFlow<Int> = cartRepo.cartItemCount
 
     private val database: AppDatabase by lazy { AppDatabase.getInstance() }
 
