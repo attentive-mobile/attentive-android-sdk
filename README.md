@@ -236,18 +236,28 @@ https://firebase.google.com/docs/android/setup
 
 Push tokens will automatically be sent to Attentive when your app is launched. Users do not need to enable push notifications for a push token to be sent to us. Push notifications can only be shown if your user has granted push permissions. Push notifications are handled internally by the ```AttentiveFirebaseMessageService.kt``` class. Right now, the launcher activity is launched when a notification is tapped.
 
-To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveEventTracker.instance.getPushToken(requestPermission = true)```
+To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveSdk.getPushToken(application = yourApplicationInstance, requestPermission = true)```
 To only query for a token pass ```false```.
 If you pass true and permissions are already granted, the token will simply be retrieved.
 
 
 Fetch a push token and optionally show permission request:
 ```kotlin
-    AttentiveEventTracker.instance.getPushToken(requestPermission = false).let {
-        if (it.isSuccess) {
-            CoroutineScope(Dispatchers.Main).launch {
-                Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
-                    .show()
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveSdk.getPushToken(application = yourApplicationInstance, requestPermission = true)
+        }
+```
+
+If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK
+First check that is a message from Attentive, then send it over.
+
+```kotlin
+    class YourFirebaseMessagingService : FirebaseMessagingService() {
+
+        override fun onMessageReceived(remoteMessage: RemoteMessage) {
+            super.onMessageReceived(remoteMessage)
+            if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
+                AttentiveSdk.sendNotification(remoteMessage)
             }
         }
     }
