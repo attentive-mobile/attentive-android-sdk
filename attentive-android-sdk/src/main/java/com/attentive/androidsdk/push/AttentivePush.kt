@@ -95,61 +95,6 @@ internal class AttentivePush {
         }
     }
 
-    private fun sendMockNotification(
-        title: String,
-        body: String,
-        notificationIconId: Int = 0,
-        context: Context
-    ) {
-        Timber.d("sendMockNotification with title: $title, body: $body")
-        val channelId = "fcm_default_channel"
-        val notificationId = 47732113
-
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-        // Launch intent to open the host app's main launcher activity
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        launchIntent?.apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
-        }
-
-        val contentPendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            launchIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        // Build the notification
-        val notificationBuilder = NotificationCompat.Builder(context, channelId)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setSound(defaultSoundUri)
-            .setContentIntent(contentPendingIntent) // Main tap opens app
-
-        if (notificationIconId == 0) {
-            notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
-        } else {
-            notificationBuilder.setSmallIcon(notificationIconId)
-        }
-
-        // Create channel
-        val notificationManager =
-            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Marketing",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        //Show notification
-        notificationManager.notify(notificationId, notificationBuilder.build())
-    }
 
     //TODO make private
     internal fun sendNotification(

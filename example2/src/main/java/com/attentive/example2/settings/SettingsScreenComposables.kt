@@ -132,8 +132,6 @@ suspend fun getCurrentToken() {
 
 fun triggerMockDeepLinkNotification() {
     Timber.d("Triggering mock deep link notification")
-    // Here you would implement the logic to trigger a mock deep link notification
-    // For example, using a specific method from your SDK or a custom implementation
     AttentiveSdk.sendMockNotification("Bonni Cart", "Your cart is ready!", mapOf("attentive_deep_link" to "bonni://cart"), BonniApp.getInstance())
 }
 
