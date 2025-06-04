@@ -64,9 +64,9 @@ object AttentiveSdk {
      * Fetches the push token from Firebase, requesting permission if needed.
      */
     suspend fun getPushToken(
-        context: Application,
+        application: Application,
         requestPermission: Boolean
     ): Result<TokenFetchResult> {
-        return AttentivePush.getInstance().fetchPushToken(context, requestPermission)
+        return AttentivePush.getInstance().fetchPushToken(application, requestPermission)
     }
 }
