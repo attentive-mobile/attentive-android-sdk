@@ -229,14 +229,14 @@ __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the des
 
 
 ## Step 4 - Integrate With Push
+
 You need to add your google-services.json file to your project, and apply the Goole Services plugin as detailed here before push will work.
 
 https://firebase.google.com/docs/android/setup
 
 
+### Tokens and Permissions
 Push tokens will automatically be sent to Attentive when your app is launched. Users do not need to enable push notifications for a push token to be sent to us. Push notifications can only be shown if your user has granted push permissions. Push notifications are handled internally by the ```AttentiveFirebaseMessageService.kt``` class. 
-
-The SDK will package a PendingIntent with the notification that will trigger when tapped. If no deep link is provided via the attentive web ui, the launcher activity will be opened when then notification is tapped. You must setup your host app with an intent filter for the deeplink you provide to launch your desired activity.
 
 To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveSdk.getPushToken(application = yourApplicationInstance, requestPermission = true)```
 To only query for a token pass ```false```.
@@ -265,6 +265,9 @@ First check that is a message from Attentive, then send it over.
         }
     }
 ```
+
+### Deeplinking
+The SDK will package a ```PendingIntent``` with the notification that will trigger when tapped. If no deep link is provided via the attentive web ui, the launcher activity will be opened when then notification is tapped. You must setup your host app with an ```intent filter``` for the deeplink you provided to launch your desired activity.
 
 ## Other functionality
 
