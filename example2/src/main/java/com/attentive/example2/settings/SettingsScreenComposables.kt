@@ -132,7 +132,7 @@ suspend fun getCurrentToken() {
 
 fun triggerMockDeepLinkNotification() {
     Timber.d("Triggering mock deep link notification")
-    AttentiveSdk.sendMockNotification("Bonni Cart", "Your cart is ready!", mapOf("attentive_deep_link" to "bonni://cart"), BonniApp.getInstance())
+    AttentiveSdk.sendMockNotification("Bonni Cart", "Your cart is ready!", mapOf("attentive_open_action_url" to "bonni://cart"), BonniApp.getInstance())
 }
 
 suspend fun sharePushToken(activity: Activity) {

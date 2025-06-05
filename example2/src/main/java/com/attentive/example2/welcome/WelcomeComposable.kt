@@ -146,7 +146,7 @@ fun CreateAccountButton() {
 }
 
 @Composable
-fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
+fun WelcomeScreen(navController: NavHostController) {
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
         NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
             composable(Routes.WelcomeScreenRoute.name) {

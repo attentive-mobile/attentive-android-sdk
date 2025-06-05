@@ -36,6 +36,8 @@ import androidx.core.net.toUri
 
 internal class AttentivePush {
 
+    val ATTENTIVE_DEEP_LINK_KEY = "attentive_open_action_url"
+
     internal suspend fun fetchPushToken(
         context: Context,
         requestPermissionIfNotGranted: Boolean
@@ -106,16 +108,12 @@ internal class AttentivePush {
     ) {
         val channelId = "fcm_default_channel"
         val notificationId = 47732113
-
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
         var launchIntent = buildLaunchIntent(context, dataMap)
-
 
         launchIntent?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
-
 
             // Add dataMap as extras
             for ((key, value) in dataMap) {
@@ -162,9 +160,10 @@ internal class AttentivePush {
 
     @VisibleForTesting
     fun buildLaunchIntent(context: Context, dataMap: Map<String, String>): Intent? {
-        val deepLink = dataMap.getOrElse("attentive_deep_link") { null }
+        val deepLink = dataMap.getOrElse(ATTENTIVE_DEEP_LINK_KEY) { null }
         var launchIntent: Intent? = null
         if (deepLink != null) {
+            Timber.d("Building launch intent from deep link: $deepLink")
             launchIntent = Intent(Intent.ACTION_VIEW, deepLink.toUri())
         } else {
             launchIntent =
