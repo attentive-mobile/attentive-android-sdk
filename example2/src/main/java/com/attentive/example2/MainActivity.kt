@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
 import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
 import com.attentive.example2.welcome.Greeting
@@ -17,7 +18,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AttentiveAndroidSDKTheme {
-                WelcomeScreen()
+                val navController = rememberNavController()
+                WelcomeScreen(navController)
             }
         }
     }

@@ -102,11 +102,11 @@ fun ItemInCart(item: ExampleCartItem, removeCartItem: () -> Unit) {
                     .height(240.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    ImageBitmap.imageResource(item.product.imageId),
-                    contentDescription = "T shirt",
-                    modifier = Modifier.weight(4.0f)
-                )
+//                Image(
+//                    ImageBitmap.imageResource(item.product.imageId),
+//                    contentDescription = "T shirt",
+//                    modifier = Modifier.weight(4.0f)
+//                )
                 Text(
                     text = item.product.item.name + " $${item.product.item.price.price}",
                     modifier = Modifier.weight(1.0f)

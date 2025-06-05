@@ -44,6 +44,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
@@ -74,7 +75,10 @@ fun WelcomeScreenContent(navController: NavHostController) {
                 Greeting()
                 SignUpForm(isVisible = newAccount, navController)
                 SignInForm(isVisible = existingAccount, navController)
-                Column(horizontalAlignment = CenterHorizontally, modifier = Modifier.padding(top = 106.dp)) {
+                Column(
+                    horizontalAlignment = CenterHorizontally,
+                    modifier = Modifier.padding(top = 106.dp)
+                ) {
                     SignInButton()
                     Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
@@ -142,7 +146,7 @@ fun CreateAccountButton() {
 }
 
 @Composable
-fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
+fun WelcomeScreen(navController: NavHostController) {
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
         NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
             composable(Routes.WelcomeScreenRoute.name) {
@@ -151,7 +155,10 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             composable(Routes.ProductScreenRoute.name) {
                 ProductScreen(navController)
             }
-            composable(Routes.CartScreen.name) {
+            composable(
+                Routes.CartScreen.name,
+                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" })
+            ) {
                 CartScreen(navController)
             }
             composable(Routes.ShippingScreen.name) {
@@ -194,14 +201,18 @@ fun Greeting() {
         Text(
             text = "HEY BESTIE!",
             fontSize = 38.sp,
-            modifier = Modifier.fillMaxWidth().padding(top = 204.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 204.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             textAlign = TextAlign.Center,
         )
         Text(
             text = "Welcome to Bonni Beauty!",
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             lineHeight = 62.sp,
             fontSize = 54.sp,
