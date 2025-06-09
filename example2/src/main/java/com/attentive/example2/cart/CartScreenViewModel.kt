@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class CartScreenViewModel: ViewModel() {
+open class CartScreenViewModel: ViewModel() {
 
     private val database: AppDatabase by lazy { AppDatabase.getInstance() }
     private val _exampleCartItems = MutableStateFlow<List<ExampleCartItem>>(emptyList())
-    val exampleCartItems: StateFlow<List<ExampleCartItem>> = _exampleCartItems
+    open val exampleCartItems: StateFlow<List<ExampleCartItem>> = _exampleCartItems
     val cartRepo = CartRepository
 
 
