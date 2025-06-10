@@ -70,13 +70,13 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .addPathSegment("e")
 
 
-    private val pushUrlEndpointBuilder: HttpUrl.Builder
+    private val httpUrlPushTokenStatusEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
             .addPathSegment("token")
 
-    private val httpUrlDevEventsEndpointBuilder: HttpUrl.Builder
+    private val httpUrlDirectOpenStatusEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
@@ -230,7 +230,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
 
         val urlBuilder = httpUrlEventsEndpointBuilder
             .addQueryParameter("tag", "modern")
-            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
+            .addQueryParameter("v", "mobile-app")
             .addQueryParameter("c", geoAdjustedDomain)
             .addQueryParameter("t", "idn")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -514,7 +514,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         }
 
         val urlBuilder = httpUrlEventsEndpointBuilder
-            .addQueryParameter("v", AppInfo.attentiveSDKVersion)
+            .addQueryParameter("v", "mobile-app")
             .addQueryParameter("lt", "0")
             .addQueryParameter("tag", "modern")
             .addQueryParameter("evs", externalVendorIdsJson)
@@ -613,7 +613,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         val jsonBody = """
     {
         "c": "$geoAdjustedDomain",
-        "v": "${AppInfo.attentiveSDKVersion}",
+        "v": "mobile-app-${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
         "m": $metadataJson,
@@ -623,7 +623,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     }
 """.trimIndent()
 
-        val pushUrl = pushUrlEndpointBuilder.build()
+        val pushUrl = httpUrlPushTokenStatusEndpointBuilder.build()
 
         val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
 
@@ -740,7 +740,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     $eventsArray
     "device":{
         "c": "$geoAdjustedDomain",
-        "v": "${AppInfo.attentiveSDKVersion}",
+        "v": "mobile-app-${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
         "m": $metadataJson,
@@ -751,13 +751,13 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     }
 """.trimIndent()
 
-        val openStatusUrl = httpUrlDevEventsEndpointBuilder.build()
+        val openStatusUrl = httpUrlDirectOpenStatusEndpointBuilder.build()
 
         val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
 
         val request = Request.Builder()
             .url(openStatusUrl)
-//            .addHeader("x-datadog-sampling-priority", "1")
+            .addHeader("x-datadog-sampling-priority", "1")
             .addHeader("Content-Type", "application/json")
             .post(requestBody)
             .build()
