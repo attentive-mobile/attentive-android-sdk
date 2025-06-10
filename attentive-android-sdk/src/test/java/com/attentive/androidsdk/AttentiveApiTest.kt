@@ -399,7 +399,7 @@ class AttentiveApiTest {
 
         Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
-
+    
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(
@@ -547,9 +547,13 @@ class AttentiveApiTest {
                 .withVisitorId("someVisitorId").build()
         }
 
-        private fun verifyCommonEventFields(url: HttpUrl, eventType: String, m: Metadata) {
+        private fun verifyCommonEventFields(url: HttpUrl, eventType: String?, m: Metadata) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
-            Assert.assertEquals(AppInfo.attentiveSDKVersion, url.queryParameter("v"))
+            if(eventType != null) {
+                Assert.assertEquals("mobile-app", url.queryParameter("v"))
+            } else {
+                Assert.assertNull("mobile-app-${AppInfo.attentiveSDKVersion}", url.queryParameter("v"))
+            }
             Assert.assertEquals("0", url.queryParameter("lt"))
             Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))
