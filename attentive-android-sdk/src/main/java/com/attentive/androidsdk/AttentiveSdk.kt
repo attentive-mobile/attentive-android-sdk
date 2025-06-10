@@ -1,12 +1,14 @@
 package com.attentive.androidsdk
 
 import android.app.Application
+import android.content.Context
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
@@ -69,5 +71,9 @@ object AttentiveSdk {
         requestPermission: Boolean
     ): Result<TokenFetchResult> {
         return AttentivePush.getInstance().fetchPushToken(application, requestPermission)
+    }
+
+    fun isPushPermissionGranted(context: Context): Boolean {
+        return AttentivePush.getInstance().checkPushPermission(context)
     }
 }

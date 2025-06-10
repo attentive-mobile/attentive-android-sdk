@@ -157,7 +157,7 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(
                 Routes.CartScreen.name,
-                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" })
+                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart"  })
             ) {
                 CartScreen(navController)
             }

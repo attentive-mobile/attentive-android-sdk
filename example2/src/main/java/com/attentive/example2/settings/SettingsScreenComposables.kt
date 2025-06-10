@@ -2,6 +2,7 @@ package com.attentive.example2.settings
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.view.ViewGroup
@@ -90,15 +91,16 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     })
 
-    val context = LocalActivity.current
+    val activity = LocalActivity.current
     pushSettings.add("Share push token" to {
         CoroutineScope(Dispatchers.Main).launch {
-            sharePushToken(context!!)
+            sharePushToken(activity!!)
         }
     })
 
+    val context = LocalContext.current
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
-    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {triggerMockDeepLinkNotification()})
+    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {triggerMockDeepLinkNotification(context)})
 
     Text(
         "Settings",
@@ -130,9 +132,20 @@ suspend fun getCurrentToken() {
     }
 }
 
-fun triggerMockDeepLinkNotification() {
+fun triggerMockDeepLinkNotification(context: Context) {
     Timber.d("Triggering mock deep link notification")
-    AttentiveSdk.sendMockNotification("Bonni Cart", "Your cart is ready!", mapOf("attentive_open_action_url" to "bonni://cart"), BonniApp.getInstance())
+    if(AttentiveSdk.isPushPermissionGranted(context).not()){
+        Timber.w("Push permission not granted, cannot send mock notification")
+        Toast.makeText(context, "Push permission not granted", Toast.LENGTH_SHORT).show()
+        return
+    } else {
+        AttentiveSdk.sendMockNotification(
+            "Bonni Cart",
+            "Your cart is ready!",
+            mapOf("attentive_open_action_url" to "bonni://cart"),
+            BonniApp.getInstance()
+        )
+    }
 }
 
 suspend fun sharePushToken(activity: Activity) {

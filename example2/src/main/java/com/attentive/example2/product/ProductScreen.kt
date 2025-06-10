@@ -120,6 +120,7 @@ fun ProductsGrid(
 ) {
     LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
         items(4) { index ->
+            Timber.d("ProductsGrid: index: $index and image id: ${products[index].imageId}")
             ProductCard(index, products[index], onProductViewed, onAddToCart)
         }
     }
@@ -149,13 +150,13 @@ fun ProductCard(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-//        Image(
-//            ImageBitmap.imageResource(item.imageId),
-//            contentDescription = "T shirt",
-//            modifier = Modifier
-//                .fillMaxSize()
-//                .height(285.dp)
-//        )
+        Image(
+            ImageBitmap.imageResource(item.imageId),
+            contentDescription = "T shirt",
+            modifier = Modifier
+                .fillMaxSize()
+                .height(285.dp)
+        )
         ProductTitle(item.item.name!!)
         ProductSubtitle(item.item.price)
         onProductViewed(item.item)
@@ -193,9 +194,10 @@ fun ProductSubtitle(price: Price) {
 @Preview
 @Composable
 fun ProductScreenPreview() {
+    val viewModel = remember { ProductViewModel() }
     ProductScreenContent(
         navHostController = NavHostController(LocalContext.current),
-        ProductViewModel()
+        viewModel
     )
 }
 
