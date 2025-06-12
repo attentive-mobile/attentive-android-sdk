@@ -162,10 +162,11 @@ internal class AttentivePush {
     fun buildLaunchIntent(context: Context, dataMap: Map<String, String>): Intent? {
         val deepLink = dataMap.getOrElse(ATTENTIVE_DEEP_LINK_KEY) { null }
         var launchIntent: Intent? = null
-        if (deepLink != null) {
+        if (deepLink?.isNotBlank() == true) {
             Timber.d("Building launch intent from deep link: $deepLink")
             launchIntent = Intent(Intent.ACTION_VIEW, deepLink.toUri())
         } else {
+            Timber.d("Using launcher activity for package: ${context.packageName}")
             launchIntent =
                 context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
