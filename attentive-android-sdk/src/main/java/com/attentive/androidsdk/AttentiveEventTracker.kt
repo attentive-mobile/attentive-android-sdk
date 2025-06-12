@@ -14,7 +14,7 @@ class AttentiveEventTracker private constructor() {
     internal lateinit var launchTracker: AppLaunchTracker
 
     fun initialize(config: AttentiveConfig) {
-        Timber.i(
+        Timber.d(
             "Initializing Attentive SDK with attn domain %s and mode %s",
             config.domain,
             config.mode
@@ -22,12 +22,18 @@ class AttentiveEventTracker private constructor() {
 
         synchronized(AttentiveEventTracker::class.java) {
             if (this.config != null) {
-                Timber.w("Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime")
+                Timber.e("Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime")
             }
             this.config = config
-        }
 
-        launchTracker = AppLaunchTracker(config.applicationContext)
+
+            if (!::launchTracker.isInitialized) {
+                Timber.d("Initializing AppLaunchTracker")
+                launchTracker = AppLaunchTracker(config.applicationContext)
+            } else {
+                Timber.d("AppLaunchTracker already initialized")
+            }
+        }
     }
 
     fun recordEvent(event: Event) {
