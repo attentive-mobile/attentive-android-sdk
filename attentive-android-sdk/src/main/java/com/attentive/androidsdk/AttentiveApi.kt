@@ -782,7 +782,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
         const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
         const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
-        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "dev.mobile.attentivemobile.com"
+//        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.dev.attentivemobile.com"
 
         private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
             val productViewMetadata = ProductViewMetadataDto()
