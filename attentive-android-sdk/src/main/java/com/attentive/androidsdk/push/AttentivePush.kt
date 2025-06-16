@@ -36,7 +36,6 @@ import androidx.core.net.toUri
 
 internal class AttentivePush {
 
-    val ATTENTIVE_DEEP_LINK_KEY = "attentive_open_action_url"
 
     internal suspend fun fetchPushToken(
         context: Context,
@@ -89,9 +88,10 @@ internal class AttentivePush {
         val body = remoteMessage.data.getOrElse("attentive_message_body") { null }
 
         if (title != null && body != null) {
-            //todo nullability check
-            val context = AttentiveEventTracker.instance.config?.applicationContext!!
-            sendNotification(title, body, remoteMessage.data, notificationIconId, context)
+            val context = AttentiveEventTracker.instance.config?.applicationContext
+            context?.let {
+                sendNotification(title, body, remoteMessage.data, notificationIconId, it)
+            }
         } else {
             Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
         }
@@ -178,7 +178,9 @@ internal class AttentivePush {
 
 
     companion object {
+        const val ATTENTIVE_DEEP_LINK_KEY = "attentive_open_action_url"
         lateinit var INSTANCE: AttentivePush
+
         fun getInstance(): AttentivePush {
             if (!::INSTANCE.isInitialized) {
                 INSTANCE = AttentivePush()
