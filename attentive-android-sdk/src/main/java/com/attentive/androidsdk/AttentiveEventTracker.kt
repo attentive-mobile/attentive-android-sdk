@@ -83,34 +83,29 @@ class AttentiveEventTracker private constructor() {
     ) {
         verifyInitialized()
         config?.let { config ->
-            TokenProvider.getInstance().getToken(config.applicationContext).run {
-                if (isSuccess) {
-                    var token = getOrNull()?.token ?: ""
-                    if (token.isEmpty()) {
+            TokenProvider.getInstance().getToken(config.applicationContext).let {
+                if (it.isSuccess) {
+                    var token = it.getOrNull()?.token
+                    if (token == null) {
                         Timber.e("TokenFetchResult is null")
+                        token = ""
                     }
-                }
-                TokenProvider.getInstance().getToken(config.applicationContext).let {
-                    if (it.isSuccess) {
-                        var token = it.getOrNull()?.token
-                        if (token == null) {
-                            Timber.e("TokenFetchResult is null")
-                            token = ""
-                        }
-                        val permissionGranted = it.getOrNull()?.permissionGranted!!
-                        config.attentiveApi.sendDirectOpenStatus(
-                            launchType,
-                            token,
-                            callbackMap,
-                            permissionGranted,
-                            config.userIdentifiers,
-                            config.domain
-                        )
-                    }
+                    val permissionGranted = it.getOrNull()?.permissionGranted!!
+                    config.attentiveApi.sendDirectOpenStatus(
+                        launchType,
+                        token,
+                        callbackMap,
+                        permissionGranted,
+                        config.userIdentifiers,
+                        config.domain
+                    )
+                } else {
+                    Timber.e("Failed to fetch push token: ${it.exceptionOrNull()?.message}")
                 }
             }
         }
     }
+
 
 
 

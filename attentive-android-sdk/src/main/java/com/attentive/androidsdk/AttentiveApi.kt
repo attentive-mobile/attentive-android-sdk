@@ -17,6 +17,7 @@ import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
+import com.attentive.androidsdk.push.AttentivePush
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -681,6 +682,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         })
     }
 
+    private var lastLaunchEventTimeStamp = 0L
+
     private fun sendDirectOpenStatusInternal(
         launchType: LaunchType,
         pushToken: String,
@@ -689,7 +692,21 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         userIdentifiers: UserIdentifiers,
         geoAdjustedDomain: String,
     ) {
+
         Timber.d("sendDirectOpenStatusInternal called with alaunchType: %s", launchType.value)
+
+        //TODO root cause triage this
+        if(lastLaunchEventTimeStamp == 0L){
+            lastLaunchEventTimeStamp = System.currentTimeMillis()
+        } else if(System.currentTimeMillis() - lastLaunchEventTimeStamp < 3000){
+            Timber.d("Debouncing launch event because it was sent too recently (<3 seconds ago).")
+            return
+        } else {
+            var delta = System.currentTimeMillis() - lastLaunchEventTimeStamp
+            Timber.d("Delta $delta ms since last launch event, sending.")
+            lastLaunchEventTimeStamp = System.currentTimeMillis()
+        }
+
         val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
         val metadataJson: String
         val metadata: Metadata
@@ -705,7 +722,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         }
 
         //TODO
-        //val pd = "${buildExtraParametersWithDeeplink("")}"
+        val deepLink = callbackMap[AttentivePush.ATTENTIVE_DEEP_LINK_KEY]
+//        val pd = "${buildExtraParametersWithDeeplink(deepLink)}"
 
         // Build the data array from callbackMap
         val dataArray = callbackMap.entries.joinToString(separator = ",") { entry ->
@@ -746,6 +764,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         "m": $metadataJson,
         "pt": "$pushToken",
         "st": "$permissionGranted",
+        "pd": "$deepLink",
         "tp": "fcm"
         }
     }
