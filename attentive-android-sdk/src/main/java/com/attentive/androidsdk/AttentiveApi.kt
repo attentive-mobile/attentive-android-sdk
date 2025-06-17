@@ -721,8 +721,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             return
         }
 
-        var deepLink = callbackMap[AttentivePush.ATTENTIVE_DEEP_LINK_KEY]
-        if(deepLink == null) deepLink = ""
+//        var deepLink = callbackMap[AttentivePush.ATTENTIVE_DEEP_LINK_KEY]
+//        if(deepLink == null) deepLink = ""
 
         // Build the data array from callbackMap
         val dataArray = callbackMap.entries.joinToString(separator = ",") { entry ->
@@ -763,7 +763,6 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
         "m": $metadataJson,
         "pt": "$pushToken",
         "st": "$permissionGranted",
-        "pd": "$deepLink",
         "tp": "fcm"
         }
     }
