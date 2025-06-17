@@ -721,9 +721,8 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             return
         }
 
-        //TODO
-        val deepLink = callbackMap[AttentivePush.ATTENTIVE_DEEP_LINK_KEY]
-//        val pd = "${buildExtraParametersWithDeeplink(deepLink)}"
+        var deepLink = callbackMap[AttentivePush.ATTENTIVE_DEEP_LINK_KEY]
+        if(deepLink == null) deepLink = ""
 
         // Build the data array from callbackMap
         val dataArray = callbackMap.entries.joinToString(separator = ",") { entry ->
