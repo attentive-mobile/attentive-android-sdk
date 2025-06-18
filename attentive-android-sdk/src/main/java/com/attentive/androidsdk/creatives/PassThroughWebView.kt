@@ -1,12 +1,12 @@
-
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.view.MotionEvent
 import timber.log.Timber
 
 class PassThroughWebView @JvmOverloads constructor(
@@ -18,12 +18,14 @@ class PassThroughWebView @JvmOverloads constructor(
     private var overlayFullscreen = false
     private val handler = Handler(Looper.getMainLooper())
     private val bubbleRect = Rect(0, 0, 0, 0)
-    internal var currentWebScale = 1.0f
 
     init {
         settings.javaScriptEnabled = true
         addJavascriptInterface(OverlayStateBridge(), "AndroidOverlayBridge")
+        isFocusable = true
+        isFocusableInTouchMode = true
     }
+
 
     internal fun injectStateWatcher() {
         val js = """
@@ -71,6 +73,17 @@ class PassThroughWebView @JvmOverloads constructor(
         evaluateJavascript(js, null)
     }
 
+    override fun performClick(): Boolean {
+        return super.performClick()
+    }
+
+    /***
+     * Expose for automated testing frameworks.
+     */
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         return if (overlayFullscreen) {
             Timber.d("Overlay is fullscreen, passing touch event to WebView")
@@ -89,11 +102,15 @@ class PassThroughWebView @JvmOverloads constructor(
         }
     }
 
-
-
     inner class OverlayStateBridge {
         @JavascriptInterface
-        fun onOverlayStateChanged(state: String, left: Float, top: Float, width: Float, height: Float) {
+        fun onOverlayStateChanged(
+            state: String,
+            left: Float,
+            top: Float,
+            width: Float,
+            height: Float
+        ) {
             Timber.d("Overlay state changed: state=$state, left=$left, top=$top, width=$width, height=$height")
             overlayFullscreen = state == "fullscreen"
             if (!overlayFullscreen && width > 0 && height > 0) {
