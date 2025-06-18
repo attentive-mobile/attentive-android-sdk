@@ -149,7 +149,7 @@ internal class AttentivePush {
             val channel = NotificationChannel(
                 channelId,
                 "Marketing",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             )
             notificationManager.createNotificationChannel(channel)
         }
