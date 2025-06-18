@@ -1,22 +1,18 @@
 package com.attentive.example2.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Settings.Global.getString
-import android.util.Log
+import android.os.Build
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,22 +27,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.creatives.Creative
-import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
-import com.attentive.example2.AttentiveApp
+import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -57,7 +51,6 @@ fun SettingsScreen(navHostController: NavHostController) {
 fun SettingsScreenContent(navHostController: NavHostController) {
     val activity = LocalActivity.current
 
-    // Create the FrameLayout first
     val frameLayout = remember {
         FrameLayout(activity!!.baseContext).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -67,7 +60,6 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         }
     }
 
-    // Remember the Creative instance
     val creative = remember {
         Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
     }
@@ -88,14 +80,29 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to {creative.trigger()})
+    creativeSettings.add("Show Creatives" to { creative.trigger() })
     creativeSettings.add("Identify Users" to {})
     creativeSettings.add("Clear Users" to {})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
-    pushSettings.add("Display current push token" to {getCurrentToken()})
+    pushSettings.add("Display current push token" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            getCurrentToken()
+        }
+    })
+
+    val activity = LocalActivity.current
+    pushSettings.add("Share push token" to {
+        CoroutineScope(Dispatchers.Main).launch {
+            sharePushToken(activity!!)
+        }
+    })
+
     val context = LocalContext.current
-    pushSettings.add("Share push token" to {sharePushToken(context)})
+    val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
+    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {triggerMockDeepLinkNotification(context, withDeepLink = true)})
+    deepLinkSettings.add("Trigger No Deep Link Notification" to {triggerMockDeepLinkNotification(context, withDeepLink = false)})
+
     Text(
         "Settings",
         modifier = Modifier
@@ -109,67 +116,85 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         SettingGroup(debugSettings)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
+        SettingGroup(deepLinkSettings)
         FeatureThatRequiresPushPermission()
     }
 }
 
-fun getCurrentToken(){
-    FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
-            return@OnCompleteListener
+suspend fun getCurrentToken() {
+    val context = BonniApp.getInstance()
+    AttentiveSdk.getPushToken(context, requestPermission = false).let {
+        if (it.isSuccess) {
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(context, "Push token: ${it.getOrNull()?.token}", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
-
-        // Get new FCM registration token
-        val token = task.result
-
-        // Log and toast
-        Log.d("Attentive", "Firebase push token = $token")
-        Toast.makeText(AttentiveApp.getInstance(), token, Toast.LENGTH_SHORT).show()
-    })
-
-}
-
-fun sharePushToken(context: Context) {
-    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            Log.w("Attentive", "Fetching FCM registration token failed", task.exception)
-            return@addOnCompleteListener
-        }
-
-        // Get the push token
-        val token = task.result
-
-
-
-        // Create a share intent
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "Push Token: $token")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
-        }
-
-        // Start the share intent
-        context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
-
-        // Notify the user
-        Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
-        Log.d("Attentive", "Push token shared: $token")
     }
 }
 
+fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
+    Timber.d("Triggering mock notification with deep link: $withDeepLink")
+    var dataMap: Map<String, String>
+    if(withDeepLink){
+        dataMap = mapOf("attentive_open_action_url" to "bonni://cart")
+    } else {
+        dataMap = mapOf("attentive_open_action_url" to "")
+    }
+    if(AttentiveSdk.isPushPermissionGranted(context).not()){
+        Timber.w("Push permission not granted, cannot send mock notification")
+        Toast.makeText(context, "Push permission not granted", Toast.LENGTH_SHORT).show()
+        return
+    } else {
+        AttentiveSdk.sendMockNotification(
+            "Bonni Cart",
+            "Your cart is ready!",
+            dataMap,
+            BonniApp.getInstance()
+        )
+    }
+}
+
+suspend fun sharePushToken(activity: Activity) {
+    AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = false).let {
+        if (it.isSuccess) {
+            val token = it.getOrNull()?.token
+            if (token != null) {
+                // Create a share intent
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, token)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+
+                activity.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
+
+                Toast.makeText(BonniApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT)
+                    .show()
+
+                Timber.d("Push token shared: $token")
+            } else {
+                Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
 
 @Composable
 fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
 ) {
-    Column() {
+    Column {
         for (titleToDestination in titlesToDestinations) {
             Setting(title = titleToDestination.first, onClick = titleToDestination.second)
         }
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
 }
+
 
 @Composable
 fun SettingGroupInvokableComposable(
@@ -226,6 +251,7 @@ fun HorizontalLine(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun FeatureThatRequiresPushPermission() {
+    val context = LocalContext.current
 
     // Camera permission state
     val pushPermissionState = rememberPermissionState(
@@ -233,20 +259,39 @@ private fun FeatureThatRequiresPushPermission() {
     )
 
     if (pushPermissionState.status.isGranted) {
-        Text(
-            "Push permission Granted",
-            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            modifier = Modifier
-                .padding(8.dp)
-        )
-    } else {
         Column {
-            val textToShow = "Request push permission"
-            Text(  text = textToShow,
+            Text(
+                "Push permission Granted",
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
-                    .clickable { pushPermissionState.launchPermissionRequest()  })
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Text(
+                    "Revoke push permission after app restart",
+                    fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clickable {
+                            context.revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                )
+            }
+        }
+    } else {
+        Column {
+            val textToShow = "Request push permission"
+            Text(
+                text = textToShow,
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = true)
+                        }
+                    }
+            )
         }
     }
 }
