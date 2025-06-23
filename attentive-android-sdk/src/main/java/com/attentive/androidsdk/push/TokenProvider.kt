@@ -18,21 +18,7 @@ class TokenProvider {
 
     internal suspend fun getToken(context: Context): Result<TokenFetchResult> {
         Timber.d("getToken")
-        var clientWillHandlePushToken = false
-//        AttentiveEventTracker.instance.config?.clientWillHandlePushToken?.let {
-//            clientWillHandlePushToken = it
-//        }
-
-        if (clientWillHandlePushToken.not()) {
-            return getTokenFromFirebase(context)
-        } else {
-            if (token == null) {
-                Timber.e("AttentiveConfig is configured for the host app to provide the push token. Please set the token manually.")
-                return Result.failure(Exception("Token not set and fetchFromFirebase is false"))
-            } else {
-               return Result.success(TokenFetchResult(token!!, permissionGranted = AttentivePush.getInstance().checkPushPermission(context)))
-            }
-        }
+        return getTokenFromFirebase(context)
     }
 
     internal suspend fun getTokenFromFirebase(context: Context): Result<TokenFetchResult> {
@@ -46,7 +32,8 @@ class TokenProvider {
                         Result.success(
                             TokenFetchResult(
                                 token,
-                                permissionGranted = AttentivePush.getInstance().checkPushPermission(context)
+                                permissionGranted = AttentivePush.getInstance()
+                                    .checkPushPermission(context)
                             )
                         )
                     )
