@@ -250,7 +250,7 @@ Fetch a push token and optionally show permission request:
         }
 ```
 
-For Java interop use the getPushTokenWithCallback() function instead :
+For Java interop use the ```getPushTokenWithCallback()``` function instead :
 ```java
 AttentiveSdk.getPushTokenWithCallback(application, requestPermission, new AttentiveSdk.PushTokenCallback() {
             @Override
