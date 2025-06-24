@@ -250,6 +250,23 @@ Fetch a push token and optionally show permission request:
         }
 ```
 
+For Java interop use the getPushTokenWithCallback() function instead :
+```java
+AttentiveSdk.getPushTokenWithCallback(application, requestPermission, new AttentiveSdk.PushTokenCallback() {
+            @Override
+            public void onSuccess(@NotNull TokenFetchResult result) {
+                String token = result.getToken();
+                System.out.println("Push token fetched successfully: " + token);
+            }
+
+            @Override
+            public void onFailure(@NotNull Exception exception) {
+
+            }
+        });
+    }
+```
+
 If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK.
 
 First check that is a message from Attentive, then send it over.
