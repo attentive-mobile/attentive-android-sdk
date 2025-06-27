@@ -1,5 +1,6 @@
 package com.attentive.androidsdk.creatives
 
+import PassThroughWebView
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
@@ -39,7 +40,7 @@ class Creative internal constructor(
     private var parentView: View,
     private var activity: Activity? = null,
     @set:VisibleForTesting
-    internal var webView: WebView? = null,
+    internal var webView: PassThroughWebView? = null,
     @SuppressLint("SupportAnnotationUsage") @VisibleForTesting
     private val handler: Handler = Handler(Looper.getMainLooper())
 ) {
@@ -121,7 +122,12 @@ class Creative internal constructor(
         changeWebViewVisibility(false)
         val width = parentView.width
         val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width, height)
+        val layoutParams = ViewGroup.LayoutParams(width,height)
+        webView?.let {
+            it.setBackgroundColor(Color.TRANSPARENT)
+            Timber.d("Set webview background color to transparent")
+        }
+
         (parentView as ViewGroup).addView(webView, layoutParams)
     }
 
@@ -220,8 +226,8 @@ class Creative internal constructor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    internal fun createWebView(parentView: View): WebView {
-        val view = WebView(parentView.context)
+    internal fun createWebView(parentView: View): PassThroughWebView {
+        val view = PassThroughWebView(parentView.context)
         val webSettings = view.settings
 
         // Security settings, allow JavaScript to run
@@ -288,6 +294,7 @@ class Creative internal constructor(
                 if (view.progress == 100) {
                     Timber.d("Page finished loading")
                     view.loadUrl(CREATIVE_LISTENER_JS)
+                    webView?.injectStateWatcher()
                 }
             }
 

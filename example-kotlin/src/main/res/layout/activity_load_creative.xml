@@ -5,7 +5,7 @@
     android:id="@+id/loadCreative"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#D9D8D8"
+    android:background="@color/teal_200"
     tools:context="com.attentive.example_kotlin.activities.LoadCreativeActivity">
 
         <View
