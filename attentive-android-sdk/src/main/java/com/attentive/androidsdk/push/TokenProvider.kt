@@ -38,9 +38,7 @@ class TokenProvider {
                         )
                     )
                 } else {
-                    continuation.resumeWithException(
-                        task.exception ?: Exception("Token fetch failed")
-                    )
+                    continuation.resume (Result.failure(Exception("Token fetch failed: ${task.exception?.message}")))
                 }
             }
         }
