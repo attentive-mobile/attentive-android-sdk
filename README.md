@@ -30,12 +30,15 @@ __*** NOTE: Please refrain from using any private or undocumented classes or met
 
 ## Step 1 - SDK initialization
 ```kotlin
-// Create an AttentiveConfig with your attentive domain, in production mode, with any Android context *
+// Create an AttentiveConfig with your attentive domain, in production mode, with an Application context
 val attentiveConfig = AttentiveConfig.Builder()
         .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
         .build()
+
+// Add a notification icon drawable id if using push
+        .notificationIconId(R.drawable.your_notification_icon)
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 val attentiveConfig = AttentiveConfig.Builder()
@@ -44,8 +47,6 @@ val attentiveConfig = AttentiveConfig.Builder()
         .mode(AttentiveConfig.Mode.DEBUG)
         .build()
 ```
-
-\* The `context` constructor parameter is of type [Context](https://developer.android.com/reference/android/content/Context)
 
 ### Initialize the Event Tracker
 ```kotlin
