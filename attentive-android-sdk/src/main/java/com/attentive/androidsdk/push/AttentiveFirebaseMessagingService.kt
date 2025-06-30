@@ -1,5 +1,6 @@
 package com.attentive.androidsdk.push
 
+import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -25,7 +26,8 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
         Timber.d(remoteMessage.data.toString())
 
         if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
-            AttentiveSdk.sendNotification(remoteMessage)
+            var notificationIconId = AttentiveEventTracker.instance.config?.notificationIconId ?: 0
+            AttentiveSdk.sendNotification(remoteMessage, notificationIconId)
         }
     }
 

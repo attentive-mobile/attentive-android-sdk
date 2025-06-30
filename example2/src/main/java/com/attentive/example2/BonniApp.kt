@@ -24,6 +24,7 @@ class BonniApp : Application() {
                 .Builder()
                 .applicationContext(this)
                 .domain("games")
+                .notificationIconId(R.drawable.bonni_logo)
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 
@@ -33,8 +34,6 @@ class BonniApp : Application() {
         attentiveConfig.identify(userIdentifiers)
 
         AttentiveEventTracker.instance.initialize(attentiveConfig)
-
-//        AttentiveSdk.sendMockNotification("Bonni Beauty", "Welcome to Bonni Beauty! We are excited to have you here. Check out our latest products and offers.", R.drawable.ic_stat_emoji_nature, this)
     }
 
     companion object {
