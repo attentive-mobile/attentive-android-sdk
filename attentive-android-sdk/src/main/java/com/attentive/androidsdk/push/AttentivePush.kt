@@ -132,6 +132,7 @@ internal class AttentivePush {
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setContentIntent(contentPendingIntent)
