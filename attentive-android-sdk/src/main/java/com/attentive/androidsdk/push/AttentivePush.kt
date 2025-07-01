@@ -132,6 +132,7 @@ internal class AttentivePush {
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setContentTitle(messageTitle)
             .setContentText(messageBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setContentIntent(contentPendingIntent)
@@ -164,7 +165,10 @@ internal class AttentivePush {
         var launchIntent: Intent? = null
         if (deepLink?.isNotBlank() == true) {
             Timber.d("Building launch intent from deep link: $deepLink")
-            launchIntent = Intent(Intent.ACTION_VIEW, deepLink.toUri())
+            launchIntent = Intent(Intent.ACTION_VIEW, deepLink.toUri()).apply {
+                //Only search for matching intent filters in the consuming app
+                `package` = context.packageName
+            }
         } else {
             Timber.d("Using launcher activity for package: ${context.packageName}")
             launchIntent =

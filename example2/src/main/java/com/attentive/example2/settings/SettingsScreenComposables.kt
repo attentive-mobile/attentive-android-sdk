@@ -10,7 +10,10 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
@@ -27,9 +30,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.BonniApp
 import com.attentive.example2.R
@@ -60,13 +65,22 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         }
     }
 
+
     val creative = remember {
         Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        SettingsList(creative, navHostController)
+        Box(modifier = Modifier.fillMaxWidth().weight(1f))
+        {
+            SettingsList(creative, navHostController)
+            AndroidView(
+                factory = { frameLayout },
+                modifier = Modifier
+                    .fillMaxSize(),
+            )
+        }
     }
 }
 
@@ -81,8 +95,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
     creativeSettings.add("Show Creatives" to { creative.trigger() })
-    creativeSettings.add("Identify Users" to {})
-    creativeSettings.add("Clear Users" to {})
+    creativeSettings.add("Identify User" to {identifyUser()})
+    creativeSettings.add("Clear Users" to {clearUsers()})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {
@@ -100,9 +114,21 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     val context = LocalContext.current
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
-    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {triggerMockDeepLinkNotification(context, withDeepLink = true)})
-    deepLinkSettings.add("Trigger No Deep Link Notification" to {triggerMockDeepLinkNotification(context, withDeepLink = false)})
+    deepLinkSettings.add("Trigger Cart Deep Link Notification" to {
+        triggerMockDeepLinkNotification(
+            context,
+            withDeepLink = true
+        )
+    })
+    deepLinkSettings.add("Trigger No Deep Link Notification" to {
+        triggerMockDeepLinkNotification(
+            context,
+            withDeepLink = false
+        )
+    })
 
+
+    Column() {
     Text(
         "Settings",
         modifier = Modifier
@@ -111,9 +137,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         textAlign = TextAlign.Start,
         fontSize = 20.sp
     )
-    Column() {
-        SettingGroup(accountSettings)
-        SettingGroup(debugSettings)
+        SettingGroup(accountSettings, enabled = false)
+        SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
         SettingGroup(deepLinkSettings)
@@ -141,19 +166,36 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
     } else {
         dataMap = mapOf("attentive_open_action_url" to "")
     }
-    if(AttentiveSdk.isPushPermissionGranted(context).not()){
+    if (AttentiveSdk.isPushPermissionGranted(context).not()) {
         Timber.w("Push permission not granted, cannot send mock notification")
         Toast.makeText(context, "Push permission not granted", Toast.LENGTH_SHORT).show()
         return
     } else {
         AttentiveSdk.sendMockNotification(
             "Bonni Cart",
-            "Your cart is ready!",
+            "Your cart is ready! Your cart is ready!Your cart is readyYour cart is ready!Your cart is ready!Your cart is ready!Your cart is reaYour cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!dy!!",
             dataMap,
             R.drawable.bonni_logo,
             BonniApp.getInstance()
         )
     }
+}
+
+
+fun identifyUser(){
+   val identifiers =  UserIdentifiers.Builder()
+        .withClientUserId("BonniAndroid")
+        .withPhone("+15556667777")
+        .withEmail("bonni@bonnibeauty.com").build()
+    AttentiveEventTracker.instance.config?.identify(identifiers)
+    Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
+
+}
+
+fun clearUsers() {
+    Timber.d("Clearing users")
+    AttentiveEventTracker.instance.config?.clearUser()
+    Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
 }
 
 suspend fun sharePushToken(activity: Activity) {
@@ -176,10 +218,15 @@ suspend fun sharePushToken(activity: Activity) {
 
                 Timber.d("Push token shared: $token")
             } else {
-                Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    BonniApp.getInstance(),
+                    "Failed to fetch push token",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         } else {
-            Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT).show()
+            Toast.makeText(BonniApp.getInstance(), "Failed to fetch push token", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 }
@@ -187,10 +234,11 @@ suspend fun sharePushToken(activity: Activity) {
 @Composable
 fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
+    enabled: Boolean = true,
 ) {
     Column {
         for (titleToDestination in titlesToDestinations) {
-            Setting(title = titleToDestination.first, onClick = titleToDestination.second)
+            Setting(title = titleToDestination.first, enabled = enabled, onClick = titleToDestination.second)
         }
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
@@ -214,10 +262,11 @@ fun SettingGroupInvokableComposable(
 
 
 @Composable
-fun Setting(title: String, onClick: () -> Unit) {
+fun Setting(title: String, enabled: Boolean, onClick: () -> Unit) {
     Text(
         text = title,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        color = if (enabled) Color.Unspecified else Color.Gray,
         modifier = Modifier
             .padding(8.dp)
             .clickable { onClick() }
@@ -289,7 +338,10 @@ private fun FeatureThatRequiresPushPermission() {
                     .padding(8.dp)
                     .clickable {
                         CoroutineScope(Dispatchers.Main).launch {
-                            AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = true)
+                            AttentiveSdk.getPushToken(
+                                BonniApp.getInstance(),
+                                requestPermission = true
+                            )
                         }
                     }
             )
