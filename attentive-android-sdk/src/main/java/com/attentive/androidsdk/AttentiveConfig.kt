@@ -37,7 +37,6 @@ import timber.log.Timber
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
-        Timber.d("skipFatigueOnCreatives called")
         return skipFatigueOnCreatives
     }
 

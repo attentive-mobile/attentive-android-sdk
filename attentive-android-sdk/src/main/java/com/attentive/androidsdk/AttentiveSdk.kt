@@ -35,8 +35,8 @@ object AttentiveSdk {
     /**
      * Forwards a push message to the SDK to display the notification.
      */
-    fun sendNotification(remoteMessage: RemoteMessage, notificationIconId: Int = 0) {
-        AttentivePush.getInstance().sendNotification(remoteMessage, notificationIconId)
+    fun sendNotification(remoteMessage: RemoteMessage) {
+        AttentivePush.getInstance().sendNotification(remoteMessage)
     }
 
     @VisibleForTesting
@@ -44,10 +44,9 @@ object AttentiveSdk {
         title: String,
         body: String,
         dataMap: Map<String, String>,
-        notificationIconId: Int = 0,
         application: Application
     ) {
-        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, notificationIconId = notificationIconId, context = application)
+        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, context = application)
     }
 
     /**
