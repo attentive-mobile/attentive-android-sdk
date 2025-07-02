@@ -35,10 +35,11 @@ val attentiveConfig = AttentiveConfig.Builder()
         .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
+        // Add a notification icon drawable id if using push
+        .notificationIconId(R.drawable.your_notification_icon)
         .build()
 
-// Add a notification icon drawable id if using push
-        .notificationIconId(R.drawable.your_notification_icon)
+
 
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 val attentiveConfig = AttentiveConfig.Builder()
