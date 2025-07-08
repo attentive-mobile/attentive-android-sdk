@@ -1,22 +1,21 @@
 package com.attentive.example2.settings
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Settings.Global.getString
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,21 +31,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
-import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
 import com.attentive.example2.AttentiveApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -74,7 +69,16 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        SettingsList(creative, navHostController)
+        Box(modifier = Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.ime))
+        {
+            SettingsList(creative, navHostController)
+            AndroidView(
+                factory = { frameLayout },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.ime)
+            )
+        }
     }
 }
 
@@ -153,7 +157,7 @@ fun sharePushToken(context: Context) {
         context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
 
         // Notify the user
-        Toast.makeText( AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(AttentiveApp.getInstance(), "Sharing push token...", Toast.LENGTH_SHORT).show()
         Log.d("Attentive", "Push token shared: $token")
     }
 }

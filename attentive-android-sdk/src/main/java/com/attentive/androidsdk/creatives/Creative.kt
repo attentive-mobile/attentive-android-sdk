@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams
 import android.view.ViewTreeObserver
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -122,7 +123,7 @@ class Creative internal constructor(
         changeWebViewVisibility(false)
         val width = parentView.width
         val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width,height)
+        val layoutParams = ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.MATCH_PARENT)
         webView?.let {
             it.setBackgroundColor(Color.TRANSPARENT)
             Timber.d("Set webview background color to transparent")

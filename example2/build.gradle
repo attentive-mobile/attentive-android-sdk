@@ -82,4 +82,7 @@ dependencies {
 
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation("androidx.room:room-ktx:$room_version")
+
+    implementation 'com.jakewharton.timber:timber:4.7.1'
+
 }
