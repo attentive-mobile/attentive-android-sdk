@@ -1,6 +1,7 @@
 package com.attentive.androidsdk
 
 import android.app.Application
+import androidx.annotation.ColorRes
 
 
 interface AttentiveConfigInterface {
@@ -9,6 +10,7 @@ interface AttentiveConfigInterface {
     var userIdentifiers: UserIdentifiers
     val applicationContext: Application
     var notificationIconId: Int
+    var notificationIconBackgroundColorResource: Int
     var logLevel: AttentiveLogLevel?
 
     fun skipFatigueOnCreatives(): Boolean

@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Resources
+import android.graphics.Color
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -141,6 +143,15 @@ internal class AttentivePush {
             notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
         } else {
             notificationBuilder.setSmallIcon(notificationIconId)
+        }
+
+        val notificationIconBackgroundColorResourceId =
+            AttentiveEventTracker.instance.config?.notificationIconBackgroundColorResource ?: 0
+
+        if (notificationIconBackgroundColorResourceId != 0) {
+            notificationBuilder
+                .setColorized(true)
+                .setColor(ContextCompat.getColor(context, notificationIconBackgroundColorResourceId))
         }
 
         // Create channel

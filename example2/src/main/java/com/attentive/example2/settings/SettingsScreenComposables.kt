@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
@@ -175,7 +176,6 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
             "Bonni Cart",
             "Your cart is ready! Your cart is ready!Your cart is readyYour cart is ready!Your cart is ready!Your cart is ready!Your cart is reaYour cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!dy!!",
             dataMap,
-            R.drawable.bonni_logo,
             BonniApp.getInstance()
         )
     }
