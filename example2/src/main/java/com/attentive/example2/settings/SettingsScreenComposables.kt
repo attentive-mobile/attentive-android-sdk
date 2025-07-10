@@ -176,6 +176,7 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
             "Bonni Cart",
             "Your cart is ready! Your cart is ready!Your cart is readyYour cart is ready!Your cart is ready!Your cart is ready!Your cart is reaYour cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!dy!!",
             dataMap,
+            R.drawable.bonni_logo,
             BonniApp.getInstance()
         )
     }

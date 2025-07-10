@@ -40,7 +40,6 @@ val attentiveConfig = AttentiveConfig.Builder()
         .build()
 
 
-
 // Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
 val attentiveConfig = AttentiveConfig.Builder()
         .applicationContext(getApplicationContext())

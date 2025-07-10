@@ -160,6 +160,7 @@ import timber.log.Timber
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
+
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
             this.okHttpClient = okHttpClient

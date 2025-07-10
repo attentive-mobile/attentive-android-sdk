@@ -44,9 +44,10 @@ object AttentiveSdk {
         title: String,
         body: String,
         dataMap: Map<String, String>,
+        notificationIconId: Int = 0,
         application: Application
     ) {
-        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, context = application)
+        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, notificationIconId = notificationIconId, context = application)
     }
 
     /**
