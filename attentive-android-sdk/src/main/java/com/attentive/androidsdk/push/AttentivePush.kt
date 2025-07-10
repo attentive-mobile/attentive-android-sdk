@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Resources
+import android.graphics.Color
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -77,7 +79,7 @@ internal class AttentivePush {
         }
     }
 
-    internal fun sendNotification(remoteMessage: RemoteMessage, notificationIconId: Int) {
+    internal fun sendNotification(remoteMessage: RemoteMessage) {
         Timber.d("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
@@ -90,7 +92,7 @@ internal class AttentivePush {
         if (title != null && body != null) {
             val context = AttentiveEventTracker.instance.config?.applicationContext
             context?.let {
-                sendNotification(title, body, remoteMessage.data, notificationIconId, it)
+                sendNotification(title, body, remoteMessage.data, it)
             }
         } else {
             Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
@@ -103,7 +105,6 @@ internal class AttentivePush {
         messageTitle: String,
         messageBody: String,
         dataMap: Map<String, String>,
-        notificationIconId: Int = 0,
         context: Context
     ) {
         val channelId = "fcm_default_channel"
@@ -137,10 +138,20 @@ internal class AttentivePush {
             .setSound(defaultSoundUri)
             .setContentIntent(contentPendingIntent)
 
+        val notificationIconId = AttentiveEventTracker.instance.config?.notificationIconId ?: 0
         if (notificationIconId == 0) {
             notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
         } else {
             notificationBuilder.setSmallIcon(notificationIconId)
+        }
+
+        val notificationIconBackgroundColorResourceId =
+            AttentiveEventTracker.instance.config?.notificationIconBackgroundColorResource ?: 0
+
+        if (notificationIconBackgroundColorResourceId != 0) {
+            notificationBuilder
+                .setColorized(true)
+                .setColor(ContextCompat.getColor(context, notificationIconBackgroundColorResourceId))
         }
 
         // Create channel

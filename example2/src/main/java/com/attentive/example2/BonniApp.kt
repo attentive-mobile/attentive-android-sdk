@@ -1,6 +1,7 @@
 package com.attentive.example2
 
 import android.app.Application
+import android.graphics.Color
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
@@ -25,6 +26,7 @@ class BonniApp : Application() {
                 .applicationContext(this)
                 .domain("games")
                 .notificationIconId(R.drawable.bonni_logo)
+                .notificationIconBackgroundColor(R.color.purple_200)
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 

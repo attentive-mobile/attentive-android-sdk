@@ -2,6 +2,8 @@ package com.attentive.androidsdk
 
 import android.app.Application
 import android.content.Context
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
@@ -15,6 +17,7 @@ import timber.log.Timber
     override var domain: String = builder._domain
     override val applicationContext = builder._context
     override var notificationIconId: Int = builder._notificationIconId
+    override var notificationIconBackgroundColorResource: Int = builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
 
     private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
@@ -37,7 +40,6 @@ import timber.log.Timber
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
-        Timber.d("skipFatigueOnCreatives called")
         return skipFatigueOnCreatives
     }
 
@@ -124,6 +126,7 @@ import timber.log.Timber
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var _notificationIconId: Int = 0
+        @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
@@ -152,6 +155,11 @@ import timber.log.Timber
         fun notificationIconId(notificationIconId: Int) = apply {
             _notificationIconId = notificationIconId
         }
+
+        fun notificationIconBackgroundColor(@ColorRes colorResourceId: Int) = apply {
+            _notificationIconBackgroundColorResource = colorResourceId
+        }
+
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
