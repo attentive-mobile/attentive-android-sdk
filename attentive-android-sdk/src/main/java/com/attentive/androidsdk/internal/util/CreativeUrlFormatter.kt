@@ -68,7 +68,7 @@ class CreativeUrlFormatter @RestrictTo(RestrictTo.Scope.LIBRARY) constructor() {
         userIdentifiers.klaviyoId?.let { builder.appendQueryParameter("kid", it) }
         userIdentifiers.shopifyId?.let { builder.appendQueryParameter("sid", it) }
 
-        if (userIdentifiers.customIdentifiers.isNotEmpty()) {
+        if (userIdentifiers.customIdentifiers.isNotEmpty() && userIdentifiers.customIdentifiers.values.isNotEmpty()) {
             builder.appendQueryParameter("cstm", getCustomIdentifiersJson(userIdentifiers))
         }
     }

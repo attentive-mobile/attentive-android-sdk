@@ -22,39 +22,54 @@ data class UserIdentifiers(
         private var klaviyoId: String? = null
         private var customIdentifiers: Map<String, String> = emptyMap()
 
-        fun withVisitorId(visitorId: String): Builder = apply {
-            ParameterValidation.verifyNotNull(visitorId, "visitorId")
-            this.visitorId = visitorId
+        internal fun withVisitorId(visitorId: String?): Builder = apply {
+            visitorId?.let {
+                this.visitorId = it
+            }
         }
 
-        fun withClientUserId(clientUserId: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
-            this.clientUserId = clientUserId
+        fun withClientUserId(clientUserId: String?): Builder = apply {
+            clientUserId?.let {
+                this.clientUserId = clientUserId
+            }
         }
 
-        fun withPhone(phone: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(phone, "phone")
-            this.phone = phone
+        fun withPhone(phone: String?): Builder = apply {
+            phone?.let {
+                this.phone = phone
+            }
         }
 
-        fun withEmail(email: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(email, "email")
-            this.email = email
+        fun withEmail(email: String?): Builder = apply {
+            email.let {
+                this.email = email
+            }
         }
 
-        fun withShopifyId(shopifyId: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(shopifyId, "shopifyId")
-            this.shopifyId = shopifyId
+        fun withShopifyId(shopifyId: String?): Builder = apply {
+            shopifyId.let {
+                this.shopifyId = shopifyId
+            }
         }
 
-        fun withKlaviyoId(klaviyoId: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(klaviyoId, "klaviyoId")
-            this.klaviyoId = klaviyoId
+        fun withKlaviyoId(klaviyoId: String?): Builder = apply {
+            klaviyoId?.let {
+                this.klaviyoId = klaviyoId
+            }
         }
 
-        fun withCustomIdentifiers(customIdentifiers: Map<String, String>): Builder = apply {
-            ParameterValidation.verifyNotNull(customIdentifiers, "customIdentifiers")
-            this.customIdentifiers = customIdentifiers.toMap() // Ensures immutability
+        fun withCustomIdentifiers(customIdentifiers: Map<String, String>?): Builder = apply {
+            if (customIdentifiers == null) {
+                this.customIdentifiers = emptyMap() // Default to empty map if null
+                return@apply
+            } else if (customIdentifiers.keys.isEmpty() || customIdentifiers.values.isEmpty()) {
+                this.customIdentifiers = emptyMap() // Default to empty map if empty
+                return@apply
+            } else {
+                this.customIdentifiers = customIdentifiers.toMutableMap().filter {
+                    it.key.isNotEmpty() && it.value.isNotEmpty()
+                }
+            }
         }
 
         fun build(): UserIdentifiers = UserIdentifiers(
