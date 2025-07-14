@@ -26,8 +26,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
         Timber.d(remoteMessage.data.toString())
 
         if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
-            var notificationIconId = AttentiveEventTracker.instance.config?.notificationIconId ?: 0
-            AttentiveSdk.sendNotification(remoteMessage, notificationIconId)
+            AttentiveSdk.sendNotification(remoteMessage)
         }
     }
 
