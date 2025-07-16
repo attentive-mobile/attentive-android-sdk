@@ -358,7 +358,7 @@ class Creative internal constructor(
                     ) && isCreativeOpen.get()
                 ) {
                     Timber.d("document-visibility: true and creative is open, closing creative")
-                    closeCreative()
+                    //closeCreative()
                 }
             }
         }
