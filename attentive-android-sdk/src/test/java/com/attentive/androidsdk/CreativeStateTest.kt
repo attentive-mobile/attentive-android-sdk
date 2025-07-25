@@ -1,5 +1,6 @@
 package com.attentive.androidsdk.creatives
 
+import PassThroughWebView
 import android.app.Activity
 import android.os.Handler
 import android.view.View
@@ -37,7 +38,7 @@ import org.mockito.kotlin.whenever
 class CreativeStateTest {
 
     private lateinit var parentView: View
-    private lateinit var webView: WebView
+    private lateinit var webView: PassThroughWebView
     private lateinit var creative: Creative
     private val testDispatcher = StandardTestDispatcher()
     private val handler: Handler = mock()
@@ -55,7 +56,7 @@ class CreativeStateTest {
 
         val webSettings = mock<WebSettings>{}
 
-        webView = mock<WebView> {
+        webView = mock<PassThroughWebView> {
             on { settings } doReturn webSettings
         }
 
