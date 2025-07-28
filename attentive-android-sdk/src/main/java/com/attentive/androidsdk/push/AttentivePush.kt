@@ -35,6 +35,12 @@ import kotlin.collections.component2
 import kotlin.collections.iterator
 import kotlin.coroutines.resume
 import androidx.core.net.toUri
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import okio.ByteString.Companion.decodeBase64
+import java.net.URL
+import kotlin.text.compareTo
 
 internal class AttentivePush {
 
@@ -89,10 +95,12 @@ internal class AttentivePush {
         }
         val body = remoteMessage.data.getOrElse("attentive_message_body") { null }
 
+        val imageUrl = remoteMessage.getImageUrl()
+
         if (title != null && body != null) {
             val context = AttentiveEventTracker.instance.config?.applicationContext
             context?.let {
-                sendNotification(title, body, remoteMessage.data, it)
+                sendNotification(title, body, remoteMessage.data, imageUrl, it)
             }
         } else {
             Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
@@ -100,11 +108,13 @@ internal class AttentivePush {
     }
 
 
+
     //TODO make private
     internal fun sendNotification(
         messageTitle: String,
         messageBody: String,
         dataMap: Map<String, String>,
+        imageUrl: String?,
         context: Context
     ) {
         val channelId = "fcm_default_channel"
@@ -154,9 +164,31 @@ internal class AttentivePush {
                 .setColor(ContextCompat.getColor(context, notificationIconBackgroundColorResourceId))
         }
 
-        // Create channel
+        if (imageUrl != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val bitmap = imageUrl.getBitmapFromUrl()
+                if (bitmap != null) {
+                    notificationBuilder.setStyle(
+                        NotificationCompat.BigPictureStyle().bigPicture(bitmap)
+                    )
+                }
+                withContext(Dispatchers.Main) {
+                    showNotification(context, channelId, notificationId, notificationBuilder)
+                }
+            }
+        } else {
+            showNotification(context, channelId, notificationId, notificationBuilder)
+        }
+    }
+
+    private fun showNotification(
+        context: Context,
+        channelId: String,
+        notificationId: Int,
+        notificationBuilder: NotificationCompat.Builder
+    ) {
         val notificationManager =
-            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
@@ -165,8 +197,6 @@ internal class AttentivePush {
             )
             notificationManager.createNotificationChannel(channel)
         }
-
-        //Show notification
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
@@ -229,6 +259,37 @@ internal class AttentivePush {
                 context.startActivity(intent)
             }
         }
+    }
+}
+
+private fun RemoteMessage.getImageUrl() : String? {
+    data.getOrElse("attentiveData") { null }?.let {
+        val decoded = it.decodeBase64()?.utf8()
+        decoded?.let {
+            val attentiveDataMap = Json.parseToJsonElement(decoded) as JsonObject
+            return attentiveDataMap.get("attentive_image_url").toString().trim('"')
+        }
+    }
+
+    return null
+}
+
+
+
+
+private suspend fun String.getBitmapFromUrl(): android.graphics.Bitmap? {
+    return try {
+        withContext(Dispatchers.IO) {
+            val connection = URL(this@getBitmapFromUrl).openConnection() as java.net.HttpURLConnection
+            connection.run {
+                doInput = true
+                connect()
+                android.graphics.BitmapFactory.decodeStream(inputStream)
+            }
+        }
+    } catch (e: Exception) {
+        Timber.e(e, "Error loading notification image")
+        null
     }
 }
 
