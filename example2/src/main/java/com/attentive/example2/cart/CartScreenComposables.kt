@@ -169,7 +169,7 @@ fun ItemInCart(item: ExampleCartItem, removeCartItem: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
             Column(verticalArrangement = Arrangement.Top, modifier = Modifier.fillMaxHeight()) {
-                ProductTitle("Title")
+                ProductTitle(item.product.item.name!!)
                 Text(
                     text = "Product Subtitle",
                     fontSize = 12.sp,

@@ -7,6 +7,7 @@ import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
+import com.attentive.example2.database.AppDatabase
 import timber.log.Timber
 
 
@@ -17,6 +18,7 @@ class BonniApp : Application() {
         appInstance = this
         initAttentiveTracker()
         Timber.plant(Timber.DebugTree())
+        AppDatabase.getInstance().initWithMockProducts()
     }
 
     private fun initAttentiveTracker() {
