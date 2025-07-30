@@ -118,7 +118,7 @@ internal class AttentivePush {
         context: Context
     ) {
         val channelId = "fcm_default_channel"
-        val notificationId = 47732113
+        val notificationId = System.currentTimeMillis().toInt()
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         var launchIntent = buildLaunchIntent(context, dataMap)
 

@@ -11,6 +11,9 @@ import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.count
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.math.BigDecimal
@@ -24,11 +27,23 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productItemDao(): ExampleProductDao
     abstract fun accountDao(): AccountDao
 
-    private fun initWithMockProducts() {
+    internal fun initWithMockProducts() {
+        Timber.d("initWithMockProducts")
         CoroutineScope(Dispatchers.IO).launch {
+            val count = productItemDao().getAll().first().count()
+            if( count > 0) {
+                Timber.d("${count}Products already exist, skipping initialization")
+                return@launch
+            }
+            val itemCount = 4
             val imageIds =
-                listOf(R.drawable.superscreen, R.drawable.stick1, R.drawable.balm2, R.drawable.balm3)
-            val names = listOf("Protective Sunscreen","The Stick", "The Balm", "The Balm")
+                listOf(
+                    R.drawable.superscreen,
+                    R.drawable.stick1,
+                    R.drawable.balm2,
+                    R.drawable.balm3
+                )
+            val names = listOf("Protective Sunscreen", "The Stick", "The Balm", "The Balm")
             val prices = listOf(
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
                     .price(BigDecimal(12)).build(),
@@ -39,7 +54,7 @@ abstract class AppDatabase : RoomDatabase() {
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
                     .price(BigDecimal(13)).build()
             )
-            for (i in 0..3) {
+            for (i in 0..(itemCount - 1)) {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
                 val product = ExampleProduct("$i", item, imageIds[i])
@@ -61,13 +76,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 ).build()
-                CoroutineScope(Dispatchers.IO).launch {
-                    instance.productItemDao().getAll().collect {
-                        if (it.isEmpty()) {
-                            instance.initWithMockProducts()
-                        }
-                    }
-                }
                 INSTANCE = instance
                 instance
             }

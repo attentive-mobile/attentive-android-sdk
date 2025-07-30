@@ -119,7 +119,7 @@ fun ProductsGrid(
     onAddToCart: (item: ExampleProduct) -> Unit
 ) {
     LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
-        items(4) { index ->
+        items(products.size) { index ->
             Timber.d("ProductsGrid: index: $index and image id: ${products[index].imageId}")
             ProductCard(index, products[index], onProductViewed, onAddToCart)
         }
