@@ -44,7 +44,6 @@ import kotlin.text.compareTo
 
 internal class AttentivePush {
 
-
     internal suspend fun fetchPushToken(
         context: Context,
         requestPermissionIfNotGranted: Boolean
@@ -85,7 +84,7 @@ internal class AttentivePush {
         }
     }
 
-    internal fun sendNotification(remoteMessage: RemoteMessage) {
+    internal fun sendNotification(remoteMessage: RemoteMessage, context: Context) {
         Timber.d("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
@@ -98,10 +97,7 @@ internal class AttentivePush {
         val imageUrl = remoteMessage.getImageUrl()
 
         if (title != null && body != null) {
-            val context = AttentiveEventTracker.instance.config?.applicationContext
-            context?.let {
-                sendNotification(title, body, remoteMessage.data, imageUrl, it)
-            }
+                sendNotification(title, body, remoteMessage.data, imageUrl, context)
         } else {
             Timber.e("Error parsing notification data: $remoteMessage title $title or body: $body is null")
         }

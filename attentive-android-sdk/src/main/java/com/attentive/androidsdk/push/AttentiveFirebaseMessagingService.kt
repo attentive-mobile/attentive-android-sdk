@@ -26,7 +26,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
         Timber.d(remoteMessage.data.toString())
 
         if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
-            AttentiveSdk.sendNotification(remoteMessage)
+            AttentiveSdk.sendNotification(remoteMessage, this)
         }
     }
 
