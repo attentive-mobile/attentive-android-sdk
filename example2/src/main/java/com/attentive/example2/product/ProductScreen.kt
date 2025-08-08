@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -80,11 +81,16 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                 }
             ) {
                 IconButton(
+
                     onClick = {
                         navHostController.navigate(Routes.CartScreen.name)
                     }
                 ) {
-                    Icon(imageVector = Icons.Filled.ShoppingCart, contentDescription = "Cart")
+                    Icon(
+                        imageVector = Icons.Filled.ShoppingCart,
+                        tint = colorResource(id = R.color.attentive_black),
+                        contentDescription = "Cart"
+                    )
                 }
             }
             IconButton(
@@ -92,7 +98,11 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                     navHostController.navigate(Routes.SettingsScreen.name)
                 }
             ) {
-                Icon(imageVector = Icons.Filled.Build, contentDescription = "Debug")
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    tint = colorResource(id = R.color.attentive_black),
+                    contentDescription = "Debug"
+                )
             }
         }, navHostController)
         Text(

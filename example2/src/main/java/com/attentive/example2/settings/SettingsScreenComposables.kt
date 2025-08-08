@@ -73,7 +73,9 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        Box(modifier = Modifier.fillMaxWidth().weight(1f))
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f))
         {
             SettingsList(creative, navHostController)
             AndroidView(
@@ -129,7 +131,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
 
-    Column() {
+    Column {
     Text(
         "Settings",
         modifier = Modifier
@@ -264,13 +266,18 @@ fun SettingGroupInvokableComposable(
 
 @Composable
 fun Setting(title: String, enabled: Boolean, onClick: () -> Unit) {
+    val textColor = if (enabled) Color.Unspecified else Color.Gray
+    val onClickAction = if (enabled) onClick else {
+        { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }
+    }
+
     Text(
         text = title,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-        color = if (enabled) Color.Unspecified else Color.Gray,
+        color = textColor,
         modifier = Modifier
             .padding(8.dp)
-            .clickable { onClick() }
+            .clickable { onClickAction() }
     )
 }
 

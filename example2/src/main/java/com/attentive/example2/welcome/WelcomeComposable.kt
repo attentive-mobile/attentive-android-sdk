@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -160,7 +161,7 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(
                 Routes.CartScreen.name,
-                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart"  })
+                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" })
             ) {
                 CartScreen(navController)
             }
@@ -204,6 +205,7 @@ fun Greeting() {
         Text(
             text = "HEY BESTIE!",
             fontSize = 38.sp,
+            color = colorResource(id = R.color.attentive_black),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 204.dp),
@@ -213,6 +215,7 @@ fun Greeting() {
         Text(
             text = "Welcome to Bonni Beauty!",
             fontWeight = FontWeight.Medium,
+            color = colorResource(id = R.color.attentive_black),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
