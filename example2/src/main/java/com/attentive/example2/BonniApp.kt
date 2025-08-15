@@ -2,6 +2,7 @@ package com.attentive.example2
 
 import android.app.Application
 import android.graphics.Color
+import androidx.compose.ui.Modifier
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
@@ -22,11 +23,13 @@ class BonniApp : Application() {
     }
 
     private fun initAttentiveTracker() {
+        val domain = getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
+
         val attentiveConfig =
             AttentiveConfig
                 .Builder()
                 .applicationContext(this)
-                .domain("games")
+                .domain(domain)
                 .notificationIconId(R.drawable.bonni_logo)
                 .notificationIconBackgroundColor(R.color.purple_200)
                 .mode(AttentiveConfig.Mode.DEBUG)
@@ -42,6 +45,9 @@ class BonniApp : Application() {
 
     companion object {
         private lateinit var appInstance: BonniApp
+
+        const val ATTENTIVE_PREFS = "ATTENTIVE_PREFS"
+        const val ATTENTIVE_DOMAIN_PREFS = "ATTENTIVE_DOMAIN_PREFS"
         fun getInstance(): BonniApp {
             return appInstance
         }

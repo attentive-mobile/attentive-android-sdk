@@ -56,6 +56,8 @@ class ProductViewModel : ViewModel() {
                 database.cartItemDao().update(updatedExampleCartItem)
             }
 
+            val addToCartEvent = AddToCartEvent.Builder().items(listOf(product.item)).build()
+            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
             updateCartItemCount()
         }
     }

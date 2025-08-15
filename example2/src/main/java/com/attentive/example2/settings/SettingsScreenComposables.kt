@@ -4,22 +4,37 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
+import android.provider.Settings.Global.putString
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,11 +50,13 @@ import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.SettingsService
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
+import com.attentive.example2.ui.theme.BonniPink
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -47,6 +64,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import androidx.core.content.edit
+data class SettingItem(
+    val title: String,
+    val enabled: Boolean = true,
+    val editable: Boolean = false,
+    val onClick: (String) -> Unit = {}
+) {
+}
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -89,9 +114,23 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
 @Composable
 fun SettingsList(creative: Creative, navHostController: NavHostController) {
-    val accountSettings = mutableListOf<Pair<String, () -> Unit>>()
-    accountSettings.add("Switch Account" to {})
-    accountSettings.add("Manage Addresses" to {})
+    val accountSettings = mutableListOf<SettingItem>()
+    val changeDomainSetting = SettingItem(
+        title = "Change Domain",
+        enabled = true,
+        editable = true,
+        onClick = { domain -> changeDomain(domain) }
+    )
+
+    val changeEmailSetting = SettingItem(
+        title = "Change Email",
+        enabled = false,
+        editable = true,
+        onClick = { /* Implement change email functionality */ }
+    )
+
+    accountSettings.add(changeDomainSetting)
+    accountSettings.add(changeEmailSetting)
 
     val debugSettings = mutableListOf<Pair<String, () -> Unit>>()
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
@@ -109,13 +148,14 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     val activity = LocalActivity.current
+    val context = LocalContext.current
+
     pushSettings.add("Share push token" to {
         CoroutineScope(Dispatchers.Main).launch {
             sharePushToken(activity!!)
         }
     })
 
-    val context = LocalContext.current
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
     deepLinkSettings.add("Trigger Cart Deep Link Notification" to {
         triggerMockDeepLinkNotification(
@@ -140,12 +180,53 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         textAlign = TextAlign.Start,
         fontSize = 20.sp
     )
-        SettingGroup(accountSettings, enabled = false)
+        SettingGroup(accountSettings)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
         SettingGroup(deepLinkSettings)
         FeatureThatRequiresPushPermission()
+    }
+}
+
+@Composable
+fun EditableSetting(settingItem: SettingItem) {
+    var isEditing by remember { mutableStateOf(false) }
+    var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config?.domain.toString()) }
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = domain,
+                    onValueChange = { domain = it },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                    ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(domain)
+                            isEditing = false
+                        }) {
+                            Icon(Icons.Filled.Check, contentDescription = "Submit", tint = BonniPink)
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = "Change current domain: ${AttentiveEventTracker.instance.config?.domain}",
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
     }
 }
 
@@ -201,6 +282,13 @@ fun clearUsers() {
     Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
 }
 
+fun changeDomain(domain: String){
+    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE).edit {
+        putString(BonniApp.ATTENTIVE_DOMAIN_PREFS, domain)
+    }
+    AttentiveEventTracker.instance.config?.changeDomain(domain)
+}
+
 suspend fun sharePushToken(activity: Activity) {
     AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = false).let {
         if (it.isSuccess) {
@@ -234,14 +322,39 @@ suspend fun sharePushToken(activity: Activity) {
     }
 }
 
+
 @Composable
 fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
     enabled: Boolean = true,
+    editable: Boolean = false
 ) {
     Column {
         for (titleToDestination in titlesToDestinations) {
-            Setting(title = titleToDestination.first, enabled = enabled, onClick = titleToDestination.second)
+//            if(editable){
+//                EditableSetting()
+//            } else {
+                Setting(
+                    title = titleToDestination.first,
+                    enabled = enabled,
+                    onClick = titleToDestination.second
+                )
+            }
+       // }
+    }
+    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
+}
+
+@Composable
+fun SettingGroup(
+    settingItems: List<SettingItem>
+) {
+    Column {
+        for (settingItem in settingItems) {
+            if(settingItem.editable){
+                EditableSetting(settingItem)
+            } else {
+            }
         }
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
@@ -266,6 +379,23 @@ fun SettingGroupInvokableComposable(
 
 @Composable
 fun Setting(title: String, enabled: Boolean, onClick: () -> Unit) {
+    val textColor = if (enabled) Color.Unspecified else Color.Gray
+    val onClickAction = if (enabled) onClick else {
+        { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }
+    }
+
+    Text(
+        text = title,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        color = textColor,
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable { onClickAction() }
+    )
+}
+
+@Composable
+fun EditableSetting(title: String, enabled: Boolean, onClick: () -> Unit) {
     val textColor = if (enabled) Color.Unspecified else Color.Gray
     val onClickAction = if (enabled) onClick else {
         { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }
