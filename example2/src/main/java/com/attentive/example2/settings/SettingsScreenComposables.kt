@@ -3,23 +3,39 @@ package com.attentive.example2.settings
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
+import android.provider.Settings.Global.putString
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,11 +51,13 @@ import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.SettingsService
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.BonniApp
 import com.attentive.example2.R
 import com.attentive.example2.SimpleToolbar
+import com.attentive.example2.ui.theme.BonniPink
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -47,6 +65,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import androidx.core.content.edit
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
+
+data class SettingItem(
+    val title: String,
+    val enabled: Boolean = true,
+    val editable: Boolean = false,
+    val onClick: (String) -> Unit = {}
+) {
+}
 
 @Composable
 fun SettingsScreen(navHostController: NavHostController) {
@@ -73,9 +102,11 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
         {
             SettingsList(creative, navHostController)
             AndroidView(
@@ -89,17 +120,31 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
 @Composable
 fun SettingsList(creative: Creative, navHostController: NavHostController) {
-    val accountSettings = mutableListOf<Pair<String, () -> Unit>>()
-    accountSettings.add("Switch Account" to {})
-    accountSettings.add("Manage Addresses" to {})
+    val accountSettings = mutableListOf<SettingItem>()
+    val changeDomainSetting = SettingItem(
+        title = "Change Domain",
+        enabled = true,
+        editable = true,
+        onClick = { domain -> changeDomain(domain) }
+    )
+
+    val changeEmailSetting = SettingItem(
+        title = "Change Email",
+        enabled = false,
+        editable = true,
+        onClick = { email -> changeEmail(email) }
+    )
+
+    accountSettings.add(changeDomainSetting)
+    accountSettings.add(changeEmailSetting)
 
     val debugSettings = mutableListOf<Pair<String, () -> Unit>>()
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
     creativeSettings.add("Show Creatives" to { creative.trigger() })
-    creativeSettings.add("Identify User" to {identifyUser()})
-    creativeSettings.add("Clear Users" to {clearUsers()})
+    creativeSettings.add("Identify User" to { identifyUser() })
+    creativeSettings.add("Clear Users" to { clearUsers() })
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {
@@ -109,13 +154,14 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     val activity = LocalActivity.current
+    val context = LocalContext.current
+
     pushSettings.add("Share push token" to {
         CoroutineScope(Dispatchers.Main).launch {
             sharePushToken(activity!!)
         }
     })
 
-    val context = LocalContext.current
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
     deepLinkSettings.add("Trigger Cart Deep Link Notification" to {
         triggerMockDeepLinkNotification(
@@ -132,20 +178,111 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
 
     Column {
-    Text(
-        "Settings",
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth(),
-        textAlign = TextAlign.Start,
-        fontSize = 20.sp
-    )
-        SettingGroup(accountSettings, enabled = false)
+        Text(
+            "Settings",
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Start,
+            fontSize = 20.sp
+        )
+        EditableDomainSetting(changeDomainSetting)
+        EditableEmailSetting(changeEmailSetting)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
         SettingGroup(deepLinkSettings)
         FeatureThatRequiresPushPermission()
+    }
+}
+
+@Composable
+fun EditableDomainSetting(settingItem: SettingItem) {
+    var isEditing by remember { mutableStateOf(false) }
+    var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config?.domain.toString()) }
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = domain,
+                    onValueChange = { domain = it },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(domain)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = "Change current domain: ${AttentiveEventTracker.instance.config?.domain}",
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditableEmailSetting(settingItem: SettingItem) {
+    var isEditing by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf(AttentiveEventTracker.instance.config!!.userIdentifiers.email!!) }
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(email)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = "Change current email: ${AttentiveEventTracker.instance.config!!.userIdentifiers.email!!}",
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
     }
 }
 
@@ -164,7 +301,7 @@ suspend fun getCurrentToken() {
 fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
     Timber.d("Triggering mock notification with deep link: $withDeepLink")
     var dataMap: Map<String, String>
-    if(withDeepLink){
+    if (withDeepLink) {
         dataMap = mapOf("attentive_open_action_url" to "bonni://cart")
     } else {
         dataMap = mapOf("attentive_open_action_url" to "")
@@ -185,20 +322,38 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
 }
 
 
-fun identifyUser(){
-   val identifiers =  UserIdentifiers.Builder()
-        .withClientUserId("BonniAndroid")
-        .withPhone("+15556667777")
-        .withEmail("bonni@bonnibeauty.com").build()
-    AttentiveEventTracker.instance.config?.identify(identifiers)
-    Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
-
+fun identifyUser() {
+    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
+        .getString(ATTENTIVE_EMAIL_PREFS, "").let { email ->
+            val identifiers = UserIdentifiers.Builder()
+                .withEmail(email!!).build()
+            AttentiveEventTracker.instance.config?.identify(identifiers)
+            Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
+        }
 }
 
 fun clearUsers() {
     Timber.d("Clearing users")
     AttentiveEventTracker.instance.config?.clearUser()
     Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
+}
+
+fun changeDomain(domain: String) {
+    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
+        .edit {
+            putString(BonniApp.ATTENTIVE_DOMAIN_PREFS, domain)
+        }
+    AttentiveEventTracker.instance.config?.changeDomain(domain)
+}
+
+fun changeEmail(email: String) {
+    BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).edit {
+        putString(
+            ATTENTIVE_EMAIL_PREFS,
+            email
+        )
+    }
+    identifyUser()
 }
 
 suspend fun sharePushToken(activity: Activity) {
@@ -234,31 +389,25 @@ suspend fun sharePushToken(activity: Activity) {
     }
 }
 
+
 @Composable
 fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
     enabled: Boolean = true,
+    editable: Boolean = false
 ) {
     Column {
         for (titleToDestination in titlesToDestinations) {
-            Setting(title = titleToDestination.first, enabled = enabled, onClick = titleToDestination.second)
-        }
-    }
-    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
-}
-
-
-@Composable
-fun SettingGroupInvokableComposable(
-    titlesToDestinations: List<Pair<String, @Composable () -> Unit>>,
-) {
-    Column() {
-        for (titleToDestination in titlesToDestinations) {
-            SettingInvokableComposable(
+//            if(editable){
+//                EditableSetting()
+//            } else {
+            Setting(
                 title = titleToDestination.first,
-                content = titleToDestination.second
+                enabled = enabled,
+                onClick = titleToDestination.second
             )
         }
+        // }
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
 }
@@ -266,6 +415,23 @@ fun SettingGroupInvokableComposable(
 
 @Composable
 fun Setting(title: String, enabled: Boolean, onClick: () -> Unit) {
+    val textColor = if (enabled) Color.Unspecified else Color.Gray
+    val onClickAction = if (enabled) onClick else {
+        { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }
+    }
+
+    Text(
+        text = title,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        color = textColor,
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable { onClickAction() }
+    )
+}
+
+@Composable
+fun EditableSetting(title: String, enabled: Boolean, onClick: () -> Unit) {
     val textColor = if (enabled) Color.Unspecified else Color.Gray
     val onClickAction = if (enabled) onClick else {
         { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }

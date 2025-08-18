@@ -7,9 +7,66 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:225073893107:android:3db0367a075802f3da7186",
+        "android_client_info": {
+          "package_name": "com.attentive.bonni"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1_OO92px9F0DW28qOH5Cipgj7sJGnjrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:225073893107:android:58c76970a18f265fda7186",
         "android_client_info": {
           "package_name": "com.attentive.example2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1_OO92px9F0DW28qOH5Cipgj7sJGnjrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:225073893107:android:1d5945810ac3ae29da7186",
+        "android_client_info": {
+          "package_name": "com.example.consumefirebase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1_OO92px9F0DW28qOH5Cipgj7sJGnjrM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:225073893107:android:62c036012bf3d6f5da7186",
+        "android_client_info": {
+          "package_name": "com.example.example_kotlin"
         }
       },
       "oauth_client": [],

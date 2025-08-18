@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.attentive.example2"
+        applicationId = 'com.attentive.bonni'
         minSdk = 30
         targetSdk = 35
         versionCode = 1
