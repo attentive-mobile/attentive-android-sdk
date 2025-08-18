@@ -3,6 +3,7 @@ package com.attentive.example2.settings
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
@@ -65,6 +66,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import androidx.core.content.edit
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
+
 data class SettingItem(
     val title: String,
     val enabled: Boolean = true,
@@ -98,9 +102,11 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Debug Screen", {}, navHostController)
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
         {
             SettingsList(creative, navHostController)
             AndroidView(
@@ -126,7 +132,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         title = "Change Email",
         enabled = false,
         editable = true,
-        onClick = { /* Implement change email functionality */ }
+        onClick = { email -> changeEmail(email) }
     )
 
     accountSettings.add(changeDomainSetting)
@@ -137,8 +143,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
     creativeSettings.add("Show Creatives" to { creative.trigger() })
-    creativeSettings.add("Identify User" to {identifyUser()})
-    creativeSettings.add("Clear Users" to {clearUsers()})
+    creativeSettings.add("Identify User" to { identifyUser() })
+    creativeSettings.add("Clear Users" to { clearUsers() })
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {
@@ -172,15 +178,16 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
 
     Column {
-    Text(
-        "Settings",
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth(),
-        textAlign = TextAlign.Start,
-        fontSize = 20.sp
-    )
-        SettingGroup(accountSettings)
+        Text(
+            "Settings",
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Start,
+            fontSize = 20.sp
+        )
+        EditableDomainSetting(changeDomainSetting)
+        EditableEmailSetting(changeEmailSetting)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
@@ -190,7 +197,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 }
 
 @Composable
-fun EditableSetting(settingItem: SettingItem) {
+fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
     var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config?.domain.toString()) }
 
@@ -207,13 +214,17 @@ fun EditableSetting(settingItem: SettingItem) {
                         unfocusedBorderColor = Color.Gray,
                         focusedTextColor = Color.Black,
 
-                    ),
+                        ),
                     trailingIcon = {
                         IconButton(onClick = {
                             settingItem.onClick(domain)
                             isEditing = false
                         }) {
-                            Icon(Icons.Filled.Check, contentDescription = "Submit", tint = BonniPink)
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
                         }
                     }
                 )
@@ -221,6 +232,51 @@ fun EditableSetting(settingItem: SettingItem) {
         } else {
             Text(
                 text = "Change current domain: ${AttentiveEventTracker.instance.config?.domain}",
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditableEmailSetting(settingItem: SettingItem) {
+    var isEditing by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf(AttentiveEventTracker.instance.config!!.userIdentifiers.email!!) }
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(email)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = "Change current email: ${AttentiveEventTracker.instance.config!!.userIdentifiers.email!!}",
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
@@ -245,7 +301,7 @@ suspend fun getCurrentToken() {
 fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
     Timber.d("Triggering mock notification with deep link: $withDeepLink")
     var dataMap: Map<String, String>
-    if(withDeepLink){
+    if (withDeepLink) {
         dataMap = mapOf("attentive_open_action_url" to "bonni://cart")
     } else {
         dataMap = mapOf("attentive_open_action_url" to "")
@@ -266,14 +322,14 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
 }
 
 
-fun identifyUser(){
-   val identifiers =  UserIdentifiers.Builder()
-        .withClientUserId("BonniAndroid")
-        .withPhone("+15556667777")
-        .withEmail("bonni@bonnibeauty.com").build()
-    AttentiveEventTracker.instance.config?.identify(identifiers)
-    Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
-
+fun identifyUser() {
+    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
+        .getString(ATTENTIVE_EMAIL_PREFS, "").let { email ->
+            val identifiers = UserIdentifiers.Builder()
+                .withEmail(email!!).build()
+            AttentiveEventTracker.instance.config?.identify(identifiers)
+            Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
+        }
 }
 
 fun clearUsers() {
@@ -282,11 +338,22 @@ fun clearUsers() {
     Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
 }
 
-fun changeDomain(domain: String){
-    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE).edit {
-        putString(BonniApp.ATTENTIVE_DOMAIN_PREFS, domain)
-    }
+fun changeDomain(domain: String) {
+    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
+        .edit {
+            putString(BonniApp.ATTENTIVE_DOMAIN_PREFS, domain)
+        }
     AttentiveEventTracker.instance.config?.changeDomain(domain)
+}
+
+fun changeEmail(email: String) {
+    BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).edit {
+        putString(
+            ATTENTIVE_EMAIL_PREFS,
+            email
+        )
+    }
+    identifyUser()
 }
 
 suspend fun sharePushToken(activity: Activity) {
@@ -334,44 +401,13 @@ fun SettingGroup(
 //            if(editable){
 //                EditableSetting()
 //            } else {
-                Setting(
-                    title = titleToDestination.first,
-                    enabled = enabled,
-                    onClick = titleToDestination.second
-                )
-            }
-       // }
-    }
-    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
-}
-
-@Composable
-fun SettingGroup(
-    settingItems: List<SettingItem>
-) {
-    Column {
-        for (settingItem in settingItems) {
-            if(settingItem.editable){
-                EditableSetting(settingItem)
-            } else {
-            }
-        }
-    }
-    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
-}
-
-
-@Composable
-fun SettingGroupInvokableComposable(
-    titlesToDestinations: List<Pair<String, @Composable () -> Unit>>,
-) {
-    Column() {
-        for (titleToDestination in titlesToDestinations) {
-            SettingInvokableComposable(
+            Setting(
                 title = titleToDestination.first,
-                content = titleToDestination.second
+                enabled = enabled,
+                onClick = titleToDestination.second
             )
         }
+        // }
     }
     HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
 }

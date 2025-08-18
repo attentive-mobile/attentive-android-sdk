@@ -23,7 +23,9 @@ class BonniApp : Application() {
     }
 
     private fun initAttentiveTracker() {
-        val domain = getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
+        val prefs =  getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+        val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
+        val email = prefs.getString(ATTENTIVE_EMAIL_PREFS, "bonni@bonnibeauty.com")!!
 
         val attentiveConfig =
             AttentiveConfig
@@ -35,8 +37,9 @@ class BonniApp : Application() {
                 .mode(AttentiveConfig.Mode.DEBUG)
                 .logLevel(AttentiveLogLevel.VERBOSE).build()
 
+
         val userIdentifiers =
-            UserIdentifiers.Builder().withClientUserId("BonniAndroid").withPhone("+15556667777").withEmail("bonni@bonnibeauty.com")
+            UserIdentifiers.Builder().withClientUserId("BonniAndroid").withPhone("+15556667777").withEmail(email)
                 .build()
         attentiveConfig.identify(userIdentifiers)
 
@@ -48,6 +51,8 @@ class BonniApp : Application() {
 
         const val ATTENTIVE_PREFS = "ATTENTIVE_PREFS"
         const val ATTENTIVE_DOMAIN_PREFS = "ATTENTIVE_DOMAIN_PREFS"
+
+        const val ATTENTIVE_EMAIL_PREFS = "ATTENTIVE_EMAIL_PREFS"
         fun getInstance(): BonniApp {
             return appInstance
         }
