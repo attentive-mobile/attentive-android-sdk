@@ -31,6 +31,14 @@ object AttentiveSdk {
         return isAttentiveMessage
     }
 
+    suspend fun sendOptInMarketingSubscription(phoneNumber: String? = null, email: String? = null){
+        AttentiveEventTracker.instance.optin()
+    }
+
+    suspend fun sendOptOutMarketingSubscription(){
+        AttentiveEventTracker.instance.optout()
+    }
+
 
     /**
      * Forwards a push message to the SDK to display the notification.

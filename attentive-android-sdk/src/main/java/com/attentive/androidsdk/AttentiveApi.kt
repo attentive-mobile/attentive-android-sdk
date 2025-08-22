@@ -18,6 +18,7 @@ import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
+import com.attentive.androidsdk.push.TokenProvider
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -82,6 +83,18 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .scheme("https")
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
             .addPathSegment("mtctrl")
+
+    private val httpUrlOptInSubscriptionStatusEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+            .addPathSegment("opt-in-subscriptions")
+
+    private val httpUrlOptOutSubscriptionStatusEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+            .addPathSegment("opt-out-subscriptions")
 
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
@@ -790,6 +803,150 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             override fun onResponse(call: Call, response: Response) {
                 Timber.d("Push request success with response ${response.message}")
             }
+        })
+    }
+
+
+    fun sendOptInSubscriptionStatus(
+        phoneNumber: String? = "",
+        email: String? = "",
+        pushToken: String
+    ) {
+        getGeoAdjustedDomainAsync(AttentiveEventTracker.instance.config.domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                sendOptInSubscriptionStatusInternal(
+                    phoneNumber,
+                    email,
+                    AttentiveEventTracker.instance.config.domain,
+                    pushToken
+                )
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                Timber.d("Geo adjusted domain: $geoAdjustedDomain")
+                sendOptInSubscriptionStatusInternal(
+                    phoneNumber,
+                    email,
+                    geoAdjustedDomain,
+                    pushToken
+                )
+            }
+
+            private fun sendOptInSubscriptionStatusInternal(
+                phoneNumber: String? = "",
+                email: String? = "",
+                domain: String,
+                pushToken: String,
+                type: String = "MARKETING"
+            ) {
+                val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+                val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+                val visitorId = userIdentifiers.visitorId ?: ""
+                val jsonBody = """
+        {
+            "c": "$domain",
+            "v": "mobile-app",
+            "u": "$visitorId",
+            "evs": $externalVendorIdsJson,
+            "tp": "fcm",
+            "pt": "$pushToken",
+            "email": "$email",
+            "phone": "$phoneNumber",
+            "type": "$type"
+        }
+    """.trimIndent()
+
+                val url = httpUrlOptInSubscriptionStatusEndpointBuilder.build()
+                val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Content-Type", "application/json")
+                    .post(requestBody)
+                    .build()
+
+                httpClient.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        Timber.e("Opt-in subscription request failed: ${e.message}")
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        Timber.d("Opt-in subscription request response: ${response.message}")
+                    }
+                })
+            }
+
+
+        })
+    }
+
+
+    fun sendOptOutSubscriptionStatus(
+        userIdentifiers: UserIdentifiers,
+        domain: String,
+        pushToken: String
+    ) {
+        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                sendOptOutSubscriptionStatusInternal(
+                    userIdentifiers,
+                    domain,
+                    pushToken
+                )
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                Timber.d("Geo adjusted domain: $geoAdjustedDomain")
+                sendOptOutSubscriptionStatusInternal(
+                    userIdentifiers,
+                    geoAdjustedDomain,
+                    pushToken
+                )
+            }
+
+            private fun sendOptOutSubscriptionStatusInternal(
+                userIdentifiers: UserIdentifiers,
+                domain: String,
+                pushToken: String
+            ) {
+                val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+                val email = userIdentifiers.email ?: ""
+                val phone = userIdentifiers.phone ?: ""
+                val visitorId = userIdentifiers.visitorId ?: ""
+                val jsonBody = """
+        {
+            "c": "$domain",
+            "v": "mobile-app",
+            "u": "$visitorId",
+            "evs": $externalVendorIdsJson,
+            "tp": "fcm",
+            "pt": "$pushToken",
+            "email": "$email",
+            "phone": "$phone"
+        }
+    """.trimIndent()
+
+                val url = httpUrlOptOutSubscriptionStatusEndpointBuilder.build()
+                val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Content-Type", "application/json")
+                    .post(requestBody)
+                    .build()
+
+                httpClient.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        Timber.e("Opt-out subscription request failed: ${e.message}")
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        Timber.d("Opt-out subscription request response: ${response.message}")
+                    }
+                })
+            }
+
+
         })
     }
 
