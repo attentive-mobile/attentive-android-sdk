@@ -31,6 +31,7 @@ class AttentiveEventTracker private constructor() {
             this.config = config
 
 
+
             if (!::launchTracker.isInitialized) {
                 Timber.d("Initializing AppLaunchTracker")
                 launchTracker = AppLaunchTracker(config.applicationContext)
@@ -110,26 +111,37 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optin(phoneNumber: String? = null, email: String? = null){
+    internal suspend fun optIn(email: String? = null, phoneNumber: String? = null) {
         verifyInitialized()
-        if(phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()){
+        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt in.")
             return
         }
-            TokenProvider.getInstance().getToken(config.applicationContext).let {
-                if(it.isSuccess){
-                    config.attentiveApi.sendOptInSubscriptionStatus(phoneNumber, email, it.getOrThrow().token)
-                }
+        TokenProvider.getInstance().getToken(config.applicationContext).let {
+            if (it.isSuccess) {
+                config.attentiveApi.sendOptInSubscriptionStatus(
+                    phoneNumber,
+                    email,
+                    it.getOrNull()?.token
+                )
             }
+        }
     }
 
-    internal suspend fun optout(){
+    internal suspend fun optOut( email: String?, phoneNumber: String?,) {
         verifyInitialized()
-        config?.let { config ->
-            TokenProvider.getInstance().getToken(config.applicationContext).let {
-                if(it.isSuccess){
-                    config.attentiveApi.sendOptOutSubscriptionStatus(config.userIdentifiers, config.domain, it.getOrNull()!!.token)
-                }
+        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
+            Timber.e("At least one of phone number or email must be provided to opt out.")
+            return
+        }
+        TokenProvider.getInstance().getToken(config.applicationContext).let {
+            if (it.isSuccess) {
+                config.attentiveApi.sendOptOutSubscriptionStatus(
+                    email,
+                    phoneNumber,
+                    config.domain,
+                    it.getOrNull()?.token
+                )
             }
         }
     }

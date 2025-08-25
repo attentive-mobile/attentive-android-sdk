@@ -130,7 +130,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     val changeEmailSetting = SettingItem(
         title = "Change Email",
-        enabled = false,
+        enabled = true,
         editable = true,
         onClick = { email -> changeEmail(email) }
     )
@@ -176,6 +176,21 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         )
     })
 
+    val optInOptOutSettings = mutableListOf<Pair<String, () -> Unit>>()
+    optInOptOutSettings.add("Opt-In User email" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            val email = AttentiveEventTracker.instance.config.userIdentifiers.email
+            AttentiveSdk.optUserIntoMarketingSubscription(email, "123")
+        }
+    })
+
+    optInOptOutSettings.add("Opt-Out User email" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            val email = AttentiveEventTracker.instance.config.userIdentifiers.email
+            AttentiveSdk.optUserOutOfMarketingSubscription(email, "17608551092")
+        }
+    })
+
 
     Column {
         Text(
@@ -188,11 +203,12 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         )
         EditableDomainSetting(changeDomainSetting)
         EditableEmailSetting(changeEmailSetting)
+        SettingGroup(optInOptOutSettings)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
         SettingGroup(pushSettings)
         SettingGroup(deepLinkSettings)
-        FeatureThatRequiresPushPermission()
+        PushPermissionRequest()
     }
 }
 
@@ -276,7 +292,7 @@ fun EditableEmailSetting(settingItem: SettingItem) {
             }
         } else {
             Text(
-                text = "Change current email: ${AttentiveEventTracker.instance.config!!.userIdentifiers.email!!}",
+                text = "Change current email: ${AttentiveEventTracker.instance.config.userIdentifiers.email!!}",
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
@@ -474,7 +490,7 @@ fun HorizontalLine(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-private fun FeatureThatRequiresPushPermission() {
+private fun PushPermissionRequest() {
     val context = LocalContext.current
 
     // Camera permission state

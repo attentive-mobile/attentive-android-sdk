@@ -34,8 +34,6 @@ class AppLaunchTracker(
         AttentiveEventTracker.instance.config?.applicationContext?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 AttentiveEventTracker.instance.registerPushToken(it)
-                AttentiveEventTracker.instance.optin()
-                AttentiveEventTracker.instance.optout()
             }
         }
     }

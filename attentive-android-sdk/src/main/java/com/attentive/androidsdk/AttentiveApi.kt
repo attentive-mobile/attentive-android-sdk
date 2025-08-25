@@ -807,11 +807,15 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     }
 
 
-    fun sendOptInSubscriptionStatus(
+    internal fun sendOptInSubscriptionStatus(
         phoneNumber: String? = "",
         email: String? = "",
-        pushToken: String
+        pushToken: String?
     ) {
+        if(pushToken == null){
+            Timber.e("Invalid push token, cannot send opt-in subscription status")
+            return
+        }
         getGeoAdjustedDomainAsync(AttentiveEventTracker.instance.config.domain, object : GetGeoAdjustedDomainCallback {
             override fun onFailure(reason: String?) {
                 Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
@@ -881,17 +885,23 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
     }
 
 
-    fun sendOptOutSubscriptionStatus(
-        userIdentifiers: UserIdentifiers,
+    internal fun sendOptOutSubscriptionStatus(
+        email: String?,
+        phoneNumber: String?,
         domain: String,
-        pushToken: String
+        pushToken: String?
     ) {
+        if(pushToken == null){
+            Timber.e("Invalid push token, cannot send opt-in subscription status")
+            return
+        }
         getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
             override fun onFailure(reason: String?) {
                 Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
                 sendOptOutSubscriptionStatusInternal(
-                    userIdentifiers,
                     domain,
+                    email,
+                    phoneNumber,
                     pushToken
                 )
             }
@@ -899,20 +909,23 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             override fun onSuccess(geoAdjustedDomain: String) {
                 Timber.d("Geo adjusted domain: $geoAdjustedDomain")
                 sendOptOutSubscriptionStatusInternal(
-                    userIdentifiers,
                     geoAdjustedDomain,
+                    email,
+                    phoneNumber,
                     pushToken
                 )
             }
 
             private fun sendOptOutSubscriptionStatusInternal(
-                userIdentifiers: UserIdentifiers,
                 domain: String,
+                email: String?,
+                phoneNumber: String?,
                 pushToken: String
             ) {
+                val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
                 val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
-                val email = userIdentifiers.email ?: ""
-                val phone = userIdentifiers.phone ?: ""
+                val email = email
+                val phone = phoneNumber
                 val visitorId = userIdentifiers.visitorId ?: ""
                 val jsonBody = """
         {
