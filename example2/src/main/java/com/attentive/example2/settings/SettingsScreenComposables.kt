@@ -68,6 +68,7 @@ import timber.log.Timber
 import androidx.core.content.edit
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
+import kotlinx.coroutines.withContext
 
 data class SettingItem(
     val title: String,
@@ -180,36 +181,65 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     optInOptOutSettings.add("Opt-In User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserIntoMarketingSubscription(email, "123")
+            AttentiveSdk.optUserIntoMarketingSubscription(email)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Opted in user with email: $email", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     })
 
     optInOptOutSettings.add("Opt-Out User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserOutOfMarketingSubscription(email, "17608551092")
+            AttentiveSdk.optUserOutOfMarketingSubscription(email)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Opted out user with email: $email", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     })
 
+    optInOptOutSettings.add("Opt-In User Phone Number" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
+            AttentiveSdk.optUserIntoMarketingSubscription(phone)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Opted in user with phone: $phone", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+})
 
-    Column {
-        Text(
-            "Settings",
-            modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth(),
-            textAlign = TextAlign.Start,
-            fontSize = 20.sp
-        )
-        EditableDomainSetting(changeDomainSetting)
-        EditableEmailSetting(changeEmailSetting)
-        SettingGroup(optInOptOutSettings)
-        SettingGroup(debugSettings, enabled = false)
-        SettingGroup(creativeSettings)
-        SettingGroup(pushSettings)
-        SettingGroup(deepLinkSettings)
-        PushPermissionRequest()
+optInOptOutSettings.add("Opt-Out User Phone Number" to {
+    CoroutineScope(Dispatchers.IO).launch {
+        val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
+        AttentiveSdk.optUserIntoMarketingSubscription(phone)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT).show()
+        }
     }
+})
+
+
+Column {
+    Text(
+        "Settings",
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth(),
+        textAlign = TextAlign.Start,
+        fontSize = 20.sp
+    )
+    EditableDomainSetting(changeDomainSetting)
+    EditableEmailSetting(changeEmailSetting)
+    SettingGroup(optInOptOutSettings)
+    SettingGroup(debugSettings, enabled = false)
+    SettingGroup(creativeSettings)
+    SettingGroup(pushSettings)
+    SettingGroup(deepLinkSettings)
+    PushPermissionRequest()
+}
 }
 
 @Composable

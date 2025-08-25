@@ -875,7 +875,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                     }
 
                     override fun onResponse(call: Call, response: Response) {
-                        Timber.d("Opt-in subscription request response: ${response.message}")
+                        Timber.d("Opt-in subscription request success: ${response.message}")
                     }
                 })
             }
@@ -954,7 +954,7 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
                     }
 
                     override fun onResponse(call: Call, response: Response) {
-                        Timber.d("Opt-out subscription request response: ${response.message}")
+                        Timber.d("Opt-out subscription request success: ${response.message}")
                     }
                 })
             }
