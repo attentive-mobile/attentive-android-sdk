@@ -299,7 +299,20 @@ attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 // assigned, if one of those cases happens, no change will be executed.
 ```
 
+### Opt in / Opt out users with email and phone numbers
+You must provide at least one of either an email address or a phone number to opt users in / out. To do this simply call
+```kotlin
+    AttentiveSdk.optUserIntoMarketingSubscription(optionalEmail, optionalPhoneNumber)
+```
+and
+
+```kotlin
+    AttentiveSdk.optUserOutOfMarketingSubscription(optionalEmail, optionalPhoneNumber)
+```
+
 ### Log Level
+All Attentive logs can be filtered by the string "Attentive"
+
 We currently support 3 log levels. Each level is more verbose than the next one.
 The log levels will dictate sdk and network logging levels
 You can configure the log level on the Builder for the AttentiveConfig. Please keep 
