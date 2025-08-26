@@ -232,17 +232,20 @@ __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the des
 
 ## Step 4 - Integrate With Push
 
-You need to add your google-services.json file to your project, and apply the Goole Services plugin as detailed here before push will work.
+The conditions for your users to receive push notifications are as follows:
+1. You have initialized the Attentive SDK with a valid domain and a notification icon resource id.
+2. Your app must be registered with Firebase and you must have a valid `google-services.json` file in your project. See https://firebase.google.com/docs/android/setup for setup.
+3. Your user must have granted push notification permissions to your app. You can request permissions with our sdk, or do it yourself.
 
-https://firebase.google.com/docs/android/setup
-
+After these conditions are met, you can send push notifications to your users via the Attentive web UI.
 
 ### Tokens and Permissions
-Push tokens will automatically be sent to Attentive when your app is launched. Users do not need to enable push notifications for a push token to be sent to us. Push notifications can only be shown if your user has granted push permissions. Push notifications are handled internally by the ```AttentiveFirebaseMessageService.kt``` class. 
-
+If you want to grab your users push token, or request permissions with the sdk, do as follows.
+It is not necessary to call ```getPushToken()``` before a user will receive push notifications, but if you want to
+know the token value you can call this function.
 To request push permissions via the Attentive SDK, pass ```requestPermission = true``` into ```AttentiveSdk.getPushToken(application = yourApplicationInstance, requestPermission = true)```
 To only query for a token pass ```false```.
-If you pass true and permissions are already granted, the token will simply be retrieved.
+
 
 
 Fetch a push token and optionally show permission request:
@@ -269,6 +272,7 @@ AttentiveSdk.getPushTokenWithCallback(application, requestPermission, new Attent
     }
 ```
 
+You do not need a subclass of `FirebaseMessagingService`, the sdk will handle that for you.
 If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK.
 
 First check that is a message from Attentive, then send it over.
