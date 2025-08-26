@@ -9,8 +9,12 @@ import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.FirebaseMessaging
 import timber.log.Timber
 
+
+/**
+ * To use the AttentiveEventTracker you must first initialize it with an AttentiveConfig.
+ */
 class AttentiveEventTracker private constructor() {
-    var config: AttentiveConfig? = null
+    lateinit var config: AttentiveConfig
     internal lateinit var launchTracker: AppLaunchTracker
 
     fun initialize(config: AttentiveConfig) {
@@ -21,10 +25,11 @@ class AttentiveEventTracker private constructor() {
         )
 
         synchronized(AttentiveEventTracker::class.java) {
-            if (this.config != null) {
+            if (::config.isInitialized) {
                 Timber.e("Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime")
             }
             this.config = config
+
 
 
             if (!::launchTracker.isInitialized) {
@@ -106,12 +111,45 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
+    internal suspend fun optIn(email: String? = null, phoneNumber: String? = null) {
+        verifyInitialized()
+        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
+            Timber.e("At least one of phone number or email must be provided to opt in.")
+            return
+        }
+        TokenProvider.getInstance().getToken(config.applicationContext).let {
+            if (it.isSuccess) {
+                config.attentiveApi.sendOptInSubscriptionStatus(
+                    phoneNumber,
+                    email,
+                    it.getOrNull()?.token
+                )
+            }
+        }
+    }
 
+    internal suspend fun optOut( email: String?, phoneNumber: String?,) {
+        verifyInitialized()
+        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
+            Timber.e("At least one of phone number or email must be provided to opt out.")
+            return
+        }
+        TokenProvider.getInstance().getToken(config.applicationContext).let {
+            if (it.isSuccess) {
+                config.attentiveApi.sendOptOutSubscriptionStatus(
+                    email,
+                    phoneNumber,
+                    config.domain,
+                    it.getOrNull()?.token
+                )
+            }
+        }
+    }
 
 
     private fun verifyInitialized() {
         synchronized(AttentiveEventTracker::class.java) {
-            if (config == null) {
+            if (!::config.isInitialized) {
                 Timber.e("AttentiveEventTracker must be initialized with an AttentiveConfig before use.")
             }
         }

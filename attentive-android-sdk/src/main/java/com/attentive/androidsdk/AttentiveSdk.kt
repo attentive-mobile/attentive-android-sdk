@@ -2,15 +2,14 @@ package com.attentive.androidsdk
 
 import android.app.Application
 import android.content.Context
+import com.attentive.androidsdk.AttentiveSdk.getPushToken
+import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
-import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.jetbrains.annotations.Nullable
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
 
@@ -21,7 +20,9 @@ object AttentiveSdk {
      */
     fun isAttentiveFirebaseMessage(remoteMessage: RemoteMessage): Boolean {
         Timber.d(
-            "%s%s", "Checking if message is from Attentive - data: ${remoteMessage.data}, ", "title: ${remoteMessage.notification?.title}, body: ${remoteMessage.notification?.body}"
+            "%s%s",
+            "Checking if message is from Attentive - data: ${remoteMessage.data}, ",
+            "title: ${remoteMessage.notification?.title}, body: ${remoteMessage.notification?.body}"
         )
 
         val isAttentiveMessage = remoteMessage.data.containsKey("attentive_message_title") ||
@@ -29,6 +30,34 @@ object AttentiveSdk {
 
         Timber.d("isAttentiveMessage: $isAttentiveMessage")
         return isAttentiveMessage
+    }
+
+    suspend fun optUserIntoMarketingSubscription(
+        email: String? = null,
+        phoneNumber: String? = null
+    ) {
+        var number = phoneNumber
+        phoneNumber?.let {
+            if (it.isPhoneNumber().not()) {
+                Timber.e("Invalid phone number: $phoneNumber")
+                number = null
+            }
+        }
+        AttentiveEventTracker.instance.optIn(email, number)
+    }
+
+    suspend fun optUserOutOfMarketingSubscription(
+        email: String? = null,
+        phoneNumber: String? = null
+    ) {
+        var number = phoneNumber
+        phoneNumber?.let {
+            if (it.isPhoneNumber().not()) {
+                Timber.e("Invalid phone number: $phoneNumber")
+                number = null
+            }
+        }
+        AttentiveEventTracker.instance.optOut(email, number)
     }
 
 
@@ -47,7 +76,13 @@ object AttentiveSdk {
         notificationIconId: Int = 0,
         application: Application
     ) {
-        AttentivePush.getInstance().sendNotification(messageTitle = title, messageBody = body, dataMap = dataMap, context = application, imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/960px-Cat_November_2010-1a.jpg")
+        AttentivePush.getInstance().sendNotification(
+            messageTitle = title,
+            messageBody = body,
+            dataMap = dataMap,
+            context = application,
+            imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Cat_November_2010-1a.jpg/960px-Cat_November_2010-1a.jpg"
+        )
     }
 
     /**
@@ -64,11 +99,16 @@ object AttentiveSdk {
      * Does the same as [getPushToken] but uses a callback instead of coroutines for Java interop.
      */
     @JvmStatic
-    fun getPushTokenWithCallback(application: Application, requestPermission: Boolean, callback: PushTokenCallback) {
+    fun getPushTokenWithCallback(
+        application: Application,
+        requestPermission: Boolean,
+        callback: PushTokenCallback
+    ) {
         Timber.d("Synchronously fetching push token with requestPermission: $requestPermission")
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = AttentivePush.getInstance().fetchPushToken(application, requestPermission)
+                val result =
+                    AttentivePush.getInstance().fetchPushToken(application, requestPermission)
                 result.getOrNull()?.let {
                     Timber.d("Push token fetched successfully: ${it.token}")
                     callback.onSuccess(it)

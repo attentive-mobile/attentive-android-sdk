@@ -8,10 +8,7 @@ import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Resources
-import android.graphics.Color
 import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,7 +17,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
+import androidx.core.net.toUri
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
 import com.attentive.androidsdk.tracking.AppLaunchTracker
@@ -29,18 +26,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import timber.log.Timber
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.iterator
-import kotlin.coroutines.resume
-import androidx.core.net.toUri
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import okio.ByteString.Companion.decodeBase64
+import timber.log.Timber
 import java.net.URL
-import kotlin.text.compareTo
+import kotlin.coroutines.resume
 
 internal class AttentivePush {
 
@@ -98,7 +90,7 @@ internal class AttentivePush {
         val imageUrl = remoteMessage.getImageUrl()
 
         if (title != null && body != null) {
-            val context = AttentiveEventTracker.instance.config?.applicationContext
+            val context = AttentiveEventTracker.instance.config.applicationContext
             context?.let {
                 sendNotification(title, body, remoteMessage.data, imageUrl, it)
             }
@@ -148,7 +140,7 @@ internal class AttentivePush {
             .setSound(defaultSoundUri)
             .setContentIntent(contentPendingIntent)
 
-        val notificationIconId = AttentiveEventTracker.instance.config?.notificationIconId ?: 0
+        val notificationIconId = AttentiveEventTracker.instance.config.notificationIconId ?: 0
         if (notificationIconId == 0) {
             notificationBuilder.setSmallIcon(R.drawable.ic_stat_tag_faces)
         } else {
@@ -156,7 +148,7 @@ internal class AttentivePush {
         }
 
         val notificationIconBackgroundColorResourceId =
-            AttentiveEventTracker.instance.config?.notificationIconBackgroundColorResource ?: 0
+            AttentiveEventTracker.instance.config.notificationIconBackgroundColorResource ?: 0
 
         if (notificationIconBackgroundColorResourceId != 0) {
             notificationBuilder
@@ -188,7 +180,7 @@ internal class AttentivePush {
         notificationBuilder: NotificationCompat.Builder
     ) {
         val notificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
