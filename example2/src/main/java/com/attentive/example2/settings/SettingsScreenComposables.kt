@@ -214,7 +214,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 optInOptOutSettings.add("Opt-Out User Phone Number" to {
     CoroutineScope(Dispatchers.IO).launch {
         val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-        AttentiveSdk.optUserIntoMarketingSubscription(phone)
+        AttentiveSdk.optUserOutOfMarketingSubscription(phone)
         withContext(Dispatchers.Main) {
             Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT).show()
         }
