@@ -9,6 +9,7 @@ import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
+import com.attentive.androidsdk.internal.network.ContactInfo
 import com.attentive.androidsdk.internal.network.CustomEventMetadataDto
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto
@@ -16,9 +17,14 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import com.attentive.androidsdk.internal.network.RetrofitApiService
+import com.attentive.androidsdk.internal.network.UserUpdateRequest
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -33,6 +39,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 import java.io.IOException
 import java.math.BigDecimal
@@ -96,6 +104,59 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
             .addPathSegment("opt-out-subscriptions")
 
+    private val httpMobileEndpointBuilder: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+
+    val retrofit = Retrofit.Builder()
+        .baseUrl(httpMobileEndpointBuilder.build())
+        .client(httpClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    val api = retrofit.create(RetrofitApiService::class.java)
+
+    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?){
+
+        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
+                sendUserUpdateInternal(
+                    domain,
+                    email,
+                    phoneNumber
+                )
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                sendUserUpdateInternal(
+                    geoAdjustedDomain,
+                    email,
+                    phoneNumber
+                )
+            }
+        })
+    }
+
+    fun sendUserUpdateInternal(geoAdjustedDomain: String, email: String?, phoneNumber: String?){
+
+        val request = UserUpdateRequest(
+            company = geoAdjustedDomain,
+            userId = "myVisitorId",
+            pushToken = "myPushToken",
+            tokenProvider = "fcm:",
+            sdkVersion = "myVersion",
+            metadata = ContactInfo(
+                phone = "1234567890",
+                email = "hi@yourcompany.com"
+            )
+        )
+
+        CoroutineScope(Dispatchers.IO).launch {
+            api.updateUserSuspend(request)
+        }
+    }
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
         domain: String,

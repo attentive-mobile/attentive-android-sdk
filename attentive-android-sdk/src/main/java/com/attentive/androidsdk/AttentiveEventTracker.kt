@@ -65,7 +65,7 @@ class AttentiveEventTracker private constructor() {
 
         if (token.isNotEmpty()) {
             Timber.d("A push token exists, will register with a non empty token")
-            config?.let {
+            config.let {
                 it.attentiveApi.registerPushToken(
                     token = token,
                     permissionGranted = AttentivePush.getInstance()

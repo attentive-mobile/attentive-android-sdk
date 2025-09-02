@@ -82,6 +82,11 @@ dependencies {
     // Timber for logging - Upgrading to 5.+ versions causes compilation errors
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
+    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
+    implementation 'com.google.code.gson:gson:2.13.1'
+    implementation "com.squareup.retrofit2:converter-gson:3.0.0" // or latest
+
+
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
     implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
 

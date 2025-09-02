@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -143,9 +144,12 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to { creative.trigger() })
-    creativeSettings.add("Identify User" to { identifyUser() })
-    creativeSettings.add("Clear Users" to { clearUsers() })
+    creativeSettings.add("Show Creative" to { creative.trigger() })
+
+    val userSettings = mutableListOf<Pair<String, () -> Unit>>()
+    userSettings.add("Identify User" to { identifyUser() })
+    userSettings.add("Clear Users" to { clearUsers() })
+    userSettings.add("Update user" to { updateUser()})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {
@@ -233,12 +237,12 @@ Column {
     )
     EditableDomainSetting(changeDomainSetting)
     EditableEmailSetting(changeEmailSetting)
+    SettingGroup(userSettings)
     SettingGroup(optInOptOutSettings)
-    SettingGroup(debugSettings, enabled = false)
     SettingGroup(creativeSettings)
+    PushPermissionRequest()
     SettingGroup(pushSettings)
     SettingGroup(deepLinkSettings)
-    PushPermissionRequest()
 }
 }
 
@@ -382,6 +386,10 @@ fun clearUsers() {
     Timber.d("Clearing users")
     AttentiveEventTracker.instance.config?.clearUser()
     Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
+}
+
+fun updateUser(){
+    AttentiveSdk.updateUser("t@t.com")
 }
 
 fun changeDomain(domain: String) {

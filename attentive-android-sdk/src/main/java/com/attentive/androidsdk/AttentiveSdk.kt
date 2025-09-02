@@ -123,6 +123,24 @@ object AttentiveSdk {
         }
     }
 
+    fun updateUser(email: String? = null, phoneNumber: String? = null){
+        if(email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()){
+            Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
+            return
+        }
+
+        var number = phoneNumber
+        phoneNumber?.let {
+            if (it.isPhoneNumber().not()) {
+                Timber.e("Invalid phone number: $phoneNumber")
+                number = null
+            }
+        }
+
+        val domain = AttentiveEventTracker.instance.config.domain
+        AttentiveEventTracker.instance.config.attentiveApi.sendUserUpdate(domain, email, number)
+    }
+
     interface PushTokenCallback {
         fun onSuccess(result: TokenFetchResult)
         fun onFailure(exception: Exception)
