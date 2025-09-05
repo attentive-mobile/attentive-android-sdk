@@ -5,9 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Build
-import android.provider.Settings.Global.putString
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -17,15 +15,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,18 +36,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
-import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
-import com.attentive.androidsdk.SettingsService
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.example2.BonniApp
@@ -67,7 +64,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import androidx.core.content.edit
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
 import kotlinx.coroutines.withContext
 
@@ -75,7 +75,8 @@ data class SettingItem(
     val title: String,
     val enabled: Boolean = true,
     val editable: Boolean = false,
-    val onClick: (String) -> Unit = {}
+    val onClick: (String) -> Unit = {},
+    val invokableComposable: @Composable ((String) -> Unit)? = null
 ) {
 }
 
@@ -99,7 +100,7 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
 
     val creative = remember {
-        Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
+        Creative(AttentiveEventTracker.instance.config, frameLayout, activity)
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -122,6 +123,7 @@ fun SettingsScreenContent(navHostController: NavHostController) {
 
 @Composable
 fun SettingsList(creative: Creative, navHostController: NavHostController) {
+    val viewModel: SettingsViewModel = viewModel()
     val accountSettings = mutableListOf<SettingItem>()
     val changeDomainSetting = SettingItem(
         title = "Change Domain",
@@ -134,7 +136,14 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         title = "Change Email",
         enabled = true,
         editable = true,
-        onClick = { email -> changeEmail(email) }
+        onClick = { email -> changeEmail(viewModel) }
+    )
+
+    val changePhoneNumberSetting = SettingItem(
+        title = "Change Phone Number",
+        enabled = true,
+        editable = true,
+        onClick = { phone -> changePhoneNumber(viewModel) }
     )
 
     accountSettings.add(changeDomainSetting)
@@ -144,12 +153,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creative" to { creative.trigger() })
+    creativeSettings.add("Show Creatives" to { creative.trigger() })
 
-    val userSettings = mutableListOf<Pair<String, () -> Unit>>()
-    userSettings.add("Identify User" to { identifyUser() })
-    userSettings.add("Clear Users" to { clearUsers() })
-    userSettings.add("Update user" to { updateUser()})
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
     pushSettings.add("Display current push token" to {
@@ -181,11 +186,11 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         )
     })
 
-    val optInOptOutSettings = mutableListOf<Pair<String, () -> Unit>>()
-    optInOptOutSettings.add("Opt-In User email" to {
+    val userSettings = mutableListOf<Pair<String, () -> Unit>>()
+    userSettings.add("Opt-In User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserIntoMarketingSubscription(email)
+            AttentiveSdk.optUserIntoMarketingSubscription(email = email)
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Opted in user with email: $email", Toast.LENGTH_SHORT)
                     .show()
@@ -193,10 +198,10 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     })
 
-    optInOptOutSettings.add("Opt-Out User email" to {
+    userSettings.add("Opt-Out User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserOutOfMarketingSubscription(email)
+            AttentiveSdk.optUserOutOfMarketingSubscription(email = email)
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Opted out user with email: $email", Toast.LENGTH_SHORT)
                     .show()
@@ -204,52 +209,58 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     })
 
-    optInOptOutSettings.add("Opt-In User Phone Number" to {
+    userSettings.add("Opt-In User Phone Number" to {
         CoroutineScope(Dispatchers.IO).launch {
             val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-            AttentiveSdk.optUserIntoMarketingSubscription(phone)
+            AttentiveSdk.optUserIntoMarketingSubscription(phoneNumber = phone)
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Opted in user with phone: $phone", Toast.LENGTH_SHORT)
                     .show()
             }
         }
-})
+    })
 
-optInOptOutSettings.add("Opt-Out User Phone Number" to {
-    CoroutineScope(Dispatchers.IO).launch {
-        val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-        AttentiveSdk.optUserOutOfMarketingSubscription(phone)
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT).show()
+    userSettings.add("Opt-Out User Phone Number" to {
+        CoroutineScope(Dispatchers.IO).launch {
+            val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
+            AttentiveSdk.optUserOutOfMarketingSubscription(phoneNumber = phone)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
+    })
+
+    userSettings.add("Identify User" to { identifyUser() })
+    userSettings.add("Clear Users" to { clearUsers(viewModel) })
+
+
+    Column {
+        Text(
+            "Settings",
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Start,
+            fontSize = 20.sp
+        )
+        EditableDomainSetting(changeDomainSetting)
+        EditableEmailSetting(changeEmailSetting)
+        EditablePhoneNumberSetting(changePhoneNumberSetting)
+        SettingGroup(userSettings)
+        SettingGroup(debugSettings, enabled = false)
+        SettingGroup(creativeSettings)
+        PushPermissionRequest()
+        SettingGroup(pushSettings)
+        SettingGroup(deepLinkSettings)
     }
-})
-
-
-Column {
-    Text(
-        "Settings",
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth(),
-        textAlign = TextAlign.Start,
-        fontSize = 20.sp
-    )
-    EditableDomainSetting(changeDomainSetting)
-    EditableEmailSetting(changeEmailSetting)
-    SettingGroup(userSettings)
-    SettingGroup(optInOptOutSettings)
-    SettingGroup(creativeSettings)
-    PushPermissionRequest()
-    SettingGroup(pushSettings)
-    SettingGroup(deepLinkSettings)
 }
-}
+
 
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
-    var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config?.domain.toString()) }
+    var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config.domain) }
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
@@ -281,7 +292,12 @@ fun EditableDomainSetting(settingItem: SettingItem) {
             }
         } else {
             Text(
-                text = "Change current domain: ${AttentiveEventTracker.instance.config?.domain}",
+                text = buildAnnotatedString {
+                    append("Change current domain: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(domain)
+                    }
+                },
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
@@ -292,16 +308,16 @@ fun EditableDomainSetting(settingItem: SettingItem) {
 }
 
 @Composable
-fun EditableEmailSetting(settingItem: SettingItem) {
+fun EditableEmailSetting(settingItem: SettingItem,    viewModel: SettingsViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
-    var email by remember { mutableStateOf(AttentiveEventTracker.instance.config!!.userIdentifiers.email!!) }
+    val email by viewModel.email.collectAsState()
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = { viewModel.updateEmail(it) },
                     label = { Text(settingItem.title) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -326,7 +342,66 @@ fun EditableEmailSetting(settingItem: SettingItem) {
             }
         } else {
             Text(
-                text = "Change current email: ${AttentiveEventTracker.instance.config.userIdentifiers.email!!}",
+                text = buildAnnotatedString {
+                    append("Change current email: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(email)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditablePhoneNumberSetting(
+    settingItem: SettingItem,
+    viewModel: SettingsViewModel = viewModel()
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    val phone by viewModel.phone.collectAsState()
+    var updatedNumber = phone
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { viewModel.updatePhone(it) },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(updatedNumber)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("Change current phone number: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(phone)
+                    }
+                },
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                 modifier = Modifier
                     .padding(8.dp)
@@ -373,42 +448,49 @@ fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
 
 
 fun identifyUser() {
-    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
-        .getString(ATTENTIVE_EMAIL_PREFS, "").let { email ->
+    BonniApp
+        .getInstance()
+        .getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+        .getString(ATTENTIVE_EMAIL_PREFS, "")
+        ?.let {
             val identifiers = UserIdentifiers.Builder()
-                .withEmail(email!!).build()
-            AttentiveEventTracker.instance.config?.identify(identifiers)
+                .withEmail(it).build()
+            AttentiveEventTracker.instance.config.identify(identifiers)
             Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
         }
 }
 
-fun clearUsers() {
+fun clearUsers(viewModel: SettingsViewModel) {
     Timber.d("Clearing users")
-    AttentiveEventTracker.instance.config?.clearUser()
+    viewModel.clearPhone()
+    viewModel.clearEmail()
+    AttentiveEventTracker.instance.config.clearUser()
+    BonniApp
+        .getInstance()
+        .getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+        .edit {
+            remove(ATTENTIVE_EMAIL_PREFS)
+            remove(ATTENTIVE_PHONE_PREFS)
+        }
     Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
 }
 
-fun updateUser(){
-    AttentiveSdk.updateUser("t@t.com")
-}
-
 fun changeDomain(domain: String) {
-    BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, Context.MODE_PRIVATE)
+    BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
         .edit {
             putString(BonniApp.ATTENTIVE_DOMAIN_PREFS, domain)
         }
-    AttentiveEventTracker.instance.config?.changeDomain(domain)
+    AttentiveEventTracker.instance.config.changeDomain(domain)
 }
 
-fun changeEmail(email: String) {
-    BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).edit {
-        putString(
-            ATTENTIVE_EMAIL_PREFS,
-            email
-        )
-    }
-    identifyUser()
+fun changeEmail(viewModel: SettingsViewModel) {
+    viewModel.saveEmail()
 }
+
+fun changePhoneNumber(viewModel: SettingsViewModel) {
+    viewModel.savePhoneNumber()
+}
+
 
 suspend fun sharePushToken(activity: Activity) {
     AttentiveSdk.getPushToken(BonniApp.getInstance(), requestPermission = false).let {
@@ -463,7 +545,7 @@ fun SettingGroup(
         }
         // }
     }
-    HorizontalLine(color = Color.Black, thickness = 2.dp, Modifier.padding(4.dp))
+    HorizontalLine(color = Color.Black, Modifier.padding(4.dp))
 }
 
 
@@ -485,38 +567,8 @@ fun Setting(title: String, enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun EditableSetting(title: String, enabled: Boolean, onClick: () -> Unit) {
-    val textColor = if (enabled) Color.Unspecified else Color.Gray
-    val onClickAction = if (enabled) onClick else {
-        { Toast.makeText(BonniApp.getInstance(), "Not yet implemented", Toast.LENGTH_SHORT).show() }
-    }
-
-    Text(
-        text = title,
-        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-        color = textColor,
-        modifier = Modifier
-            .padding(8.dp)
-            .clickable { onClickAction() }
-    )
-}
-
-@Composable
-fun SettingInvokableComposable(title: String, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .padding(8.dp)
-            .clickable { /* Handle click if needed */ }
-    ) {
-        Text(text = title)
-        content()
-    }
-}
-
-@Composable
 fun HorizontalLine(
     color: Color = Color.Gray,
-    thickness: Dp = Dp.Hairline,
     modifier: Modifier = Modifier
 ) {
     HorizontalDivider(
@@ -533,7 +585,7 @@ private fun PushPermissionRequest() {
 
     // Camera permission state
     val pushPermissionState = rememberPermissionState(
-        android.Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.POST_NOTIFICATIONS
     )
 
     if (pushPermissionState.status.isGranted) {
