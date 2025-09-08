@@ -45,9 +45,8 @@ class SettingsViewModel : ViewModel() {
                 )
             }
 
-        val identifiers = UserIdentifiers.Builder().withPhone(phone.value)
-        AttentiveEventTracker.instance.config.userIdentifiers = identifiers.build()
-
+        val identifiers = UserIdentifiers.Builder().withPhone(phone.value).build()
+        AttentiveEventTracker.instance.config.identify(identifiers)
     }
 
     fun getPersistedPhoneNumber(): String {
@@ -71,8 +70,8 @@ class SettingsViewModel : ViewModel() {
             )
         }
 
-        val identifiers = UserIdentifiers.Builder().withEmail(email.value)
-        AttentiveEventTracker.instance.config.userIdentifiers = identifiers.build()
+        val identifiers = UserIdentifiers.Builder().withEmail(email.value).build()
+        AttentiveEventTracker.instance.config.identify(identifiers)
     }
 
     fun getPersistedEmail(): String {

@@ -29,6 +29,9 @@ for a sample of how the Attentive Android SDK is used.
 __*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
 ## Step 1 - SDK initialization
+
+__*** NOTE: To function properly, the SDK must be initialized as soon as possible after application startup. This is required for us to properly track metrics (app open events, etc) ***__
+
 ```kotlin
 // Create an AttentiveConfig with your attentive domain, in production mode, with an Application context
 val attentiveConfig = AttentiveConfig.Builder()
