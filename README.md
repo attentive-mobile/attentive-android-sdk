@@ -306,8 +306,10 @@ attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 // assigned, if one of those cases happens, no change will be executed.
 ```
 
-### Opt in / Opt out users with email and phone numbers
-You must provide at least one of either an email address or a phone number to opt users in / out. To do this simply call
+### Manage subscriptions for email and phone number
+Our SDK allows you to directly manage marketing subscriptions for emails and phone numbers. Your app is solely responsible for displaying any required legal information. To opt users in or out, you must provide at least one of either an email address or a phone number. Phone numbers must be in [E.164 format](https://support.google.com/google-ads/answer/16355235?hl=en).
+
+To opt users in and/or out simply call
 ```kotlin
     AttentiveSdk.optUserIntoMarketingSubscription(optionalEmail, optionalPhoneNumber)
 ```
