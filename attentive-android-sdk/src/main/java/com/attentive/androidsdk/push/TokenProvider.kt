@@ -26,12 +26,13 @@ class TokenProvider {
         return suspendCancellableCoroutine { continuation ->
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val token = task.result
+                    val resultToken = task.result
+                    token = task.result
                     Timber.d("Token: $token")
                     continuation.resume(
                         Result.success(
                             TokenFetchResult(
-                                token,
+                                resultToken,
                                 permissionGranted = AttentivePush.getInstance()
                                     .checkPushPermission(context)
                             )

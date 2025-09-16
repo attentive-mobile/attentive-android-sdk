@@ -23,6 +23,6 @@ data class UserUpdateRequest(
 )
 
 data class ContactInfo(
-    val phone: String,
-    val email: String
+    var phone: String = "",
+    var email: String = ""
 )

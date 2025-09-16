@@ -11,6 +11,7 @@ import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
 import com.attentive.androidsdk.internal.network.ContactInfo
 import com.attentive.androidsdk.internal.network.CustomEventMetadataDto
+import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto
 import com.attentive.androidsdk.internal.network.ProductDto
@@ -49,7 +50,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 
 
-class AttentiveApi(private val httpClient: OkHttpClient) {
+class AttentiveApi(private val httpClient: OkHttpClient, private val domain: String) {
     @get:VisibleForTesting
     var cachedGeoAdjustedDomain: String? = null
         private set
@@ -109,54 +110,42 @@ class AttentiveApi(private val httpClient: OkHttpClient) {
             .scheme("https")
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
 
+    val geoClient = httpClient.newBuilder()
+        .addInterceptor(GeoAdjustedDomainInterceptor(httpClient, domain = domain ))
+        .build()
+
     val retrofit = Retrofit.Builder()
         .baseUrl(httpMobileEndpointBuilder.build())
-        .client(httpClient)
+        .client(geoClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
     val api = retrofit.create(RetrofitApiService::class.java)
 
-    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?){
+    internal suspend fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
 
-        getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-            override fun onFailure(reason: String?) {
-                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-                sendUserUpdateInternal(
-                    domain,
-                    email,
-                    phoneNumber
-                )
+        val contactInfo = ContactInfo().apply {
+            if(email != null){
+                this.email = email
             }
-
-            override fun onSuccess(geoAdjustedDomain: String) {
-                sendUserUpdateInternal(
-                    geoAdjustedDomain,
-                    email,
-                    phoneNumber
-                )
+            if(phoneNumber != null){
+                this.phone = phoneNumber
             }
-        })
-    }
+        }
 
-    fun sendUserUpdateInternal(geoAdjustedDomain: String, email: String?, phoneNumber: String?){
-
-        val request = UserUpdateRequest(
-            company = geoAdjustedDomain,
-            userId = "myVisitorId",
-            pushToken = "myPushToken",
-            tokenProvider = "fcm:",
-            sdkVersion = "myVersion",
-            metadata = ContactInfo(
-                phone = "1234567890",
-                email = "hi@yourcompany.com"
+        api.updateUserSuspend(
+            UserUpdateRequest(
+                company = domain,
+                userId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId!!,
+                pushToken = TokenProvider.getInstance().token!!,
+                tokenProvider = "fcm:",
+                sdkVersion = AppInfo.attentiveSDKVersion,
+                metadata = contactInfo
             )
         )
-
-        CoroutineScope(Dispatchers.IO).launch {
-            api.updateUserSuspend(request)
-        }
     }
+
+
     // TODO refactor to use the 'sendEvent' method
     fun sendUserIdentifiersCollectedEvent(
         domain: String,

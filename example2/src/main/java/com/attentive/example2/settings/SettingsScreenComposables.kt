@@ -232,6 +232,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     userSettings.add("Identify User" to { identifyUser() })
+    userSettings.add("Login User" to { loginUser(viewModel) })
     userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
 
@@ -458,6 +459,10 @@ fun identifyUser() {
             AttentiveEventTracker.instance.config.identify(identifiers)
             Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
         }
+}
+
+fun loginUser(viewModel: SettingsViewModel){
+    viewModel.loginUser()
 }
 
 fun clearUsers(viewModel: SettingsViewModel) {

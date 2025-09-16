@@ -35,7 +35,7 @@ import timber.log.Timber
         val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
-        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient)
+        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
     }
 

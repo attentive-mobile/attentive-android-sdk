@@ -39,8 +39,8 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildAttentiveApi(okHttpClient: OkHttpClient): AttentiveApi {
-        return AttentiveApi(okHttpClient)
+    fun buildAttentiveApi(okHttpClient: OkHttpClient, domain: String): AttentiveApi {
+        return AttentiveApi(okHttpClient, domain)
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {

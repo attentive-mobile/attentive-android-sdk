@@ -11,6 +11,7 @@ import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.core.content.edit
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 
 class SettingsViewModel : ViewModel() {
@@ -77,5 +78,9 @@ class SettingsViewModel : ViewModel() {
     fun getPersistedEmail(): String {
         return BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
             .getString(ATTENTIVE_EMAIL_PREFS, "") ?: ""
+    }
+
+    fun loginUser(){
+        AttentiveSdk.updateUser(getPersistedEmail(), getPersistedPhoneNumber())
     }
 }
