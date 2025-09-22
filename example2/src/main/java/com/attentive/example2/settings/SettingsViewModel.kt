@@ -2,6 +2,7 @@ package com.attentive.example2.settings
 
 import android.content.Context.MODE_PRIVATE
 import android.provider.Settings.Global.putString
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.UserIdentifiers
@@ -82,5 +83,6 @@ class SettingsViewModel : ViewModel() {
 
     fun loginUser(){
         AttentiveSdk.updateUser(getPersistedEmail(), getPersistedPhoneNumber())
+        Toast.makeText(BonniApp.getInstance(), "Login with email: ${getPersistedEmail()} and phone ${getPersistedPhoneNumber()}", Toast.LENGTH_SHORT).show()
     }
 }

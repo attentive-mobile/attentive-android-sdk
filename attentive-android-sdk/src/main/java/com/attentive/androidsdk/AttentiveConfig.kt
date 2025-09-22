@@ -52,7 +52,7 @@ import timber.log.Timber
     override fun identify(userIdentifiers: UserIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
-        Timber.d("identify called with userIdentifiers: %s", userIdentifiers)
+        Timber.d("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
 

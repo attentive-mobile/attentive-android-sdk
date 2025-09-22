@@ -21,11 +21,6 @@ class GeoAdjustedDomainInterceptor(
         val geoDomain = getGeoAdjustedDomain()
         val originalRequest = chain.request()
         val originalUrl = originalRequest.url
-
-//        val newUrl = originalUrl.newBuilder()
-//            .host(geoDomain)
-//            .build()
-
         var newRequestBuilder = originalRequest.newBuilder()
             .url(originalUrl)
 
