@@ -81,8 +81,8 @@ class SettingsViewModel : ViewModel() {
             .getString(ATTENTIVE_EMAIL_PREFS, "") ?: ""
     }
 
-    fun loginUser(){
+    fun switchUser(){
         AttentiveSdk.updateUser(getPersistedEmail(), getPersistedPhoneNumber())
-        Toast.makeText(BonniApp.getInstance(), "Login with email: ${getPersistedEmail()} and phone ${getPersistedPhoneNumber()}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(BonniApp.getInstance(), "Switch to user with email: ${getPersistedEmail()} and phone ${getPersistedPhoneNumber()}", Toast.LENGTH_SHORT).show()
     }
 }

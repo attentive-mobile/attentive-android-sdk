@@ -232,7 +232,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     userSettings.add("Identify User" to { identifyUser() })
-    userSettings.add("Login User" to { loginUser(viewModel) })
+    userSettings.add("Switch User" to { viewModel.switchUser() })
     userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
 
@@ -461,9 +461,6 @@ fun identifyUser() {
         }
 }
 
-fun loginUser(viewModel: SettingsViewModel){
-    viewModel.loginUser()
-}
 
 fun clearUsers(viewModel: SettingsViewModel) {
     Timber.d("Clearing users")
