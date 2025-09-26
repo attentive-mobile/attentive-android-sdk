@@ -111,9 +111,9 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optIn(email: String? = null, phoneNumber: String? = null) {
+    internal suspend fun optIn(email: String = "", phoneNumber: String = "" ) {
         verifyInitialized()
-        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
+        if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt in.")
             return
         }
@@ -128,9 +128,9 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optOut( email: String?, phoneNumber: String?,) {
+    internal suspend fun optOut( email: String = "", phoneNumber: String = "",) {
         verifyInitialized()
-        if (phoneNumber.isNullOrEmpty() && email.isNullOrEmpty()) {
+        if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt out.")
             return
         }

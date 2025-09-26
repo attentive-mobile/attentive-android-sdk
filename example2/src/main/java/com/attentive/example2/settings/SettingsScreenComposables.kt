@@ -190,10 +190,19 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     userSettings.add("Opt-In User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserIntoMarketingSubscription(email = email)
+            email?.let {
+                AttentiveSdk.optUserIntoMarketingSubscription(email = email)
+            }
+
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Opted in user with email: $email", Toast.LENGTH_SHORT)
-                    .show()
+                if (email == null) {
+                    Toast.makeText(context, "No email, can't opt in", Toast.LENGTH_SHORT)
+                        .show()
+                    return@withContext
+                } else {
+                    Toast.makeText(context, "Opted in user with email: $email", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
         }
     })
@@ -201,10 +210,18 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     userSettings.add("Opt-Out User email" to {
         CoroutineScope(Dispatchers.IO).launch {
             val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-            AttentiveSdk.optUserOutOfMarketingSubscription(email = email)
+            email?.let {
+                AttentiveSdk.optUserOutOfMarketingSubscription(email = it)
+            }
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Opted out user with email: $email", Toast.LENGTH_SHORT)
-                    .show()
+                if (email == null) {
+                    Toast.makeText(context, "No email, can't opt out", Toast.LENGTH_SHORT)
+                        .show()
+                    return@withContext
+                } else {
+                    Toast.makeText(context, "Opted out user with email: $email", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
         }
     })
@@ -212,10 +229,17 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     userSettings.add("Opt-In User Phone Number" to {
         CoroutineScope(Dispatchers.IO).launch {
             val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-            AttentiveSdk.optUserIntoMarketingSubscription(phoneNumber = phone)
+            phone?.let {
+                AttentiveSdk.optUserIntoMarketingSubscription(phoneNumber = it)
+            }
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Opted in user with phone: $phone", Toast.LENGTH_SHORT)
-                    .show()
+                if (phone == null) {
+                    Toast.makeText(context, "No number, can't opt in", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    Toast.makeText(context, "Opted in user with phone: $phone", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
         }
     })
@@ -223,10 +247,17 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     userSettings.add("Opt-Out User Phone Number" to {
         CoroutineScope(Dispatchers.IO).launch {
             val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-            AttentiveSdk.optUserOutOfMarketingSubscription(phoneNumber = phone)
+            phone?.let {
+                AttentiveSdk.optUserOutOfMarketingSubscription(phoneNumber = it)
+            }
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT)
-                    .show()
+                if (phone == null) {
+                    Toast.makeText(context, "No number, can't opt out", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
         }
     })
@@ -309,7 +340,7 @@ fun EditableDomainSetting(settingItem: SettingItem) {
 }
 
 @Composable
-fun EditableEmailSetting(settingItem: SettingItem,    viewModel: SettingsViewModel = viewModel()) {
+fun EditableEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
 

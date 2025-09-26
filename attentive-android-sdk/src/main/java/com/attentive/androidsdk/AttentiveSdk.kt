@@ -33,31 +33,25 @@ object AttentiveSdk {
     }
 
     suspend fun optUserIntoMarketingSubscription(
-        email: String? = null,
-        phoneNumber: String? = null
+        email: String = "",
+        phoneNumber: String = ""
     ) {
-        var number = phoneNumber
-        phoneNumber?.let {
-            if (it.isPhoneNumber().not()) {
+            if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
                 Timber.e("Invalid phone number: $phoneNumber")
-                number = null
             }
-        }
-        AttentiveEventTracker.instance.optIn(email, number)
+
+        AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
 
     suspend fun optUserOutOfMarketingSubscription(
-        email: String? = null,
-        phoneNumber: String? = null
+        email: String = "",
+        phoneNumber: String = ""
     ) {
-        var number = phoneNumber
-        phoneNumber?.let {
-            if (it.isPhoneNumber().not()) {
+
+            if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
                 Timber.e("Invalid phone number: $phoneNumber")
-                number = null
             }
-        }
-        AttentiveEventTracker.instance.optOut(email, number)
+        AttentiveEventTracker.instance.optOut(email, phoneNumber)
     }
 
 
