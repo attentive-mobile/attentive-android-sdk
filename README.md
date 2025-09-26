@@ -317,6 +317,17 @@ and
     AttentiveSdk.optUserOutOfMarketingSubscription(optionalEmail, optionalPhoneNumber)
 ```
 
+### Update user via email and/or phone
+
+Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided). 
+Calling this method will clear all identifiers previously associated with the current user (the sdk will automatically call clearUser()), and associate the app with the new identifier(s) you provide. 
+This ensures that all subsequent events and messages are attributed to the newly identified user.
+
+```kotlin
+AttentiveSdk.updateUser(email = "someOptionalEmail", phone = "someOptionalPhone")
+```
+
+
 ### Log Level
 All Attentive logs can be filtered by the string "Attentive"
 
