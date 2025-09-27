@@ -299,12 +299,13 @@ The SDK will package a ```PendingIntent``` with the notification that will trigg
 
 ### Change domain
 
+If you want to change domain to handle some user flow, you can do so changing the domain on attentive config. Please contact your CSM before using this use case.
 ```kotlin
-// If you want to change domain to handle some user flow, you can do so changing the domain on attentive config. Please contact your CSM before using this use case.
-attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
-// Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
-// assigned, if one of those cases happens, no change will be executed.
+    attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 ```
+Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
+assigned, if one of those cases happens, no change will be executed.
+
 
 ### Opt in / Opt out users with email and phone numbers
 You must provide at least one of either an email address or a phone number to opt users in / out. To do this simply call
