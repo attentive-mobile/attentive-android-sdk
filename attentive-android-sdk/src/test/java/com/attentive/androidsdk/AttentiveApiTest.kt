@@ -11,10 +11,12 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
+import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
+import com.attentive.androidsdk.internal.util.AppInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -51,7 +53,7 @@ class AttentiveApiTest {
     @Before
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient))
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "games"))
         json = Json{ignoreUnknownKeys = true}
     }
 
@@ -398,7 +400,7 @@ class AttentiveApiTest {
 
         Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
-
+    
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(
@@ -546,9 +548,13 @@ class AttentiveApiTest {
                 .withVisitorId("someVisitorId").build()
         }
 
-        private fun verifyCommonEventFields(url: HttpUrl, eventType: String, m: Metadata) {
+        private fun verifyCommonEventFields(url: HttpUrl, eventType: String?, m: Metadata) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
-            Assert.assertEquals("mobile-app", url.queryParameter("v"))
+            if(eventType != null) {
+                Assert.assertEquals("mobile-app", url.queryParameter("v"))
+            } else {
+                Assert.assertNull("mobile-app-${AppInfo.attentiveSDKVersion}", url.queryParameter("v"))
+            }
             Assert.assertEquals("0", url.queryParameter("lt"))
             Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))

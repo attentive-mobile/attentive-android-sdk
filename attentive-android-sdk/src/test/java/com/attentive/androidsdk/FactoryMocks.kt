@@ -49,6 +49,7 @@ class FactoryMocks private constructor(
             val okHttpClient = Mockito.mock(OkHttpClient::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildOkHttpClient(
+                    any(),
                     any()
                 )
             }.thenReturn(okHttpClient)
@@ -56,7 +57,7 @@ class FactoryMocks private constructor(
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
-                    any()
+                    any(), any()
                 )
             }.thenReturn(attentiveApi)
 

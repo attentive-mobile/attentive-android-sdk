@@ -1,6 +1,9 @@
 package com.attentive.androidsdk
 
+import android.app.Application
 import android.content.Context
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
@@ -9,33 +12,34 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
-class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
+ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
-    private val visitorService =
-        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
-    override var userIdentifiers =
-        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+    override val applicationContext = builder._context
+    override var notificationIconId: Int = builder._notificationIconId
+    override var notificationIconBackgroundColorResource: Int = builder._notificationIconBackgroundColorResource
+    override var logLevel: AttentiveLogLevel? = null
+
+    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
-    private val settingsService: SettingsService =
-        ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
+    private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
     init {
-        configureLogging(builder.logLevel, settingsService, builder._context)
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
+        logLevel = builder.logLevel
+        configureLogging(logLevel, settingsService, builder._context)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
-        attentiveApi =
-            ClassFactory.buildAttentiveApi(okHttpClient)
+        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
     }
 
     override fun skipFatigueOnCreatives(): Boolean {
-        Timber.d("skipFatigueOnCreatives called")
         return skipFatigueOnCreatives
     }
 
@@ -46,11 +50,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     override fun identify(userIdentifiers: UserIdentifiers) {
-        Timber.d("identify called with userIdentifiers: %s", userIdentifiers)
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
+        Timber.d("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
+
 
     override fun clearUser() {
         Timber.d("clearUser called")
@@ -118,14 +123,22 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     class  Builder {
-        internal lateinit var _context: Context
+        internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
+        internal var _notificationIconId: Int = 0
+        @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
-        internal var logLevel: AttentiveLogLevel? = null
+        internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
-        fun context(context: Context) = apply {
+        fun applicationContext(context: Application) = apply {
+            ParameterValidation.verifyNotNull(context, "context")
+            _context = context
+        }
+
+        @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
+        fun context(context: Application) = apply {
             ParameterValidation.verifyNotNull(context, "context")
             _context = context
         }
@@ -140,6 +153,15 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _domain = domain
         }
 
+        fun notificationIconId(notificationIconId: Int) = apply {
+            _notificationIconId = notificationIconId
+        }
+
+        fun notificationIconBackgroundColor(@ColorRes colorResourceId: Int) = apply {
+            _notificationIconBackgroundColorResource = colorResourceId
+        }
+
+
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
             this.okHttpClient = okHttpClient
@@ -152,6 +174,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun logLevel(logLevel: AttentiveLogLevel) = apply {
             this.logLevel = logLevel
         }
+
+
 
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {

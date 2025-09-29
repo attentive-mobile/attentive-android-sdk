@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.attentive.example2"
+        applicationId = 'com.attentive.bonni'
         minSdk = 30
         targetSdk = 35
         versionCode = 1
@@ -27,11 +27,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "21"
+        jvmTarget = "1.8"
     }
     buildFeatures {
         compose = true
@@ -40,21 +40,22 @@ android {
 
 dependencies {
     implementation project(path: ':attentive-android-sdk')
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.1")
-    implementation(platform("androidx.compose:compose-bom:2025.02.00"))
+    implementation(platform("androidx.compose:compose-bom:2025.05.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.navigation:navigation-compose:2.8.8")
-    implementation("com.google.android.engage:engage-core:1.5.6")
+    implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation("com.google.android.engage:engage-core:1.5.8")
     implementation "com.google.accompanist:accompanist-permissions:0.37.2"
     implementation 'com.google.firebase:firebase-messaging'
     implementation("com.google.code.gson:gson:2.12.1")
-    implementation 'androidx.activity:activity:1.10.0'
+    implementation 'androidx.activity:activity:1.10.1'
+    implementation 'com.jakewharton.timber:timber:4.7.1'
     // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:33.12.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
 
     // When using the BoM, you don't specify versions in Firebase library dependencies
 
@@ -64,9 +65,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2025.02.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.04.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     var room_version = "2.6.1"

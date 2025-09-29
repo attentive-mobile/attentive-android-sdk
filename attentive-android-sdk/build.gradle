@@ -82,17 +82,26 @@ dependencies {
     // Timber for logging - Upgrading to 5.+ versions causes compilation errors
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
+    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
+    implementation 'com.google.code.gson:gson:2.13.1'
+    implementation "com.squareup.retrofit2:converter-gson:3.0.0" // or latest
+
+
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
     implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+    implementation "androidx.activity:activity-ktx:1.10.1"
+
 
 
     // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
     // so we want to expose the okhttp object
     api 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.activity:activity-ktx:1.10.0'
+    implementation 'androidx.activity:activity:1.8.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.12.0'

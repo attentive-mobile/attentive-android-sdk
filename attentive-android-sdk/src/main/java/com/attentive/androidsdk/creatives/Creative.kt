@@ -357,7 +357,10 @@ class Creative internal constructor(
                     ) && isCreativeOpen.get()
                 ) {
                     Timber.d("document-visibility: true and creative is open, closing creative")
-                    closeCreative()
+                    // Ignoring reacting to document visibility for now to bring the behavior in line with iOS.
+                    // This is because the creative can be closed by the user and we don't want to close
+                    // the creative automatically when the document visibility changes.
+                    //closeCreative()
                 }
             }
         }

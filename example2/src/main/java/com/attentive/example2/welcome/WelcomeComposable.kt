@@ -5,11 +5,14 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -30,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -43,6 +47,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import com.attentive.example2.R
 import com.attentive.example2.Routes
 import com.attentive.example2.cart.CartScreen
@@ -67,14 +72,19 @@ fun WelcomeScreenContent(navController: NavHostController) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 64.dp),
                 horizontalAlignment = CenterHorizontally,
             ) {
                 Greeting()
                 SignUpForm(isVisible = newAccount, navController)
                 SignInForm(isVisible = existingAccount, navController)
-                Column(horizontalAlignment = CenterHorizontally, modifier = Modifier.padding(top = 106.dp)) {
+                Column(
+                    horizontalAlignment = CenterHorizontally,
+                    modifier = Modifier.padding(top = 106.dp)
+                ) {
                     SignInButton()
+                    Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
 
                 }
@@ -140,7 +150,7 @@ fun CreateAccountButton() {
 }
 
 @Composable
-fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
+fun WelcomeScreen(navController: NavHostController) {
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
         NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
             composable(Routes.WelcomeScreenRoute.name) {
@@ -149,7 +159,10 @@ fun WelcomeScreen(navController: NavHostController = rememberNavController()) {
             composable(Routes.ProductScreenRoute.name) {
                 ProductScreen(navController)
             }
-            composable(Routes.CartScreen.name) {
+            composable(
+                Routes.CartScreen.name,
+                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" })
+            ) {
                 CartScreen(navController)
             }
             composable(Routes.ShippingScreen.name) {
@@ -192,14 +205,20 @@ fun Greeting() {
         Text(
             text = "HEY BESTIE!",
             fontSize = 38.sp,
-            modifier = Modifier.fillMaxWidth().padding(top = 204.dp),
+            color = colorResource(id = R.color.attentive_black),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 204.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             textAlign = TextAlign.Center,
         )
         Text(
             text = "Welcome to Bonni Beauty!",
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            color = colorResource(id = R.color.attentive_black),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             lineHeight = 62.sp,
             fontSize = 54.sp,

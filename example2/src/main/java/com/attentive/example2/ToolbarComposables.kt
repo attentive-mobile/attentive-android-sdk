@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.getColor
@@ -41,14 +42,12 @@ fun SimpleToolbar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 56.dp, end = 56.dp), // Add padding to account for navigationIcon and actions
+                    .padding(
+                        start = 56.dp,
+                        end = 56.dp
+                    ), // Add padding to account for navigationIcon and actions
                 contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-//                androidx.compose.foundation.Image(
-//                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.bonni_logo),
-//                    contentDescription = "Toolbar Image",
-//                    modifier = Modifier.size(40.dp) // Adjust size as needed
-//                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -61,7 +60,11 @@ fun SimpleToolbar(
                     navController.navigateUp()
                 }
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    tint = colorResource(id = R.color.attentive_black),
+                    contentDescription = "Back"
+                )
             }
         },
         actions = actions // Ensure the actions are properly displayed

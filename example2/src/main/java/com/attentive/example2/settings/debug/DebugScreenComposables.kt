@@ -1,19 +1,15 @@
 package com.attentive.example2.settings.debug
 
-import android.R
+import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.provider.CalendarContract.Colors
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,7 +30,6 @@ import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.creatives.Creative
-import com.attentive.example2.Routes
 import com.attentive.example2.SimpleToolbar
 import com.attentive.example2.ui.theme.BonniYellow
 
@@ -97,7 +92,7 @@ fun DebugScreenComposables(navHostController: NavHostController) {
 @Composable
 fun DebugScreenContent(navHostController: NavHostController) {
     val activity = LocalActivity.current
-    val context = LocalContext.current
+    val context = LocalContext.current.applicationContext as Application
 
     // Create the FrameLayout once
     val frameLayout = remember {
@@ -115,7 +110,7 @@ fun DebugScreenContent(navHostController: NavHostController) {
         AttentiveConfig.Builder()
             .domain("YOUR_ATTENTIVE_DOMAIN")
             .mode(AttentiveConfig.Mode.DEBUG)
-            .context(context)
+            .applicationContext(context)
             .build()
     }
     AttentiveEventTracker.instance.config = config

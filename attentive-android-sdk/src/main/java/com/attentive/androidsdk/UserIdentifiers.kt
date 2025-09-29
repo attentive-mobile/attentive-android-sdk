@@ -33,12 +33,10 @@ data class UserIdentifiers(
         }
 
         fun withPhone(phone: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(phone, "phone")
             this.phone = phone
         }
 
         fun withEmail(email: String): Builder = apply {
-            ParameterValidation.verifyNotEmpty(email, "email")
             this.email = email
         }
 
