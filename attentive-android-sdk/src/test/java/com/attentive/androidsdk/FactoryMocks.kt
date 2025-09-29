@@ -57,7 +57,7 @@ class FactoryMocks private constructor(
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
-                    any()
+                    any(), any()
                 )
             }.thenReturn(attentiveApi)
 

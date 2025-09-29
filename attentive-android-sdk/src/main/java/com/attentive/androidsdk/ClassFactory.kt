@@ -1,6 +1,7 @@
 package com.attentive.androidsdk
 
 import android.content.Context
+import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import com.attentive.androidsdk.internal.util.AppInfo
 import okhttp3.Interceptor
@@ -39,8 +40,9 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildAttentiveApi(okHttpClient: OkHttpClient): AttentiveApi {
-        return AttentiveApi(okHttpClient)
+    fun buildAttentiveApi(okHttpClient: OkHttpClient, domain: String): AttentiveApi {
+        val client = okHttpClient.newBuilder().addInterceptor(GeoAdjustedDomainInterceptor(okHttpClient, domain)).build()
+        return AttentiveApi(client, domain)
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {

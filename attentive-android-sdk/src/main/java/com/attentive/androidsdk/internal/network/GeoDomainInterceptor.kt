@@ -4,6 +4,7 @@ import com.attentive.androidsdk.AttentiveApi.Companion.ATTENTIVE_DTAG_URL
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.Response
 import java.io.IOException
 import java.util.regex.Pattern
@@ -20,17 +21,26 @@ class GeoAdjustedDomainInterceptor(
         val geoDomain = getGeoAdjustedDomain()
         val originalRequest = chain.request()
         val originalUrl = originalRequest.url
+        var newRequestBuilder = originalRequest.newBuilder()
+            .url(originalUrl)
 
-        val newUrl = originalUrl.newBuilder()
-            .host(geoDomain)
-            .build()
 
-        val newRequest = originalRequest.newBuilder()
-            .url(newUrl)
-            .build()
+        // Only modify body for POST requests with a body
+        if (originalRequest.method == "POST" && originalRequest.body != null) {
+            val buffer = okio.Buffer()
+            originalRequest.body!!.writeTo(buffer)
+            var bodyString = buffer.readUtf8()
 
-        return chain.proceed(newRequest)
+            // Replace the c= field (assuming format: c=oldvalue)
+            bodyString = bodyString.replace(Regex("c=[^&]*"), "c=$geoDomain")
+
+            val newBody = RequestBody.create(originalRequest.body!!.contentType(), bodyString)
+            newRequestBuilder = newRequestBuilder.method(originalRequest.method, newBody)
+        }
+
+        return chain.proceed(newRequestBuilder.build())
     }
+
 
     private fun getGeoAdjustedDomain(): String {
         cachedGeoAdjustedDomain?.let { return it }

@@ -65,7 +65,7 @@ class AttentiveApiTestIT {
     fun setup() {
         countDownLatch = CountDownLatch(1)
         okHttpClient = Mockito.spy(OkHttpClient())
-        attentiveApi = AttentiveApi(okHttpClient)
+        attentiveApi = AttentiveApi(okHttpClient, "games")
         json = Json {
             serializersModule = metadataModule
             classDiscriminator = "className" // Helps identify the subclass

@@ -299,12 +299,13 @@ The SDK will package a ```PendingIntent``` with the notification that will trigg
 
 ### Change domain
 
+If you want to change domain to handle some user flow, you can do so changing the domain on attentive config. Please contact your CSM before using this use case.
 ```kotlin
-// If you want to change domain to handle some user flow, you can do so changing the domain on attentive config. Please contact your CSM before using this use case.
-attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
-// Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
-// assigned, if one of those cases happens, no change will be executed.
+    attentiveConfig.changeDomain("YOUR_NEW_DOMAIN");
 ```
+Keep in mind that the new domain shouldn't be null / empty / or the same value as it's already 
+assigned, if one of those cases happens, no change will be executed.
+
 
 ### Manage subscriptions for email and phone number
 Our SDK allows you to directly manage marketing subscriptions for emails and phone numbers. Your app is solely responsible for displaying any required legal information. To opt users in or out, you must provide at least one of either an email address or a phone number. Phone numbers must be in [E.164 format](https://support.google.com/google-ads/answer/16355235?hl=en).
@@ -318,6 +319,17 @@ and
 ```kotlin
     AttentiveSdk.optUserOutOfMarketingSubscription(optionalEmail, optionalPhoneNumber)
 ```
+
+### Update user via email and/or phone
+
+Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided). 
+Calling this method will clear all identifiers previously associated with the current user (the sdk will automatically call clearUser()), and associate the app with the new identifier(s) you provide. 
+This ensures that all subsequent events and messages are attributed to the newly identified user.
+
+```kotlin
+AttentiveSdk.updateUser(email = "someOptionalEmail", phone = "someOptionalPhone")
+```
+
 
 ### Log Level
 All Attentive logs can be filtered by the string "Attentive"

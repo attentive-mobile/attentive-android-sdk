@@ -2,6 +2,7 @@ package com.attentive.example2.settings
 
 import android.content.Context.MODE_PRIVATE
 import android.provider.Settings.Global.putString
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.UserIdentifiers
@@ -11,6 +12,7 @@ import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.core.content.edit
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 
 class SettingsViewModel : ViewModel() {
@@ -77,5 +79,10 @@ class SettingsViewModel : ViewModel() {
     fun getPersistedEmail(): String {
         return BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
             .getString(ATTENTIVE_EMAIL_PREFS, "") ?: ""
+    }
+
+    fun switchUser(){
+        AttentiveSdk.updateUser(getPersistedEmail(), getPersistedPhoneNumber())
+        Toast.makeText(BonniApp.getInstance(), "Switch to user with email: ${getPersistedEmail()} and phone ${getPersistedPhoneNumber()}", Toast.LENGTH_SHORT).show()
     }
 }
