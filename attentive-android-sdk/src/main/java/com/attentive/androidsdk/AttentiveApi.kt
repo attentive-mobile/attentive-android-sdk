@@ -47,7 +47,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 
 
-class AttentiveApi(private val httpClient: OkHttpClient, private val domain: String) {
+class AttentiveApi(private var httpClient: OkHttpClient, private val domain: String) {
     @get:VisibleForTesting
     var cachedGeoAdjustedDomain: String? = null
         private set
@@ -107,13 +107,10 @@ class AttentiveApi(private val httpClient: OkHttpClient, private val domain: Str
             .scheme("https")
             .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
 
-    val geoClient = httpClient.newBuilder()
-        .addInterceptor(GeoAdjustedDomainInterceptor(httpClient, domain = domain))
-        .build()
 
     val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(httpMobileEndpointBuilder.build())
-        .client(geoClient)
+        .client(httpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 

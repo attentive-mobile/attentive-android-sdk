@@ -11,6 +11,7 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
+import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
@@ -52,7 +53,7 @@ class AttentiveApiTest {
     @Before
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient))
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "games"))
         json = Json{ignoreUnknownKeys = true}
     }
 
