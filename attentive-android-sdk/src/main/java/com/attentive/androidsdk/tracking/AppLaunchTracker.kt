@@ -9,9 +9,13 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.AttentiveApi
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.internal.util.toJsonEncodedString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import org.json.JSONObject
 import timber.log.Timber
 
 class AppLaunchTracker(
@@ -75,12 +79,18 @@ class AppLaunchTracker(
                         activity.intent.extras.run {
                             if (this != null) {
                                 for (key in keySet()) {
+                                    //All the metadata for the notification is packaged in the launch intent
+                                    //The attentive backend needs these to be sent back to it when a notification is tapped
+                                    //The LAUNCHED_FROM_NOTIFICATION flag is a flag used for internal use only and shouldn't be sent to the backend
                                     if (key != LAUNCHED_FROM_NOTIFICATION) {
                                         dataMap[key] = getString(key).toString()
                                     }
                                 }
                             }
                         }
+
+                        jsonEncodeTitleAndBody()
+
                         AttentiveEventTracker.instance.sendAppLaunchEvent(
                             AttentiveApi.LaunchType.DIRECT_OPEN,
                             dataMap
@@ -91,6 +101,7 @@ class AppLaunchTracker(
                     }
                 }
             }
+
 
             override fun onActivityResumed(activity: Activity) {
                 Timber.d("Activity resumed: ${activity.localClassName}")
@@ -113,6 +124,16 @@ class AppLaunchTracker(
                 Timber.d("onActivityDestroyed: ${activity.localClassName}")
             }
         })
+    }
+
+    fun jsonEncodeTitleAndBody(){
+        dataMap[Constants.Companion.KEY_NOTIFICATION_BODY]?.let {
+            dataMap[Constants.Companion.KEY_NOTIFICATION_BODY] = it.toJsonEncodedString()
+        }
+
+        dataMap[Constants.Companion.KEY_NOTIFICATION_TITLE]?.let {
+            dataMap[Constants.Companion.KEY_NOTIFICATION_TITLE] = it.toJsonEncodedString()
+        }
     }
 
     companion object {

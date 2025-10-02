@@ -3,6 +3,7 @@ package com.attentive.androidsdk
 import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
+import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
@@ -25,7 +26,7 @@ object AttentiveSdk {
             "title: ${remoteMessage.notification?.title}, body: ${remoteMessage.notification?.body}"
         )
 
-        val isAttentiveMessage = remoteMessage.data.containsKey("attentive_message_title") ||
+        val isAttentiveMessage = remoteMessage.data.containsKey(Constants.Companion.KEY_NOTIFICATION_TITLE) ||
                 remoteMessage.data.containsKey("attentiveData")
 
         Timber.d("isAttentiveMessage: $isAttentiveMessage")
