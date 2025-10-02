@@ -28,7 +28,7 @@ class AttentiveSdkTest {
 
     @Test
     fun isAttentiveFirebaseMessage_returnsTrue_whenAttentiveKeyPresent() {
-        whenever(remoteMessage.data).thenReturn(mapOf("attentive_message_title" to "Test"))
+        whenever(remoteMessage.data).thenReturn(mapOf(Constants.Companion.KEY_NOTIFICATION_TITLE to "Test"))
         assertTrue(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage))
     }
 
