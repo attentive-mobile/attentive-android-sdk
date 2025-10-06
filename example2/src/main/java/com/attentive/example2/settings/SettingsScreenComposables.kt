@@ -66,6 +66,7 @@ import timber.log.Timber
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
@@ -457,20 +458,27 @@ suspend fun getCurrentToken() {
 
 fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
     Timber.d("Triggering mock notification with deep link: $withDeepLink")
-    var dataMap: Map<String, String>
+    var dataMap: MutableMap<String, String>
     if (withDeepLink) {
-        dataMap = mapOf("attentive_open_action_url" to "bonni://cart")
+        dataMap = mutableMapOf("attentive_open_action_url" to "bonni://cart")
     } else {
-        dataMap = mapOf("attentive_open_action_url" to "")
+        dataMap = mutableMapOf("attentive_open_action_url" to "")
     }
+
+    val title = "Bonni Cart"
+    val body = "Your cart is \"waiting\" for you!"
+
+    dataMap[Constants.Companion.KEY_NOTIFICATION_TITLE] = title
+    dataMap[Constants.Companion.KEY_NOTIFICATION_BODY] = body
+
     if (AttentiveSdk.isPushPermissionGranted(context).not()) {
         Timber.w("Push permission not granted, cannot send mock notification")
         Toast.makeText(context, "Push permission not granted", Toast.LENGTH_SHORT).show()
         return
     } else {
         AttentiveSdk.sendMockNotification(
-            "Bonni Cart",
-            "Your cart is ready! Your cart is ready!Your cart is readyYour cart is ready!Your cart is ready!Your cart is ready!Your cart is reaYour cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!dy!!",
+            title,
+            body,
             dataMap,
             R.drawable.bonni_logo,
             BonniApp.getInstance()

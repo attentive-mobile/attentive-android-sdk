@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.R
+import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.tracking.AppLaunchTracker
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -82,10 +83,10 @@ internal class AttentivePush {
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
 
-        val title = remoteMessage.data.getOrElse("attentive_message_title") {
+        val title = remoteMessage.data.getOrElse(Constants.Companion.KEY_NOTIFICATION_TITLE) {
             null
         }
-        val body = remoteMessage.data.getOrElse("attentive_message_body") { null }
+        val body = remoteMessage.data.getOrElse(Constants.Companion.KEY_NOTIFICATION_BODY) { null }
 
         val imageUrl = remoteMessage.getImageUrl()
 
