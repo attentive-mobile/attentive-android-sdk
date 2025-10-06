@@ -1,6 +1,5 @@
 package com.attentive.androidsdk
 
-import com.attentive.androidsdk.internal.util.ObjectToRawJsonStringConverter
 import kotlinx.serialization.json.Json
 import org.junit.Assert
 import org.junit.Before
