@@ -117,6 +117,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
     val api: RetrofitApiService = retrofit.create(RetrofitApiService::class.java)
 
     internal suspend fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
+        AttentiveEventTracker.instance.config.clearUser()
 
         val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
         if (visitorId == null) {
@@ -138,7 +139,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             }
         }
 
-        AttentiveEventTracker.instance.config.clearUser()
         val builder = UserIdentifiers.Builder()
         email?.let {
             builder.withEmail(it)
