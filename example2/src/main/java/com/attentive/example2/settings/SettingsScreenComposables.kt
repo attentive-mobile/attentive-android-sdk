@@ -147,12 +147,22 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         onClick = { phone -> changePhoneNumber(viewModel) }
     )
 
-    val switchUserSetting = SettingItem(
-        title = "Switch User",
+    val switchUserWithEmailSetting = SettingItem(
+        title = "Switch User with email",
         enabled = true,
         editable = true,
         onClick = {
             viewModel.saveEmail()
+            viewModel.switchUser()
+        }
+    )
+
+    val switchUserWithPhoneSetting = SettingItem(
+        title = "Switch User with phone",
+        enabled = true,
+        editable = true,
+        onClick = {
+            viewModel.savePhoneNumber()
             viewModel.switchUser()
         }
     )
@@ -289,7 +299,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         EditableDomainSetting(changeDomainSetting)
         EditableEmailSetting(changeEmailSetting)
         EditablePhoneNumberSetting(changePhoneNumberSetting)
-        SwitchEmailSetting(switchUserSetting)
+        SwitchUserWithEmailSetting(switchUserWithEmailSetting)
+        SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
         SettingGroup(userSettings)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
@@ -300,7 +311,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 }
 
 @Composable
-fun SwitchEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
 
@@ -335,7 +346,57 @@ fun SwitchEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = 
         } else {
             Text(
                 text = buildAnnotatedString {
-                    append("Switch user: ")
+                    append("Switch user with email: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(email)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    var isEditing by remember { mutableStateOf(false) }
+    val email by viewModel.phone.collectAsState()
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { viewModel.updatePhone(it) },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(email)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("Switch user with phone: ")
                     withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                         append(email)
                     }
