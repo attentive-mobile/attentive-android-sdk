@@ -311,16 +311,20 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 }
 
 @Composable
-fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+private fun SwitchUserSetting(
+    settingItem: SettingItem,
+    value: String,
+    displayLabel: String,
+    onValueChange: (String) -> Unit
+) {
     var isEditing by remember { mutableStateOf(false) }
-    val email by viewModel.email.collectAsState()
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
-                    value = email,
-                    onValueChange = { viewModel.updateEmail(it) },
+                    value = value,
+                    onValueChange = onValueChange,
                     label = { Text(settingItem.title) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -331,7 +335,7 @@ fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsView
                         ),
                     trailingIcon = {
                         IconButton(onClick = {
-                            settingItem.onClick(email)
+                            settingItem.onClick(value)
                             isEditing = false
                         }) {
                             Icon(
@@ -346,9 +350,9 @@ fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsView
         } else {
             Text(
                 text = buildAnnotatedString {
-                    append("Switch user with email: ")
+                    append("$displayLabel: ")
                     withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append(email)
+                        append(value)
                     }
                 },
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
@@ -361,53 +365,25 @@ fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsView
 }
 
 @Composable
+fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val email by viewModel.email.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = email,
+        displayLabel = "Switch user with email",
+        onValueChange = { viewModel.updateEmail(it) }
+    )
+}
+
+@Composable
 fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
-    var isEditing by remember { mutableStateOf(false) }
-    val email by viewModel.phone.collectAsState()
-
-    AnimatedContent(targetState = isEditing) { editing ->
-        if (editing) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { viewModel.updatePhone(it) },
-                    label = { Text(settingItem.title) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BonniPink,
-                        unfocusedBorderColor = Color.Gray,
-                        focusedTextColor = Color.Black,
-
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            settingItem.onClick(email)
-                            isEditing = false
-                        }) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Submit",
-                                tint = BonniPink
-                            )
-                        }
-                    }
-                )
-            }
-        } else {
-            Text(
-                text = buildAnnotatedString {
-                    append("Switch user with phone: ")
-                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append(email)
-                    }
-                },
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier = Modifier
-                    .padding(8.dp)
-                    .clickable { isEditing = true }
-            )
-        }
-    }
+    val phone by viewModel.phone.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = phone,
+        displayLabel = "Switch user with phone",
+        onValueChange = { viewModel.updatePhone(it) }
+    )
 }
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
