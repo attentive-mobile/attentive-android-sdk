@@ -147,6 +147,26 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         onClick = { phone -> changePhoneNumber(viewModel) }
     )
 
+    val switchUserWithEmailSetting = SettingItem(
+        title = "Switch User with email",
+        enabled = true,
+        editable = true,
+        onClick = {
+            viewModel.saveEmail()
+            viewModel.switchUser()
+        }
+    )
+
+    val switchUserWithPhoneSetting = SettingItem(
+        title = "Switch User with phone",
+        enabled = true,
+        editable = true,
+        onClick = {
+            viewModel.savePhoneNumber()
+            viewModel.switchUser()
+        }
+    )
+
     accountSettings.add(changeDomainSetting)
     accountSettings.add(changeEmailSetting)
 
@@ -264,7 +284,6 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     userSettings.add("Identify User" to { identifyUser() })
-    userSettings.add("Switch User" to { viewModel.switchUser() })
     userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
 
@@ -280,6 +299,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         EditableDomainSetting(changeDomainSetting)
         EditableEmailSetting(changeEmailSetting)
         EditablePhoneNumberSetting(changePhoneNumberSetting)
+        SwitchUserWithEmailSetting(switchUserWithEmailSetting)
+        SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
         SettingGroup(userSettings)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
@@ -289,7 +310,81 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     }
 }
 
+@Composable
+private fun SwitchUserSetting(
+    settingItem: SettingItem,
+    value: String,
+    displayLabel: String,
+    onValueChange: (String) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
 
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(value)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("$displayLabel: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(value)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val email by viewModel.email.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = email,
+        displayLabel = "Switch user with email",
+        onValueChange = { viewModel.updateEmail(it) }
+    )
+}
+
+@Composable
+fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val phone by viewModel.phone.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = phone,
+        displayLabel = "Switch user with phone",
+        onValueChange = { viewModel.updatePhone(it) }
+    )
+}
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
@@ -433,6 +528,56 @@ fun EditablePhoneNumberSetting(
                     append("Change current phone number: ")
                     withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                         append(phone)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun EditableSwitchUserSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    var isEditing by remember { mutableStateOf(false) }
+    val email by viewModel.email.collectAsState()
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { viewModel.updateEmail(it) },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(email)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("Change current email: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(email)
                     }
                 },
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
