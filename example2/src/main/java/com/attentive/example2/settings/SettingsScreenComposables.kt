@@ -66,6 +66,7 @@ import timber.log.Timber
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_PREFS
@@ -144,6 +145,26 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         enabled = true,
         editable = true,
         onClick = { phone -> changePhoneNumber(viewModel) }
+    )
+
+    val switchUserWithEmailSetting = SettingItem(
+        title = "Switch User with email",
+        enabled = true,
+        editable = true,
+        onClick = {
+            viewModel.saveEmail()
+            viewModel.switchUser()
+        }
+    )
+
+    val switchUserWithPhoneSetting = SettingItem(
+        title = "Switch User with phone",
+        enabled = true,
+        editable = true,
+        onClick = {
+            viewModel.savePhoneNumber()
+            viewModel.switchUser()
+        }
     )
 
     accountSettings.add(changeDomainSetting)
@@ -263,7 +284,6 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     })
 
     userSettings.add("Identify User" to { identifyUser() })
-    userSettings.add("Switch User" to { viewModel.switchUser() })
     userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
 
@@ -279,6 +299,8 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         EditableDomainSetting(changeDomainSetting)
         EditableEmailSetting(changeEmailSetting)
         EditablePhoneNumberSetting(changePhoneNumberSetting)
+        SwitchUserWithEmailSetting(switchUserWithEmailSetting)
+        SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
         SettingGroup(userSettings)
         SettingGroup(debugSettings, enabled = false)
         SettingGroup(creativeSettings)
@@ -288,7 +310,81 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     }
 }
 
+@Composable
+private fun SwitchUserSetting(
+    settingItem: SettingItem,
+    value: String,
+    displayLabel: String,
+    onValueChange: (String) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
 
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(value)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("$displayLabel: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(value)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val email by viewModel.email.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = email,
+        displayLabel = "Switch user with email",
+        onValueChange = { viewModel.updateEmail(it) }
+    )
+}
+
+@Composable
+fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val phone by viewModel.phone.collectAsState()
+    SwitchUserSetting(
+        settingItem = settingItem,
+        value = phone,
+        displayLabel = "Switch user with phone",
+        onValueChange = { viewModel.updatePhone(it) }
+    )
+}
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
@@ -443,6 +539,56 @@ fun EditablePhoneNumberSetting(
     }
 }
 
+@Composable
+fun EditableSwitchUserSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    var isEditing by remember { mutableStateOf(false) }
+    val email by viewModel.email.collectAsState()
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { viewModel.updateEmail(it) },
+                    label = { Text(settingItem.title) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BonniPink,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            settingItem.onClick(email)
+                            isEditing = false
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink
+                            )
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = buildAnnotatedString {
+                    append("Change current email: ")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(email)
+                    }
+                },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { isEditing = true }
+            )
+        }
+    }
+}
+
 suspend fun getCurrentToken() {
     val context = BonniApp.getInstance()
     AttentiveSdk.getPushToken(context, requestPermission = false).let {
@@ -457,20 +603,27 @@ suspend fun getCurrentToken() {
 
 fun triggerMockDeepLinkNotification(context: Context, withDeepLink: Boolean) {
     Timber.d("Triggering mock notification with deep link: $withDeepLink")
-    var dataMap: Map<String, String>
+    var dataMap: MutableMap<String, String>
     if (withDeepLink) {
-        dataMap = mapOf("attentive_open_action_url" to "bonni://cart")
+        dataMap = mutableMapOf("attentive_open_action_url" to "bonni://cart")
     } else {
-        dataMap = mapOf("attentive_open_action_url" to "")
+        dataMap = mutableMapOf("attentive_open_action_url" to "")
     }
+
+    val title = "Bonni Cart"
+    val body = "Your cart is \"waiting\" for you!"
+
+    dataMap[Constants.Companion.KEY_NOTIFICATION_TITLE] = title
+    dataMap[Constants.Companion.KEY_NOTIFICATION_BODY] = body
+
     if (AttentiveSdk.isPushPermissionGranted(context).not()) {
         Timber.w("Push permission not granted, cannot send mock notification")
         Toast.makeText(context, "Push permission not granted", Toast.LENGTH_SHORT).show()
         return
     } else {
         AttentiveSdk.sendMockNotification(
-            "Bonni Cart",
-            "Your cart is ready! Your cart is ready!Your cart is readyYour cart is ready!Your cart is ready!Your cart is ready!Your cart is reaYour cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!Your cart is ready!dy!!",
+            title,
+            body,
             dataMap,
             R.drawable.bonni_logo,
             BonniApp.getInstance()
