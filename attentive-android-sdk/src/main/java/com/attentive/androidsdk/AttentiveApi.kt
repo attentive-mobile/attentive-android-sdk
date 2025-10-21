@@ -77,6 +77,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
             .addPathSegment("e")
 
+        private val testPoint: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
+
+
 
     private val httpUrlPushTokenStatusEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
@@ -109,7 +115,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
 
     val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(httpMobileEndpointBuilder.build())
+        .baseUrl(testPoint.build())
         .client(httpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -162,6 +168,42 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         )
     }
 
+    /**
+     * Sends an event using the new BaseEventRequest format
+     * This method supports the following event types:
+     * - PurchaseEvent -> Purchase EventMetadata
+     * - ProductViewEvent -> ProductView EventMetadata
+     * - AddToCartEvent -> AddToCart EventMetadata
+     * - CustomEvent -> MobileCustomEvent EventMetadata
+     *
+     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
+     * This is a suspend function that should be called from a coroutine context.
+     */
+    suspend fun recordEvent(
+        event: Event,
+        userIdentifiers: UserIdentifiers,
+        domain: String
+    ) {
+        Timber.d("recordEvent called with event: %s", event.javaClass.name)
+
+        // Map the event to BaseEventRequest(s)
+        val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
+
+        if (baseEventRequests.isEmpty()) {
+            Timber.w("No event requests generated for event: ${event.javaClass.name}")
+            return
+        }
+
+        // Send each request - the interceptor will handle geo-domain adjustment
+        for (request in baseEventRequests) {
+            try {
+                api.sendEvent(request)
+                Timber.i("Successfully sent ${request.eventType} event")
+            } catch (e: Exception) {
+                Timber.e("Failed to send ${request.eventType} event: ${e.message}")
+            }
+        }
+    }
 
 
 
@@ -562,6 +604,252 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
     }
 
     return eventRequests
+}
+
+// New function to map events to BaseEventRequest according to OpenAPI schema
+private fun getBaseEventRequestsFromEvent(
+    event: Event,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
+    return when (event) {
+        is PurchaseEvent -> mapPurchaseEvent(event, userIdentifiers, domain)
+        is ProductViewEvent -> mapProductViewEvent(event, userIdentifiers, domain)
+        is AddToCartEvent -> mapAddToCartEvent(event, userIdentifiers, domain)
+        is CustomEvent -> mapCustomEvent(event, userIdentifiers, domain)
+        else -> {
+            Timber.e("Unknown Event type: ${event.javaClass.name}")
+            emptyList()
+        }
+    }
+}
+
+private fun mapPurchaseEvent(
+    event: PurchaseEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Purchase event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId ?: ""
+
+    val products = event.items.map { item -> itemToProduct(item) }
+    val cart = event.cart?.let { cartToCartModel(it) }
+
+    val purchaseMetadata = com.attentive.androidsdk.internal.network.events.PurchaseMetadata(
+        orderId = event.order.orderId,
+        currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
+        orderTotal = calculateCartTotal(event.items),
+        cart = cart,
+        products = products
+    )
+
+    return listOf(
+        com.attentive.androidsdk.internal.network.events.BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = com.attentive.androidsdk.internal.network.events.EventType.Purchase,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = purchaseMetadata,
+            sourceType = com.attentive.androidsdk.internal.network.events.SourceType.mobile,
+            referrer = "",
+            locationHref = null
+        )
+    )
+}
+
+private fun mapProductViewEvent(
+    event: ProductViewEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Product View event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId ?: ""
+
+    return event.items.map { item ->
+        val productViewMetadata = com.attentive.androidsdk.internal.network.events.ProductViewMetadata(
+            product = itemToProduct(item),
+            currency = item.price.currency.currencyCode
+        )
+
+        com.attentive.androidsdk.internal.network.events.BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = com.attentive.androidsdk.internal.network.events.EventType.ProductView,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = productViewMetadata,
+            sourceType = com.attentive.androidsdk.internal.network.events.SourceType.mobile,
+            referrer = event.deeplink ?: "",
+            locationHref = event.deeplink
+        )
+    }
+}
+
+private fun mapAddToCartEvent(
+    event: AddToCartEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Add to Cart event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId ?: ""
+
+    return event.items.map { item ->
+        val addToCartMetadata = com.attentive.androidsdk.internal.network.events.AddToCartMetadata(
+            product = itemToProduct(item),
+            currency = item.price.currency.currencyCode
+        )
+
+        com.attentive.androidsdk.internal.network.events.BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = com.attentive.androidsdk.internal.network.events.EventType.AddToCart,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = addToCartMetadata,
+            sourceType = com.attentive.androidsdk.internal.network.events.SourceType.mobile,
+            referrer = event.deeplink ?: "",
+            locationHref = event.deeplink
+        )
+    }
+}
+
+private fun mapCustomEvent(
+    event: CustomEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId ?: ""
+
+    val customEventMetadata = com.attentive.androidsdk.internal.network.events.MobileCustomEventMetadata(
+        customProperties = event.properties
+    )
+
+    return listOf(
+        com.attentive.androidsdk.internal.network.events.BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = com.attentive.androidsdk.internal.network.events.EventType.MobileCustomEvent,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = customEventMetadata,
+            sourceType = com.attentive.androidsdk.internal.network.events.SourceType.mobile,
+            referrer = "",
+            locationHref = null
+        )
+    )
+}
+
+private fun getCurrentTimestamp(): String {
+    return java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }.format(java.util.Date())
+}
+
+// Helper function to map UserIdentifiers to Identifiers model
+private fun buildIdentifiers(userIdentifiers: UserIdentifiers): com.attentive.androidsdk.internal.network.events.Identifiers {
+    val otherIdentifiers = mutableListOf<com.attentive.androidsdk.internal.network.events.OtherIdentifier>()
+
+    userIdentifiers.clientUserId?.let {
+        otherIdentifiers.add(
+            com.attentive.androidsdk.internal.network.events.OtherIdentifier(
+                idType = com.attentive.androidsdk.internal.network.events.IdType.ClientUserId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.shopifyId?.let {
+        otherIdentifiers.add(
+            com.attentive.androidsdk.internal.network.events.OtherIdentifier(
+                idType = com.attentive.androidsdk.internal.network.events.IdType.ShopifyId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.klaviyoId?.let {
+        otherIdentifiers.add(
+            com.attentive.androidsdk.internal.network.events.OtherIdentifier(
+                idType = com.attentive.androidsdk.internal.network.events.IdType.KlaviyoId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.customIdentifiers.forEach { (key, value) ->
+        otherIdentifiers.add(
+            com.attentive.androidsdk.internal.network.events.OtherIdentifier(
+                idType = com.attentive.androidsdk.internal.network.events.IdType.CustomId,
+                value = value,
+                name = key
+            )
+        )
+    }
+
+    return com.attentive.androidsdk.internal.network.events.Identifiers(
+        encryptedEmail = userIdentifiers.email?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        encryptedPhone = userIdentifiers.phone?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        otherIdentifiers = otherIdentifiers.ifEmpty { null }
+    )
+}
+
+// Helper function to convert Item to Product
+private fun itemToProduct(item: Item): com.attentive.androidsdk.internal.network.events.Product {
+    return com.attentive.androidsdk.internal.network.events.Product(
+        productId = item.productId,
+        variantId = item.productVariantId,
+        name = item.name,
+        variantName = null,
+        imageUrl = item.productImage,
+        categories = item.category?.let { listOf(it) },
+        price = item.price.price.toPlainString(),
+        quantity = item.quantity,
+        productUrl = null
+    )
+}
+
+// Helper function to convert Cart to Cart model
+private fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): com.attentive.androidsdk.internal.network.events.Cart {
+    return com.attentive.androidsdk.internal.network.events.Cart(
+        cartTotal = null,
+        cartCoupon = cart.cartCoupon,
+        cartDiscount = null,
+        cartId = cart.cartId
+    )
+}
+
+// Helper function to calculate cart total
+private fun calculateCartTotal(items: List<Item>): String {
+    var cartTotal = BigDecimal.ZERO
+    for (item in items) {
+        cartTotal = cartTotal.add(item.price.price)
+    }
+    return cartTotal.setScale(2, RoundingMode.DOWN).toPlainString()
 }
 
 private fun sendEventInternalAsync(

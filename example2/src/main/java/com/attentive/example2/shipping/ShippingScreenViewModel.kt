@@ -16,10 +16,9 @@ class ShippingScreenViewModel : ViewModel() {
 
     fun placeOrder() {
         viewModelScope.launch(Dispatchers.IO) {
-            val items = AppDatabase.getInstance().cartItemDao().getAll()
-            val itemss = items.firstOrNull()
+            val items = AppDatabase.getInstance().cartItemDao().getAll().firstOrNull()
             var baseItems = mutableListOf<Item>()
-            itemss?.forEach {
+            items?.forEach {
                 baseItems.add(it.product.item)
             }
             val order = Order.Builder().orderId("anOrderId").build()

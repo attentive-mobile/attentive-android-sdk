@@ -57,7 +57,7 @@ class ProductViewModel : ViewModel() {
             }
 
             val addToCartEvent = AddToCartEvent.Builder().items(listOf(product.item)).build()
-            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+            AttentiveEventTracker.instance.recordEventAsync(addToCartEvent)
             updateCartItemCount()
         }
     }
