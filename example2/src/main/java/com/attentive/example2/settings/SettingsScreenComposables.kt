@@ -193,6 +193,11 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     })
 
+    pushSettings.add("Update push permission status" to {
+        AttentiveSdk.updatePushPermissionStatus(context)
+        Toast.makeText(context, "Updating push permission status: ${AttentiveSdk.isPushPermissionGranted(context)}", Toast.LENGTH_SHORT).show()
+    })
+
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
     deepLinkSettings.add("Trigger Cart Deep Link Notification" to {
         triggerMockDeepLinkNotification(
