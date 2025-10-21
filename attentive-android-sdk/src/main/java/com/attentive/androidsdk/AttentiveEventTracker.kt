@@ -49,6 +49,26 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
+    /**
+     * Records an event using the new BaseEventRequest format.
+     * This is a suspend function that should be called from a coroutine context.
+     *
+     * Currently supports the following event types:
+     * - PurchaseEvent -> Maps to Purchase EventMetadata
+     * - ProductViewEvent -> Maps to ProductView EventMetadata
+     * - AddToCartEvent -> Maps to AddToCart EventMetadata
+     * - CustomEvent -> Maps to MobileCustomEvent EventMetadata
+     *
+     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
+     *
+     * @param event The event to record
+     */
+    suspend fun recordEventAsync(event: Event) {
+        verifyInitialized()
+
+        config.attentiveApi.recordEvent(event, config.userIdentifiers, config.domain)
+    }
+
     internal suspend fun registerPushToken(context: Context) {
         Timber.d("registerPushToken")
         verifyInitialized()
