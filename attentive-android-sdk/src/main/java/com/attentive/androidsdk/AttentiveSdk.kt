@@ -146,4 +146,10 @@ object AttentiveSdk {
     fun isPushPermissionGranted(context: Context): Boolean {
         return AttentivePush.getInstance().checkPushPermission(context)
     }
+
+    fun updatePushPermissionStatus(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveEventTracker.instance.registerPushToken(context)
+        }
+    }
 }
