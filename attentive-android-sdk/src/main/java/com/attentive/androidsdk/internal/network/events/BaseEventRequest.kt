@@ -14,7 +14,8 @@ data class BaseEventRequest(
     val sourceType: SourceType,
     val referrer: String,
     val locationHref: String? = null,
-    val genericMetadata: GenericMetadata? = null
+    val genericMetadata: GenericMetadata? = null,
+    val appSdk: AppSdk = AppSdk.Android
 )
 
 @Serializable
