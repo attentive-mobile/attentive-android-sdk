@@ -275,6 +275,19 @@ AttentiveSdk.getPushTokenWithCallback(application, requestPermission, new Attent
     }
 ```
 
+If you decide to handle permission requests yourself, you should update the push permission status after you receive your permission callback from the system:
+
+```kotlin
+    // After receiving the permission result from the system
+    AttentiveSdk.updatePushPermissionStatus(context)
+```
+
+```java
+    AttentiveSdk.INSTANCE.updatePushPermissionStatus(context);
+```
+
+This will automatically fetch the permission status on the device and report it to Attentive. If you fail to call this, it will not get reported until the next time the app is foregrounded.
+
 You do not need a subclass of `FirebaseMessagingService`, the sdk will handle that for you.
 If you have an existing subclass of `FirebaseMessagingService` you can route messages received there to the Attentive SDK.
 
