@@ -29,7 +29,7 @@ class UserAgentInterceptor(context: Context?) : Interceptor {
         get() {
             val appName = AppInfo.getApplicationName(context)
             val appNameEncoded = if (appName == null) {
-                null
+                ""
             } else {
                 encodeForHeader(appName.replace(" ", "-"))
             }
