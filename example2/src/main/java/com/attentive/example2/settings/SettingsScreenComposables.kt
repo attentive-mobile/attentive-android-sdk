@@ -167,11 +167,21 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         }
     )
 
+    val apiVersionSetting = SettingItem(
+        title = "Toggle Api Version",
+        enabled = true,
+        editable = false,
+        onClick = { viewModel.toggleEndpointVersion() }
+    )
+
     accountSettings.add(changeDomainSetting)
     accountSettings.add(changeEmailSetting)
 
     val debugSettings = mutableListOf<Pair<String, () -> Unit>>()
-    debugSettings.add("Debug" to { navHostController.navigate("DebugScreen") })
+    val currentApiPreference = viewModel.getEndpointVersion()
+
+
+//    debugSettings.add("Toggle Api Version - Current: $apiVersionString" to { viewModel.toggleEndpointVersion() })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
     creativeSettings.add("Show Creatives" to { creative.trigger() })
@@ -195,7 +205,11 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     pushSettings.add("Update push permission status" to {
         AttentiveSdk.updatePushPermissionStatus(context)
-        Toast.makeText(context, "Updating push permission status: ${AttentiveSdk.isPushPermissionGranted(context)}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            "Updating push permission status: ${AttentiveSdk.isPushPermissionGranted(context)}",
+            Toast.LENGTH_SHORT
+        ).show()
     })
 
     val deepLinkSettings = mutableListOf<Pair<String, () -> Unit>>()
@@ -307,7 +321,7 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
         SwitchUserWithEmailSetting(switchUserWithEmailSetting)
         SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
         SettingGroup(userSettings)
-        SettingGroup(debugSettings, enabled = false)
+        ApiVersionSetting(apiVersionSetting)
         SettingGroup(creativeSettings)
         PushPermissionRequest()
         SettingGroup(pushSettings)
@@ -370,7 +384,10 @@ private fun SwitchUserSetting(
 }
 
 @Composable
-fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+fun SwitchUserWithEmailSetting(
+    settingItem: SettingItem,
+    viewModel: SettingsViewModel = viewModel()
+) {
     val email by viewModel.email.collectAsState()
     SwitchUserSetting(
         settingItem = settingItem,
@@ -381,7 +398,10 @@ fun SwitchUserWithEmailSetting(settingItem: SettingItem, viewModel: SettingsView
 }
 
 @Composable
-fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+fun SwitchUserWithPhoneSetting(
+    settingItem: SettingItem,
+    viewModel: SettingsViewModel = viewModel()
+) {
     val phone by viewModel.phone.collectAsState()
     SwitchUserSetting(
         settingItem = settingItem,
@@ -390,6 +410,7 @@ fun SwitchUserWithPhoneSetting(settingItem: SettingItem, viewModel: SettingsView
         onValueChange = { viewModel.updatePhone(it) }
     )
 }
+
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
@@ -545,7 +566,10 @@ fun EditablePhoneNumberSetting(
 }
 
 @Composable
-fun EditableSwitchUserSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+fun EditableSwitchUserSetting(
+    settingItem: SettingItem,
+    viewModel: SettingsViewModel = viewModel()
+) {
     var isEditing by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
 
@@ -592,6 +616,16 @@ fun EditableSwitchUserSetting(settingItem: SettingItem, viewModel: SettingsViewM
             )
         }
     }
+}
+
+@Composable
+fun ApiVersionSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
+    val endpointVersion by viewModel.endpointVersion.collectAsState()
+    Setting(
+        title = "${endpointVersion}",
+        enabled = settingItem.enabled,
+        onClick = { settingItem.onClick("") }
+    )
 }
 
 suspend fun getCurrentToken() {
