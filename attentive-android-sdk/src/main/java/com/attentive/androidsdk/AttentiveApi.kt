@@ -71,6 +71,11 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         ignoreUnknownKeys = true
     }
 
+    private val baseEventRequestJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true  // Must encode defaults to include eventType field
+    }
+
     private val httpUrlEventsEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
@@ -186,6 +191,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
     ) {
         Timber.d("recordEvent called with event: %s", event.javaClass.name)
 
+        // Validate that we have a visitorId
+        if (userIdentifiers.visitorId.isNullOrEmpty()) {
+            Timber.e("Cannot send event: visitorId is required but is null or empty")
+            return
+        }
+
         // Map the event to BaseEventRequest(s)
         val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
 
@@ -197,10 +208,17 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         // Send each request - the interceptor will handle geo-domain adjustment
         for (request in baseEventRequests) {
             try {
-                api.sendEvent(request)
+                // Serialize the BaseEventRequest to JSON string for the -d parameter
+                val eventDataJson = baseEventRequestJson.encodeToString(
+                    com.attentive.androidsdk.internal.network.events.BaseEventRequest.serializer(),
+                    request
+                )
+                Timber.d("Sending event JSON: $eventDataJson")
+                api.sendEvent(eventDataJson)
                 Timber.i("Successfully sent ${request.eventType} event")
             } catch (e: Exception) {
                 Timber.e("Failed to send ${request.eventType} event: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -636,7 +654,7 @@ private fun mapPurchaseEvent(
 
     val identifiers = buildIdentifiers(userIdentifiers)
     val timestamp = getCurrentTimestamp()
-    val visitorId = userIdentifiers.visitorId ?: ""
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     val products = event.items.map { item -> itemToProduct(item) }
     val cart = event.cart?.let { cartToCartModel(it) }
@@ -677,7 +695,7 @@ private fun mapProductViewEvent(
 
     val identifiers = buildIdentifiers(userIdentifiers)
     val timestamp = getCurrentTimestamp()
-    val visitorId = userIdentifiers.visitorId ?: ""
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     return event.items.map { item ->
         val productViewMetadata = com.attentive.androidsdk.internal.network.events.ProductViewMetadata(
@@ -712,7 +730,7 @@ private fun mapAddToCartEvent(
 
     val identifiers = buildIdentifiers(userIdentifiers)
     val timestamp = getCurrentTimestamp()
-    val visitorId = userIdentifiers.visitorId ?: ""
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     return event.items.map { item ->
         val addToCartMetadata = com.attentive.androidsdk.internal.network.events.AddToCartMetadata(
@@ -742,7 +760,7 @@ private fun mapCustomEvent(
 ): List<com.attentive.androidsdk.internal.network.events.BaseEventRequest> {
     val identifiers = buildIdentifiers(userIdentifiers)
     val timestamp = getCurrentTimestamp()
-    val visitorId = userIdentifiers.visitorId ?: ""
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     val customEventMetadata = com.attentive.androidsdk.internal.network.events.MobileCustomEventMetadata(
         customProperties = event.properties
