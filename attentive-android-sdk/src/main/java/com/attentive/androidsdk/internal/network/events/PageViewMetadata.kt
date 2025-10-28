@@ -3,4 +3,6 @@ package com.attentive.androidsdk.internal.network.events
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class EventMetadata
+data class PageViewMetadata(
+    val eventType: String = "PageView"
+) : EventMetadata()
