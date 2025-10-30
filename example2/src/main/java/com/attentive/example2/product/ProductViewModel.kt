@@ -57,7 +57,7 @@ class ProductViewModel : ViewModel() {
             }
 
             val addToCartEvent = AddToCartEvent.Builder().items(listOf(product.item)).build()
-            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+            AttentiveEventTracker.instance.recordEventAsync(addToCartEvent)
             updateCartItemCount()
         }
     }
@@ -75,11 +75,17 @@ class ProductViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         val event = ProductViewEvent.Builder().items(viewedItems).build()
-        AttentiveEventTracker.instance.recordEvent(event)
+       // AttentiveEventTracker.instance.recordEvent(event)
 
-        if (cartItems.isNotEmpty()) {
-            val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
-            AttentiveEventTracker.instance.recordEvent(cartEvent)
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveEventTracker.instance.recordEventAsync(event)
+
+            if (cartItems.isNotEmpty()) {
+                val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
+                AttentiveEventTracker.instance.recordEvent(cartEvent)
+            }
         }
+
+
     }
 }

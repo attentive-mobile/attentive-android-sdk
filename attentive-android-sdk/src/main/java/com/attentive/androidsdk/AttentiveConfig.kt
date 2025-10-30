@@ -21,6 +21,7 @@ import timber.log.Timber
     override var logLevel: AttentiveLogLevel? = null
 
     private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+
     override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi

@@ -63,6 +63,12 @@ class BonniApp : Application() {
 
         const val ATTENTIVE_EMAIL_PREFS = "ATTENTIVE_EMAIL_PREFS"
         const val ATTENTIVE_PHONE_PREFS = "ATTENTIVE_PHONE_PREFS"
+
+        const val ATTENTIVE_ENDPOINT_PREFS = "ATTENTIVE_ENDPOINT_PREFS"
+
+        const val ATTENTIVE_ENDPOINT_OLD = "ATTENTIVE_ENDPOINT_OLD"
+        const val ATTENTIVE_ENDPOINT_NEW = "ATTENTIVE_ENDPOINT_NEW"
+
         fun getInstance(): BonniApp {
             return appInstance
         }

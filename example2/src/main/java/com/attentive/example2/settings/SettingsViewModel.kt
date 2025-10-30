@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 import androidx.core.content.edit
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.example2.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_ENDPOINT_NEW
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_ENDPOINT_OLD
+import com.attentive.example2.BonniApp.Companion.ATTENTIVE_ENDPOINT_PREFS
 
 class SettingsViewModel : ViewModel() {
     private val _phone = MutableStateFlow(
@@ -30,6 +33,13 @@ class SettingsViewModel : ViewModel() {
             getPersistedEmail()
     )
     val email: StateFlow<String> = _email as StateFlow<String>
+
+    private val _endpointVersion = if(getEndpointVersion() == ATTENTIVE_ENDPOINT_OLD){
+        MutableStateFlow("Toggle Api Version - Current: Old Endpoint")
+    } else {
+        MutableStateFlow("Toggle Api Version - Current: New Endpoint")
+    }
+    val endpointVersion: StateFlow<String> = _endpointVersion
 
     fun updatePhone(newPhone: String) {
         _phone.value = newPhone
@@ -79,6 +89,32 @@ class SettingsViewModel : ViewModel() {
     fun getPersistedEmail(): String {
         return BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
             .getString(ATTENTIVE_EMAIL_PREFS, "") ?: ""
+    }
+
+    fun getEndpointVersion(): String {
+        return BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+            .getString(ATTENTIVE_ENDPOINT_PREFS, ATTENTIVE_ENDPOINT_OLD) ?: ""    }
+
+    fun toggleEndpointVersion() {
+        val prefs = BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+        val currentEndpoint = prefs.getString(ATTENTIVE_ENDPOINT_PREFS, ATTENTIVE_ENDPOINT_OLD)
+
+        val newEndpoint = if (currentEndpoint == ATTENTIVE_ENDPOINT_OLD) {
+            ATTENTIVE_ENDPOINT_NEW
+        } else {
+            ATTENTIVE_ENDPOINT_OLD
+        }
+
+        prefs.edit {
+            putString(ATTENTIVE_ENDPOINT_PREFS, newEndpoint)
+        }
+
+        val endPointString = if(newEndpoint == ATTENTIVE_ENDPOINT_OLD){
+            "Old Endpoint"
+        } else {
+            "New Endpoint"
+        }
+        _endpointVersion.value = "Toggle Api Version - Current: $endPointString"
     }
 
     fun switchUser(){
