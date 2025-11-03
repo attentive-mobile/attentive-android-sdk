@@ -53,6 +53,31 @@ class SignUpSignInViewModel(application: Application): AndroidViewModel(BonniApp
         AttentiveEventTracker.instance.config?.identify(identifiers)
     }
 
+    fun restorePreviousUser() {
+        val prefs = BonniApp.getInstance().getSharedPreferences(BonniApp.ATTENTIVE_PREFS, android.content.Context.MODE_PRIVATE)
+        val email = prefs.getString(BonniApp.ATTENTIVE_EMAIL_PREFS, null)
+        val phone = prefs.getString(BonniApp.ATTENTIVE_PHONE_PREFS, null)
+
+        if (email != null || phone != null) {
+            val builder = UserIdentifiers.Builder()
+            email?.let { builder.withEmail(it) }
+            phone?.let { builder.withPhone(it) }
+
+            AttentiveEventTracker.instance.config.identify(builder.build())
+            _signedIn.value = true
+
+            val message = when {
+                email != null && phone != null -> "Restored user with email: $email and phone: $phone"
+                email != null -> "Restored user with email: $email"
+                phone != null -> "Restored user with phone: $phone"
+                else -> ""
+            }
+            Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(getApplication(), "No previous user found", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
     }

@@ -47,8 +47,11 @@ class BonniApp : Application() {
                 .build()
 
 
-        val userIdentifiers = UserIdentifiers.Builder()
+        AttentiveEventTracker.instance.initialize(attentiveConfig)
+
+        // Restore user identifiers if they exist (using identify to preserve visitorId)
         if(email != null || phone != null){
+            val userIdentifiers = UserIdentifiers.Builder()
             email?.let {
                 userIdentifiers.withEmail(it)
             }
@@ -56,11 +59,8 @@ class BonniApp : Application() {
                 userIdentifiers.withPhone(it)
             }
 
-            attentiveConfig.userIdentifiers = userIdentifiers.build()
+            attentiveConfig.identify(userIdentifiers.build())
         }
-
-
-        AttentiveEventTracker.instance.initialize(attentiveConfig)
     }
 
     companion object {

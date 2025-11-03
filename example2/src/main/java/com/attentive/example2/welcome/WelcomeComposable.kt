@@ -59,9 +59,18 @@ import com.attentive.example2.ui.theme.AttentiveAndroidSDKTheme
 import com.attentive.example2.ui.theme.BonniPink
 
 @Composable
-fun WelcomeScreenContent(navController: NavHostController) {
+fun WelcomeScreenContent(
+    navController: NavHostController,
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+) {
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
+    val signedIn by viewModel.signedIn.collectAsState()
+
+    LaunchedEffect(signedIn) {
+        if (signedIn) navController.navigate(Routes.ProductScreenRoute.name)
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(
             modifier = Modifier.paint(
@@ -83,7 +92,7 @@ fun WelcomeScreenContent(navController: NavHostController) {
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.padding(top = 106.dp)
                 ) {
-                    SignInButton()
+                    SignInButton(viewModel)
                     Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
 
@@ -94,17 +103,17 @@ fun WelcomeScreenContent(navController: NavHostController) {
 }
 
 
-@Preview
 @Composable
-fun SignInButton() {
+fun SignInButton(viewModel: SignUpSignInViewModel? = null) {
     Button(
         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-        onClick = {},
+        onClick = {
+            viewModel?.restorePreviousUser()
+        },
         shape = RectangleShape,
         modifier = Modifier
             .width(378.dp)
             .height(62.dp)
-        //onClick = { existingAccount = true }
     ) {
         Text(
             "SIGN IN",
