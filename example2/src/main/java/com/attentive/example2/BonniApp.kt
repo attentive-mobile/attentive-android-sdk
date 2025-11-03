@@ -8,6 +8,7 @@ import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
+import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.example2.database.AppDatabase
 import timber.log.Timber
 
@@ -27,6 +28,11 @@ class BonniApp : Application() {
         val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
         val email = prefs.getString(ATTENTIVE_EMAIL_PREFS, null)
         val phone = prefs.getString(ATTENTIVE_PHONE_PREFS, null)
+        val apiVersion = try {
+            ApiVersion.valueOf(prefs.getString(ATTENTIVE_ENDPOINT_PREFS, null) ?: "OLD")
+        } catch (e: IllegalArgumentException) {
+            ApiVersion.OLD
+        }
 
         val attentiveConfig =
             AttentiveConfig
@@ -36,7 +42,9 @@ class BonniApp : Application() {
                 .notificationIconId(R.drawable.bonni_logo)
                 .notificationIconBackgroundColor(R.color.purple_200)
                 .mode(AttentiveConfig.Mode.DEBUG)
-                .logLevel(AttentiveLogLevel.VERBOSE).build()
+                .logLevel(AttentiveLogLevel.VERBOSE)
+                .apiVersion(apiVersion)
+                .build()
 
 
         val userIdentifiers = UserIdentifiers.Builder()
@@ -65,9 +73,6 @@ class BonniApp : Application() {
         const val ATTENTIVE_PHONE_PREFS = "ATTENTIVE_PHONE_PREFS"
 
         const val ATTENTIVE_ENDPOINT_PREFS = "ATTENTIVE_ENDPOINT_PREFS"
-
-        const val ATTENTIVE_ENDPOINT_OLD = "ATTENTIVE_ENDPOINT_OLD"
-        const val ATTENTIVE_ENDPOINT_NEW = "ATTENTIVE_ENDPOINT_NEW"
 
         fun getInstance(): BonniApp {
             return appInstance

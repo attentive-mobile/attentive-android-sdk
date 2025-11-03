@@ -57,7 +57,7 @@ class ProductViewModel : ViewModel() {
             }
 
             val addToCartEvent = AddToCartEvent.Builder().items(listOf(product.item)).build()
-            AttentiveEventTracker.instance.recordEventAsync(addToCartEvent)
+            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
             updateCartItemCount()
         }
     }
@@ -78,7 +78,7 @@ class ProductViewModel : ViewModel() {
        // AttentiveEventTracker.instance.recordEvent(event)
 
         CoroutineScope(Dispatchers.IO).launch {
-            AttentiveEventTracker.instance.recordEventAsync(event)
+            AttentiveEventTracker.instance.recordEvent(event)
 
             if (cartItems.isNotEmpty()) {
                 val cartEvent = AddToCartEvent.Builder().items(cartItems).build()

@@ -24,7 +24,7 @@ class ShippingScreenViewModel : ViewModel() {
             val order = Order.Builder().orderId("anOrderId").build()
             val cart = Cart.Builder().cartId("aCartId").cartCoupon("someCoupon").build()
             val purchaseEvent = PurchaseEvent.Builder(baseItems, order).cart(cart).build()
-            AttentiveEventTracker.instance.recordEventAsync(purchaseEvent)
+            AttentiveEventTracker.instance.recordEvent(purchaseEvent)
 
             AppDatabase.getInstance().cartItemDao().deleteAll()
         }

@@ -223,6 +223,101 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         }
     }
 
+    /**
+     * Sends an event using the new BaseEventRequest format (Java-compatible version).
+     * This method supports the following event types:
+     * - PurchaseEvent -> Purchase EventMetadata
+     * - ProductViewEvent -> ProductView EventMetadata
+     * - AddToCartEvent -> AddToCart EventMetadata
+     * - CustomEvent -> MobileCustomEvent EventMetadata
+     *
+     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
+     * Returns a Retrofit Call that can be executed synchronously or asynchronously.
+     *
+     * @return A Call object that can be used to execute the request. Returns null if validation fails.
+     */
+    fun recordEventCall(
+        event: Event,
+        userIdentifiers: UserIdentifiers,
+        domain: String,
+        callback: AttentiveApiCallback
+    ) {
+        Timber.d("recordEventCall called with event: %s", event.javaClass.name)
+
+        // Validate that we have a visitorId
+        if (userIdentifiers.visitorId.isNullOrEmpty()) {
+            Timber.e("Cannot send event: visitorId is required but is null or empty")
+            callback.onFailure("Cannot send event: visitorId is required")
+            return
+        }
+
+        // Map the event to BaseEventRequest(s)
+        val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
+
+        if (baseEventRequests.isEmpty()) {
+            Timber.w("No event requests generated for event: ${event.javaClass.name}")
+            callback.onFailure("No event requests generated for event")
+            return
+        }
+
+        // Track completed requests
+        var completedRequests = 0
+        var hasError = false
+        val totalRequests = baseEventRequests.size
+
+        // Send each request - the interceptor will handle geo-domain adjustment
+        for (request in baseEventRequests) {
+            try {
+                // Serialize the BaseEventRequest to JSON string for the -d parameter
+                val eventDataJson = baseEventRequestJson.encodeToString(
+                    com.attentive.androidsdk.internal.network.events.BaseEventRequest.serializer(),
+                    request
+                )
+                Timber.d("Sending event JSON: $eventDataJson")
+
+                val call = api.sendEventCall(eventDataJson)
+                call.enqueue(object : retrofit2.Callback<Unit> {
+                    override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
+                        if (response.isSuccessful) {
+                            Timber.i("Successfully sent ${request.eventType} event")
+                            synchronized(this@AttentiveApi) {
+                                completedRequests++
+                                if (completedRequests == totalRequests && !hasError) {
+                                    callback.onSuccess()
+                                }
+                            }
+                        } else {
+                            Timber.e("Failed to send ${request.eventType} event: ${response.code()}")
+                            synchronized(this@AttentiveApi) {
+                                if (!hasError) {
+                                    hasError = true
+                                    callback.onFailure("Failed to send event: ${response.code()}")
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
+                        Timber.e("Failed to send ${request.eventType} event: ${t.message}")
+                        synchronized(this@AttentiveApi) {
+                            if (!hasError) {
+                                hasError = true
+                                callback.onFailure("Failed to send event: ${t.message}")
+                            }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                Timber.e("Failed to send ${request.eventType} event: ${e.message}")
+                if (!hasError) {
+                    hasError = true
+                    callback.onFailure("Failed to serialize event: ${e.message}")
+                }
+                e.printStackTrace()
+            }
+        }
+    }
+
 
 
 // TODO refactor to use the 'sendEvent' method
