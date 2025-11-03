@@ -15,9 +15,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
@@ -306,26 +308,29 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
     userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
 
-    Column {
-        Text(
-            "Settings",
-            modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth(),
-            textAlign = TextAlign.Start,
-            fontSize = 20.sp
-        )
-        EditableDomainSetting(changeDomainSetting)
-        EditableEmailSetting(changeEmailSetting)
-        EditablePhoneNumberSetting(changePhoneNumberSetting)
-        SwitchUserWithEmailSetting(switchUserWithEmailSetting)
-        SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
-        SettingGroup(userSettings)
-        ApiVersionSetting(apiVersionSetting)
-        SettingGroup(creativeSettings)
-        PushPermissionRequest()
-        SettingGroup(pushSettings)
-        SettingGroup(deepLinkSettings)
+    LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
+        items(count = 1) {
+            Text(
+                "Settings",
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Start,
+                fontSize = 20.sp
+            )
+            EditableDomainSetting(changeDomainSetting)
+            EditableEmailSetting(changeEmailSetting)
+            EditablePhoneNumberSetting(changePhoneNumberSetting)
+            SwitchUserWithEmailSetting(switchUserWithEmailSetting)
+            SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
+            SettingGroup(userSettings)
+            ApiVersionSetting(apiVersionSetting)
+            SettingGroup(creativeSettings)
+            PushPermissionRequest()
+            SettingGroup(pushSettings)
+            SettingGroup(deepLinkSettings)
+            Spacer(modifier = Modifier.padding(8.dp))
+        }
     }
 }
 
@@ -622,7 +627,7 @@ fun EditableSwitchUserSetting(
 fun ApiVersionSetting(settingItem: SettingItem, viewModel: SettingsViewModel = viewModel()) {
     val endpointVersion by viewModel.endpointVersion.collectAsState()
     Setting(
-        title = "${endpointVersion}",
+        title = endpointVersion,
         enabled = settingItem.enabled,
         onClick = { settingItem.onClick("") }
     )
