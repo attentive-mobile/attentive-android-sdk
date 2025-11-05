@@ -13,7 +13,6 @@ import okhttp3.OkHttpClient
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.MockedStatic
 import org.mockito.Mockito
 import java.math.BigDecimal
 import java.util.Currency
@@ -113,18 +112,28 @@ class BaseEventRequestMapperTest {
 
     @Test
     fun mapPurchaseEvent_withEmptyItems_returnsEmptyList() {
-        // Arrange
-        val purchaseEvent = PurchaseEvent.Builder(
-            emptyList(),
-            Order.Builder().orderId("ORDER123").build()
-        ).build()
-        val userIdentifiers = buildAllUserIdentifiers()
+        // Mock Android Log to avoid NoSuchMethodError when Timber tries to log
+        val logMock = Mockito.mockStatic(android.util.Log::class.java)
+        try {
+            logMock.`when`<Int> {
+                android.util.Log.w(Mockito.anyString(), Mockito.anyString())
+            }.thenReturn(0)
 
-        // Act
-        val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+            // Arrange
+            val purchaseEvent = PurchaseEvent.Builder(
+                emptyList(),
+                Order.Builder().orderId("ORDER123").build()
+            ).build()
+            val userIdentifiers = buildAllUserIdentifiers()
 
-        // Assert
-        assertTrue(result.isEmpty())
+            // Act
+            val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+
+            // Assert
+            assertTrue(result.isEmpty())
+        } finally {
+            logMock.close()
+        }
     }
 
     // Test mapProductViewEvent
@@ -510,48 +519,30 @@ class BaseEventRequestMapperTest {
         assertEquals("16.98", result) // Should round down
     }
 
-    // Helper methods to invoke private functions using reflection
+    // Helper methods to call internal functions
+    // Since these are marked internal, we can call them directly from tests in the same module
     private fun invokeGetBaseEventRequestsFromEvent(
         event: com.attentive.androidsdk.events.Event,
         userIdentifiers: UserIdentifiers,
         domain: String
     ): List<BaseEventRequest> {
-        val method = AttentiveApi::class.java.getDeclaredMethod(
-            "getBaseEventRequestsFromEvent",
-            com.attentive.androidsdk.events.Event::class.java,
-            UserIdentifiers::class.java,
-            String::class.java
-        )
-        method.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        return method.invoke(attentiveApi, event, userIdentifiers, domain) as List<BaseEventRequest>
+        return attentiveApi.getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
     }
 
     private fun invokeBuildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
-        val method = AttentiveApi::class.java.getDeclaredMethod(
-            "buildIdentifiers",
-            UserIdentifiers::class.java
-        )
-        method.isAccessible = true
-        return method.invoke(attentiveApi, userIdentifiers) as Identifiers
+        return attentiveApi.buildIdentifiers(userIdentifiers)
     }
 
     private fun invokeItemToProduct(item: Item): Product {
-        val method = AttentiveApi::class.java.getDeclaredMethod("itemToProduct", Item::class.java)
-        method.isAccessible = true
-        return method.invoke(attentiveApi, item) as Product
+        return attentiveApi.itemToProduct(item)
     }
 
     private fun invokeCartToCartModel(cart: Cart): com.attentive.androidsdk.internal.network.events.Cart {
-        val method = AttentiveApi::class.java.getDeclaredMethod("cartToCartModel", Cart::class.java)
-        method.isAccessible = true
-        return method.invoke(attentiveApi, cart) as com.attentive.androidsdk.internal.network.events.Cart
+        return attentiveApi.cartToCartModel(cart)
     }
 
     private fun invokeCalculateCartTotal(items: List<Item>): String {
-        val method = AttentiveApi::class.java.getDeclaredMethod("calculateCartTotal", List::class.java)
-        method.isAccessible = true
-        return method.invoke(attentiveApi, items) as String
+        return attentiveApi.calculateCartTotal(items)
     }
 
     // Builder helper methods

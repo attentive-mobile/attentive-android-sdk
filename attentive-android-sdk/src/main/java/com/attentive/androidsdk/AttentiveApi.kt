@@ -245,14 +245,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
     ) {
         Timber.d("recordEventCall called with event: %s", event.javaClass.name)
 
-        // Validate that we have a visitorId
         if (userIdentifiers.visitorId.isNullOrEmpty()) {
             Timber.e("Cannot send event: visitorId is required but is null or empty")
             callback.onFailure("Cannot send event: visitorId is required")
             return
         }
 
-        // Map the event to BaseEventRequest(s)
         val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
 
         if (baseEventRequests.isEmpty()) {
@@ -261,12 +259,10 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             return
         }
 
-        // Track completed requests
         var completedRequests = 0
         var hasError = false
         val totalRequests = baseEventRequests.size
 
-        // Send each request - the interceptor will handle geo-domain adjustment
         for (request in baseEventRequests) {
             try {
                 // Serialize the BaseEventRequest to JSON string for the -d parameter
@@ -720,8 +716,8 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
     return eventRequests
 }
 
-// New function to map events to BaseEventRequest according to OpenAPI schema
-private fun getBaseEventRequestsFromEvent(
+@VisibleForTesting
+internal fun getBaseEventRequestsFromEvent(
     event: Event,
     userIdentifiers: UserIdentifiers,
     domain: String
@@ -885,7 +881,8 @@ private fun getCurrentTimestamp(): String {
 }
 
 // Helper function to map UserIdentifiers to Identifiers model
-private fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
+@VisibleForTesting
+internal fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
     val otherIdentifiers = mutableListOf<OtherIdentifier>()
 
     userIdentifiers.clientUserId?.let {
@@ -933,7 +930,8 @@ private fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
 }
 
 // Helper function to convert Item to Product
-private fun itemToProduct(item: Item): Product {
+@VisibleForTesting
+internal fun itemToProduct(item: Item): Product {
     return Product(
         productId = item.productId,
         variantId = item.productVariantId,
@@ -948,7 +946,8 @@ private fun itemToProduct(item: Item): Product {
 }
 
 // Helper function to convert Cart to Cart model
-private fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
+@VisibleForTesting
+internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
     return Cart(
         cartTotal = null,
         cartCoupon = cart.cartCoupon,
@@ -958,7 +957,8 @@ private fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
 }
 
 // Helper function to calculate cart total
-private fun calculateCartTotal(items: List<Item>): String {
+@VisibleForTesting
+internal fun calculateCartTotal(items: List<Item>): String {
     var cartTotal = BigDecimal.ZERO
     for (item in items) {
         cartTotal = cartTotal.add(item.price.price)
