@@ -2,7 +2,6 @@ package com.attentive.androidsdk
 
 import android.app.Application
 import android.content.Context
-import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
@@ -29,12 +28,12 @@ import timber.log.Timber
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
-    var _apiVersion = ApiVersion.OLD
+    var apiVersion = ApiVersion.OLD
 
     init {
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
         logLevel = builder.logLevel
-        _apiVersion = builder.apiVersion
+        apiVersion = builder.apiVersion
         configureLogging(logLevel, settingsService, builder._context)
 
         val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
@@ -76,8 +75,8 @@ import timber.log.Timber
     }
 
     fun changeApiVersion(apiVersion: ApiVersion) {
-        Timber.d("Changing API version from ${_apiVersion} to $apiVersion")
-        _apiVersion = apiVersion
+        Timber.d("Changing API version from ${this@AttentiveConfig.apiVersion} to $apiVersion")
+        this@AttentiveConfig.apiVersion = apiVersion
     }
 
     private fun sendUserIdentifiersCollectedEvent() {
@@ -173,8 +172,11 @@ import timber.log.Timber
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
+        private val allowApiVersionOverride = true
         fun apiVersion(apiVersion: ApiVersion) = apply {
+            if(allowApiVersionOverride){
             this.apiVersion = apiVersion
+                }
         }
 
 

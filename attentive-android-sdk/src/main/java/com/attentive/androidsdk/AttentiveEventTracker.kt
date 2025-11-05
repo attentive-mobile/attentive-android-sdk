@@ -4,10 +4,8 @@ import android.content.Context
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.push.AttentivePush
-import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.androidsdk.push.TokenProvider
 import com.attentive.androidsdk.tracking.AppLaunchTracker
-import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -62,7 +60,7 @@ class AttentiveEventTracker private constructor() {
         verifyInitialized()
 
         config?.let {
-            if(it._apiVersion == ApiVersion.OLD) {
+            if(it.apiVersion == ApiVersion.OLD) {
                 it.attentiveApi.sendEvent(event, it.userIdentifiers, it.domain, callback)
             } else {
                 it.attentiveApi.recordEventCall(
@@ -103,7 +101,7 @@ class AttentiveEventTracker private constructor() {
     suspend fun recordEvent(event: Event) {
         verifyInitialized()
 
-        if(config._apiVersion == ApiVersion.OLD) {
+        if(config.apiVersion == ApiVersion.OLD) {
             // Wrap the callback-based old API in a suspend function
             suspendCancellableCoroutine { continuation ->
                 config.attentiveApi.sendEvent(
