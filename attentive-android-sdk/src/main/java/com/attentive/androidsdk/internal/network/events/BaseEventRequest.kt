@@ -47,7 +47,5 @@ enum class SourceType {
 
 @Serializable
 enum class AppSdk {
-    iOS,
-    Android,
-    ReactNative
+    Android
 }

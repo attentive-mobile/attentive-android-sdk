@@ -716,24 +716,6 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
     return eventRequests
 }
 
-@VisibleForTesting
-internal fun getBaseEventRequestsFromEvent(
-    event: Event,
-    userIdentifiers: UserIdentifiers,
-    domain: String
-): List<BaseEventRequest> {
-    return when (event) {
-        is PurchaseEvent -> mapPurchaseEvent(event, userIdentifiers, domain)
-        is ProductViewEvent -> mapProductViewEvent(event, userIdentifiers, domain)
-        is AddToCartEvent -> mapAddToCartEvent(event, userIdentifiers, domain)
-        is CustomEvent -> mapCustomEvent(event, userIdentifiers, domain)
-        else -> {
-            Timber.e("Unknown Event type: ${event.javaClass.name}")
-            emptyList()
-        }
-    }
-}
-
 private fun mapPurchaseEvent(
     event: PurchaseEvent,
     userIdentifiers: UserIdentifiers,
@@ -878,92 +860,6 @@ private fun getCurrentTimestamp(): String {
     return java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
         timeZone = java.util.TimeZone.getTimeZone("UTC")
     }.format(java.util.Date())
-}
-
-// Helper function to map UserIdentifiers to Identifiers model
-@VisibleForTesting
-internal fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
-    val otherIdentifiers = mutableListOf<OtherIdentifier>()
-
-    userIdentifiers.clientUserId?.let {
-        otherIdentifiers.add(
-            OtherIdentifier(
-                idType = IdType.ClientUserId,
-                value = it
-            )
-        )
-    }
-
-    userIdentifiers.shopifyId?.let {
-        otherIdentifiers.add(
-            OtherIdentifier(
-                idType = IdType.ShopifyId,
-                value = it
-            )
-        )
-    }
-
-    userIdentifiers.klaviyoId?.let {
-        otherIdentifiers.add(
-            OtherIdentifier(
-                idType = IdType.KlaviyoId,
-                value = it
-            )
-        )
-    }
-
-    userIdentifiers.customIdentifiers.forEach { (key, value) ->
-        otherIdentifiers.add(
-            OtherIdentifier(
-                idType = IdType.CustomId,
-                value = value,
-                name = key
-            )
-        )
-    }
-
-    return Identifiers(
-        encryptedEmail = userIdentifiers.email?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
-        encryptedPhone = userIdentifiers.phone?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
-        otherIdentifiers = otherIdentifiers.ifEmpty { null }
-    )
-}
-
-// Helper function to convert Item to Product
-@VisibleForTesting
-internal fun itemToProduct(item: Item): Product {
-    return Product(
-        productId = item.productId,
-        variantId = item.productVariantId,
-        name = item.name,
-        variantName = null,
-        imageUrl = item.productImage,
-        categories = item.category?.let { listOf(it) },
-        price = item.price.price.toPlainString(),
-        quantity = item.quantity,
-        productUrl = null
-    )
-}
-
-// Helper function to convert Cart to Cart model
-@VisibleForTesting
-internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
-    return Cart(
-        cartTotal = null,
-        cartCoupon = cart.cartCoupon,
-        cartDiscount = null,
-        cartId = cart.cartId
-    )
-}
-
-// Helper function to calculate cart total
-@VisibleForTesting
-internal fun calculateCartTotal(items: List<Item>): String {
-    var cartTotal = BigDecimal.ZERO
-    for (item in items) {
-        cartTotal = cartTotal.add(item.price.price)
-    }
-    return cartTotal.setScale(2, RoundingMode.DOWN).toPlainString()
 }
 
 private fun sendEventInternalAsync(
@@ -1437,6 +1333,107 @@ internal fun sendOptOutSubscriptionStatus(
 
 private fun buildEmptyRequest(): RequestBody {
     return RequestBody.create(null, ByteArray(0))
+}
+
+// Test helper functions - marked as @VisibleForTesting internal so tests can access them
+@VisibleForTesting
+internal fun getBaseEventRequestsFromEvent(
+    event: Event,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    return when (event) {
+        is PurchaseEvent -> mapPurchaseEvent(event, userIdentifiers, domain)
+        is ProductViewEvent -> mapProductViewEvent(event, userIdentifiers, domain)
+        is AddToCartEvent -> mapAddToCartEvent(event, userIdentifiers, domain)
+        is CustomEvent -> mapCustomEvent(event, userIdentifiers, domain)
+        else -> {
+            Timber.e("Unknown Event type: ${event.javaClass.name}")
+            emptyList()
+        }
+    }
+}
+
+@VisibleForTesting
+internal fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
+    val otherIdentifiers = mutableListOf<OtherIdentifier>()
+
+    userIdentifiers.clientUserId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.ClientUserId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.shopifyId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.ShopifyId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.klaviyoId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.KlaviyoId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.customIdentifiers.forEach { (key, value) ->
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.CustomId,
+                value = value,
+                name = key
+            )
+        )
+    }
+
+    return Identifiers(
+        encryptedEmail = userIdentifiers.email?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        encryptedPhone = userIdentifiers.phone?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        otherIdentifiers = otherIdentifiers.ifEmpty { null }
+    )
+}
+
+@VisibleForTesting
+internal fun itemToProduct(item: Item): Product {
+    return Product(
+        productId = item.productId,
+        variantId = item.productVariantId,
+        name = item.name,
+        variantName = null,
+        imageUrl = item.productImage,
+        categories = item.category?.let { listOf(it) },
+        price = item.price.price.toPlainString(),
+        quantity = item.quantity,
+        productUrl = null
+    )
+}
+
+@VisibleForTesting
+internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
+    return Cart(
+        cartTotal = null,
+        cartCoupon = cart.cartCoupon,
+        cartDiscount = null,
+        cartId = cart.cartId
+    )
+}
+
+@VisibleForTesting
+internal fun calculateCartTotal(items: List<Item>): String {
+    var cartTotal = BigDecimal.ZERO
+    for (item in items) {
+        cartTotal = cartTotal.add(item.price.price)
+    }
+    return cartTotal.setScale(2, RoundingMode.DOWN).toPlainString()
 }
 
 companion object {

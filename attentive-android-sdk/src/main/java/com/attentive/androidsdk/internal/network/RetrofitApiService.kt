@@ -27,10 +27,7 @@ interface RetrofitApiService {
         @Body request: UserUpdateRequest
     ): Call<Unit>
 
-    /**
-     * Send analytics events to the Attentive Internal Events API
-     * Supports all event types defined in the OpenAPI schema
-     */
+
     @Headers("x-datadog-sampling-priority: 1")
     @FormUrlEncoded
     @POST("mobile")
@@ -39,8 +36,7 @@ interface RetrofitApiService {
     ): Unit
 
     /**
-     * Send analytics events to the Attentive Internal Events API (non-suspending version)
-     * Supports all event types defined in the OpenAPI schema
+     * Non suspend sendEvent
      */
     @Headers("x-datadog-sampling-priority: 1")
     @FormUrlEncoded

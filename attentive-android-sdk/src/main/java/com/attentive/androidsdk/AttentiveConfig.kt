@@ -172,7 +172,7 @@ import timber.log.Timber
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
-        private val allowApiVersionOverride = true
+        private val allowApiVersionOverride = false
         fun apiVersion(apiVersion: ApiVersion) = apply {
             if(allowApiVersionOverride){
             this.apiVersion = apiVersion
