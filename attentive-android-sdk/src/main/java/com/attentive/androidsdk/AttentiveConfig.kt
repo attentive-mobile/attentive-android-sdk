@@ -2,9 +2,9 @@ package com.attentive.androidsdk
 
 import android.app.Application
 import android.content.Context
-import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
+import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
@@ -21,15 +21,19 @@ import timber.log.Timber
     override var logLevel: AttentiveLogLevel? = null
 
     private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+
     override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
+    var apiVersion = ApiVersion.OLD
+
     init {
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
         logLevel = builder.logLevel
+        apiVersion = builder.apiVersion
         configureLogging(logLevel, settingsService, builder._context)
 
         val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
@@ -68,6 +72,11 @@ import timber.log.Timber
             this.domain = domain
             sendInfoEvent()
         }
+    }
+
+    fun changeApiVersion(apiVersion: ApiVersion) {
+        Timber.d("Changing API version from ${this@AttentiveConfig.apiVersion} to $apiVersion")
+        this@AttentiveConfig.apiVersion = apiVersion
     }
 
     private fun sendUserIdentifiersCollectedEvent() {
@@ -132,6 +141,8 @@ import timber.log.Timber
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
 
+        internal var apiVersion: ApiVersion = ApiVersion.OLD
+
         fun applicationContext(context: Application) = apply {
             ParameterValidation.verifyNotNull(context, "context")
             _context = context
@@ -159,6 +170,13 @@ import timber.log.Timber
 
         fun notificationIconBackgroundColor(@ColorRes colorResourceId: Int) = apply {
             _notificationIconBackgroundColorResource = colorResourceId
+        }
+
+        private val allowApiVersionOverride = false
+        fun apiVersion(apiVersion: ApiVersion) = apply {
+            if(allowApiVersionOverride){
+            this.apiVersion = apiVersion
+                }
         }
 
 

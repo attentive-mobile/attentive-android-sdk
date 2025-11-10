@@ -51,6 +51,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
     testFixtures {
         enable = true
     }
@@ -104,7 +108,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
     testImplementation "org.mockito.kotlin:mockito-kotlin:5.4.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
 

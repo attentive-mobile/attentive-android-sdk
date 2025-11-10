@@ -2,12 +2,13 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.push.AttentivePush
-import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.androidsdk.push.TokenProvider
 import com.attentive.androidsdk.tracking.AppLaunchTracker
-import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
+import kotlin.coroutines.resume
 
 
 /**
@@ -41,11 +42,87 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    fun recordEvent(event: Event) {
+    /**
+     * Records an event. Uses callback-based approach for non-suspend contexts.
+     * From Java, this is the version that will be called.
+     *
+     * Supports the following event types:
+     * - PurchaseEvent -> Maps to Purchase EventMetadata
+     * - ProductViewEvent -> Maps to ProductView EventMetadata
+     * - AddToCartEvent -> Maps to AddToCart EventMetadata
+     * - CustomEvent -> Maps to MobileCustomEvent EventMetadata
+     *
+     * @param event The event to record
+     * @param callback Optional callback to handle success or failure
+     */
+    @JvmOverloads
+    fun recordEvent(event: Event, callback: AttentiveApiCallback? = null) {
         verifyInitialized()
 
         config?.let {
-            it.attentiveApi.sendEvent(event, it.userIdentifiers, it.domain)
+            if(it.apiVersion == ApiVersion.OLD) {
+                it.attentiveApi.sendEvent(event, it.userIdentifiers, it.domain, callback)
+            } else {
+                it.attentiveApi.recordEventCall(
+                    event,
+                    it.userIdentifiers,
+                    it.domain,
+                    callback ?: object : AttentiveApiCallback {
+                        override fun onSuccess() {
+                            Timber.d("Event recorded successfully")
+                        }
+
+                        override fun onFailure(message: String?) {
+                            Timber.e("Failed to record event: $message")
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Records an event (suspend version).
+     * This is a suspend function that should be called from a coroutine context.
+     * From Kotlin suspend contexts, this version will be automatically selected.
+     *
+     * Supports both OLD and NEW API versions:
+     * - OLD: Uses callback-based sendEvent wrapped in suspendCancellableCoroutine
+     * - NEW: Uses native suspend recordEvent
+     *
+     * Currently supports the following event types:
+     * - PurchaseEvent -> Maps to Purchase EventMetadata
+     * - ProductViewEvent -> Maps to ProductView EventMetadata
+     * - AddToCartEvent -> Maps to AddToCart EventMetadata
+     * - CustomEvent -> Maps to MobileCustomEvent EventMetadata
+     *
+     * @param event The event to record
+     */
+    suspend fun recordEvent(event: Event) {
+        verifyInitialized()
+
+        if(config.apiVersion == ApiVersion.OLD) {
+            // Wrap the callback-based old API in a suspend function
+            suspendCancellableCoroutine { continuation ->
+                config.attentiveApi.sendEvent(
+                    event,
+                    config.userIdentifiers,
+                    config.domain,
+                    object : AttentiveApiCallback {
+                        override fun onSuccess() {
+                            Timber.d("Event recorded successfully (OLD API)")
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onFailure(message: String?) {
+                            Timber.e("Failed to record event (OLD API): $message")
+                            continuation.resume(Unit) // Resume anyway, don't throw
+                        }
+                    }
+                )
+            }
+        } else {
+            config.attentiveApi.recordEvent(event, config.userIdentifiers, config.domain)
         }
     }
 

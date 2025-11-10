@@ -10,7 +10,6 @@ import kotlinx.serialization.Serializable
 @Polymorphic
 class PurchaseMetadataDto : ProductMetadata() {
     var quantity: String? = null
-//    var orderId: String? = null
     var cartTotal: String? = null
     var cartId: String? = null
     var cartCoupon: String? = null

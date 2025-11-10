@@ -13,6 +13,9 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.example.example_kotlin.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Currency
 import java.util.List
@@ -29,7 +32,9 @@ class ProductPageActivity : AppCompatActivity() {
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/product/32423")
             .build()
-        AttentiveEventTracker.instance.recordEvent(productViewEvent)
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveEventTracker.instance.recordEvent(productViewEvent)
+        }
         showToastMessageForEvent("Product View")
     }
 
@@ -40,7 +45,9 @@ class ProductPageActivity : AppCompatActivity() {
             .items(listOf(item))
             .deeplink("https://mydeeplink.com/products/32432423")
             .build()
-        AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+        }
         showToastMessageForEvent("Add to Cart")
     }
 
@@ -61,7 +68,9 @@ class ProductPageActivity : AppCompatActivity() {
         val purchaseEvent = PurchaseEvent.Builder(listOf(item), order).cart(cart).build()
 
         // Record the PurchaseEvent
-        AttentiveEventTracker.instance.recordEvent(purchaseEvent)
+        CoroutineScope(Dispatchers.IO).launch {
+            AttentiveEventTracker.instance.recordEvent(purchaseEvent)
+        }
         showToastMessageForEvent("Purchase")
     }
 

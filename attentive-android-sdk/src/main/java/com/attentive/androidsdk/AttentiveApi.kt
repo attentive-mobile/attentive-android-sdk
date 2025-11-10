@@ -45,6 +45,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
 import java.util.regex.Pattern
+import com.attentive.androidsdk.internal.network.events.*
 
 
 class AttentiveApi(private var httpClient: OkHttpClient, private val domain: String) {
@@ -71,11 +72,22 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         ignoreUnknownKeys = true
     }
 
+    private val baseEventRequestJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true  // Must encode defaults to include eventType field
+    }
+
     private val httpUrlEventsEndpointBuilder: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
             .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
             .addPathSegment("e")
+
+        private val testPoint: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
+
 
 
     private val httpUrlPushTokenStatusEndpointBuilder: HttpUrl.Builder
@@ -109,7 +121,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
 
     val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(httpMobileEndpointBuilder.build())
+        .baseUrl(testPoint.build())
         .client(httpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -162,6 +174,146 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         )
     }
 
+    /**
+     * Sends an event using the new BaseEventRequest format
+     * This method supports the following event types:
+     * - PurchaseEvent -> Purchase EventMetadata
+     * - ProductViewEvent -> ProductView EventMetadata
+     * - AddToCartEvent -> AddToCart EventMetadata
+     * - CustomEvent -> MobileCustomEvent EventMetadata
+     *
+     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
+     * This is a suspend function that should be called from a coroutine context.
+     */
+    suspend fun recordEvent(
+        event: Event,
+        userIdentifiers: UserIdentifiers,
+        domain: String
+    ) {
+        Timber.d("recordEvent called with event: %s", event.javaClass.name)
+
+        // Validate that we have a visitorId
+        if (userIdentifiers.visitorId.isNullOrEmpty()) {
+            Timber.e("Cannot send event: visitorId is required but is null or empty")
+            return
+        }
+
+        // Map the event to BaseEventRequest(s)
+        val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
+
+        if (baseEventRequests.isEmpty()) {
+            Timber.w("No event requests generated for event: ${event.javaClass.name}")
+            return
+        }
+
+        // Send each request - the interceptor will handle geo-domain adjustment
+        for (request in baseEventRequests) {
+            try {
+                // Serialize the BaseEventRequest to JSON string for the -d parameter
+                val eventDataJson = baseEventRequestJson.encodeToString(
+                    BaseEventRequest.serializer(),
+                    request
+                )
+                Timber.d("Sending event JSON: $eventDataJson")
+                api.sendEvent(eventDataJson)
+                Timber.i("Successfully sent ${request.eventType} event")
+            } catch (e: Exception) {
+                Timber.e("Failed to send ${request.eventType} event: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Sends an event using the new BaseEventRequest format (Java-compatible version).
+     * This method supports the following event types:
+     * - PurchaseEvent -> Purchase EventMetadata
+     * - ProductViewEvent -> ProductView EventMetadata
+     * - AddToCartEvent -> AddToCart EventMetadata
+     * - CustomEvent -> MobileCustomEvent EventMetadata
+     *
+     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
+     * Returns a Retrofit Call that can be executed synchronously or asynchronously.
+     *
+     * @return A Call object that can be used to execute the request. Returns null if validation fails.
+     */
+    fun recordEventCall(
+        event: Event,
+        userIdentifiers: UserIdentifiers,
+        domain: String,
+        callback: AttentiveApiCallback
+    ) {
+        Timber.d("recordEventCall called with event: %s", event.javaClass.name)
+
+        if (userIdentifiers.visitorId.isNullOrEmpty()) {
+            Timber.e("Cannot send event: visitorId is required but is null or empty")
+            callback.onFailure("Cannot send event: visitorId is required")
+            return
+        }
+
+        val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
+
+        if (baseEventRequests.isEmpty()) {
+            Timber.w("No event requests generated for event: ${event.javaClass.name}")
+            callback.onFailure("No event requests generated for event")
+            return
+        }
+
+        var completedRequests = 0
+        var hasError = false
+        val totalRequests = baseEventRequests.size
+
+        for (request in baseEventRequests) {
+            try {
+                // Serialize the BaseEventRequest to JSON string for the -d parameter
+                val eventDataJson = baseEventRequestJson.encodeToString(
+                    BaseEventRequest.serializer(),
+                    request
+                )
+                Timber.d("Sending event JSON: $eventDataJson")
+
+                val call = api.sendEventCall(eventDataJson)
+                call.enqueue(object : retrofit2.Callback<Unit> {
+                    override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
+                        if (response.isSuccessful) {
+                            Timber.i("Successfully sent ${request.eventType} event")
+                            synchronized(this@AttentiveApi) {
+                                completedRequests++
+                                if (completedRequests == totalRequests && !hasError) {
+                                    callback.onSuccess()
+                                }
+                            }
+                        } else {
+                            Timber.e("Failed to send ${request.eventType} event: ${response.code()}")
+                            synchronized(this@AttentiveApi) {
+                                if (!hasError) {
+                                    hasError = true
+                                    callback.onFailure("Failed to send event: ${response.code()}")
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
+                        Timber.e("Failed to send ${request.eventType} event: ${t.message}")
+                        synchronized(this@AttentiveApi) {
+                            if (!hasError) {
+                                hasError = true
+                                callback.onFailure("Failed to send event: ${t.message}")
+                            }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                Timber.e("Failed to send ${request.eventType} event: ${e.message}")
+                if (!hasError) {
+                    hasError = true
+                    callback.onFailure("Failed to serialize event: ${e.message}")
+                }
+                e.printStackTrace()
+            }
+        }
+    }
 
 
 
@@ -562,6 +714,152 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
     }
 
     return eventRequests
+}
+
+private fun mapPurchaseEvent(
+    event: PurchaseEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Purchase event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
+
+    val products = event.items.map { item -> itemToProduct(item) }
+    val cart = event.cart?.let { cartToCartModel(it) }
+
+    val purchaseMetadata = PurchaseMetadata(
+        orderId = event.order.orderId,
+        currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
+        orderTotal = calculateCartTotal(event.items),
+        cart = cart,
+        products = products
+    )
+
+    return listOf(
+        BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = EventType.Purchase,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = purchaseMetadata,
+            sourceType = SourceType.mobile,
+            referrer = "",
+            locationHref = null
+        )
+    )
+}
+
+private fun mapProductViewEvent(
+    event: ProductViewEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Product View event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
+
+    return event.items.map { item ->
+        val productViewMetadata = ProductViewMetadata(
+            product = itemToProduct(item),
+            currency = item.price.currency.currencyCode
+        )
+
+        BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = EventType.ProductView,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = productViewMetadata,
+            sourceType = SourceType.mobile,
+            referrer = event.deeplink ?: "",
+            locationHref = event.deeplink
+        )
+    }
+}
+
+private fun mapAddToCartEvent(
+    event: AddToCartEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    if (event.items.isEmpty()) {
+        Timber.w("Add to Cart event has no items. Skipping.")
+        return emptyList()
+    }
+
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
+
+    return event.items.map { item ->
+        val addToCartMetadata = AddToCartMetadata(
+            product = itemToProduct(item),
+            currency = item.price.currency.currencyCode
+        )
+
+        BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = EventType.AddToCart,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = addToCartMetadata,
+            sourceType = SourceType.mobile,
+            referrer = event.deeplink ?: "",
+            locationHref = event.deeplink
+        )
+    }
+}
+
+private fun mapCustomEvent(
+    event: CustomEvent,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    val identifiers = buildIdentifiers(userIdentifiers)
+    val timestamp = getCurrentTimestamp()
+    val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
+
+    val customEventMetadata = MobileCustomEventMetadata(
+        customProperties = event.properties.ifEmpty { null }
+    )
+
+    return listOf(
+        BaseEventRequest(
+            visitorId = visitorId,
+            version = AppInfo.attentiveSDKVersion,
+            attentiveDomain = domain,
+            eventType = EventType.MobileCustomEvent,
+            timestamp = timestamp,
+            identifiers = identifiers,
+            eventMetadata = customEventMetadata,
+            sourceType = SourceType.mobile,
+            referrer = "",
+            locationHref = null
+        )
+    )
+}
+
+private fun getCurrentTimestamp(): String {
+    return java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }.format(java.util.Date())
 }
 
 private fun sendEventInternalAsync(
@@ -1035,6 +1333,107 @@ internal fun sendOptOutSubscriptionStatus(
 
 private fun buildEmptyRequest(): RequestBody {
     return RequestBody.create(null, ByteArray(0))
+}
+
+// Test helper functions - marked as @VisibleForTesting internal so tests can access them
+@VisibleForTesting
+internal fun getBaseEventRequestsFromEvent(
+    event: Event,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): List<BaseEventRequest> {
+    return when (event) {
+        is PurchaseEvent -> mapPurchaseEvent(event, userIdentifiers, domain)
+        is ProductViewEvent -> mapProductViewEvent(event, userIdentifiers, domain)
+        is AddToCartEvent -> mapAddToCartEvent(event, userIdentifiers, domain)
+        is CustomEvent -> mapCustomEvent(event, userIdentifiers, domain)
+        else -> {
+            Timber.e("Unknown Event type: ${event.javaClass.name}")
+            emptyList()
+        }
+    }
+}
+
+@VisibleForTesting
+internal fun buildIdentifiers(userIdentifiers: UserIdentifiers): Identifiers {
+    val otherIdentifiers = mutableListOf<OtherIdentifier>()
+
+    userIdentifiers.clientUserId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.ClientUserId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.shopifyId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.ShopifyId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.klaviyoId?.let {
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.KlaviyoId,
+                value = it
+            )
+        )
+    }
+
+    userIdentifiers.customIdentifiers.forEach { (key, value) ->
+        otherIdentifiers.add(
+            OtherIdentifier(
+                idType = IdType.CustomId,
+                value = value,
+                name = key
+            )
+        )
+    }
+
+    return Identifiers(
+        encryptedEmail = userIdentifiers.email?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        encryptedPhone = userIdentifiers.phone?.let { android.util.Base64.encodeToString(it.toByteArray(), android.util.Base64.NO_WRAP) },
+        otherIdentifiers = otherIdentifiers.ifEmpty { null }
+    )
+}
+
+@VisibleForTesting
+internal fun itemToProduct(item: Item): Product {
+    return Product(
+        productId = item.productId,
+        variantId = item.productVariantId,
+        name = item.name,
+        variantName = null,
+        imageUrl = item.productImage,
+        categories = item.category?.let { listOf(it) },
+        price = item.price.price.toPlainString(),
+        quantity = item.quantity,
+        productUrl = null
+    )
+}
+
+@VisibleForTesting
+internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
+    return Cart(
+        cartTotal = null,
+        cartCoupon = cart.cartCoupon,
+        cartDiscount = null,
+        cartId = cart.cartId
+    )
+}
+
+@VisibleForTesting
+internal fun calculateCartTotal(items: List<Item>): String {
+    var cartTotal = BigDecimal.ZERO
+    for (item in items) {
+        cartTotal = cartTotal.add(item.price.price)
+    }
+    return cartTotal.setScale(2, RoundingMode.DOWN).toPlainString()
 }
 
 companion object {
