@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class Creative internal constructor(
     private var attentiveConfig: AttentiveConfig,
     private var parentView: View,
-    private var activity: Activity? = null,
+    private var activity: Activity,
     @set:VisibleForTesting
     internal var webView: PassThroughWebView? = null,
     @SuppressLint("SupportAnnotationUsage") @VisibleForTesting
@@ -48,12 +48,12 @@ class Creative internal constructor(
      * Creates a new Creative instance. Used to display and control creatives.
      * @param attentiveConfig The AttentiveConfig instance to use.
      * @param parentView The view to add the WebView to.
-     * @param activity The Activity to use for lifecycle callbacks.
+     * @param activity The Activity to use for lifecycle callbacks and WebView context.
      */
     constructor(
         attentiveConfig: AttentiveConfig,
         parentView: View,
-        activity: Activity? = null
+        activity: Activity
     ) : this(
         attentiveConfig,
         parentView,
@@ -109,12 +109,10 @@ class Creative internal constructor(
 
         this.creativeUrlFormatter = CreativeUrlFormatter()
 
-        activity?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Timber.d("Registering activity lifecycle callbacks")
-                // Delegate to CreativeActivityCallbacks to handle lifecycle events
-                it.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Timber.d("Registering activity lifecycle callbacks")
+            // Delegate to CreativeActivityCallbacks to handle lifecycle events
+            activity.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
         }
     }
 
@@ -227,7 +225,8 @@ class Creative internal constructor(
 
     @SuppressLint("SetJavaScriptEnabled")
     internal fun createWebView(parentView: View): PassThroughWebView {
-        val view = PassThroughWebView(parentView.context)
+        // Use Activity context to ensure proper resources for WebView
+        val view = PassThroughWebView(activity)
         val webSettings = view.settings
 
         // Security settings, allow JavaScript to run

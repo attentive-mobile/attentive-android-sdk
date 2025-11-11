@@ -91,12 +91,14 @@ fun DebugScreenComposables(navHostController: NavHostController) {
 
 @Composable
 fun DebugScreenContent(navHostController: NavHostController) {
-    val activity = LocalActivity.current
+    val activity = requireNotNull(LocalActivity.current) {
+        "Activity required for Creative initialization"
+    }
     val context = LocalContext.current.applicationContext as Application
 
     // Create the FrameLayout once
     val frameLayout = remember {
-        FrameLayout(activity!!.baseContext).apply {
+        FrameLayout(activity.baseContext).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT

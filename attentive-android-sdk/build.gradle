@@ -106,6 +106,7 @@ dependencies {
     implementation 'androidx.activity:activity-ktx:1.10.0'
     implementation 'androidx.activity:activity:1.8.0'
     implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
+    implementation 'androidx.test:runner:1.7.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-inline:5.2.0'
