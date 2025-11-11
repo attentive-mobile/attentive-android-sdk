@@ -9,7 +9,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import timber.log.Timber
 
-class PassThroughWebView @JvmOverloads constructor(
+internal class PassThroughWebView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
