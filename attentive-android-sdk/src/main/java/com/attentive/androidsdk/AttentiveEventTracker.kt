@@ -6,6 +6,9 @@ import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenProvider
 import com.attentive.androidsdk.tracking.AppLaunchTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -81,7 +84,13 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    /**
+    fun recordEvent(event: Event) {
+        CoroutineScope(Dispatchers.IO).launch {
+            recordEventSuspend(event)
+        }
+    }
+
+        /**
      * Records an event (suspend version).
      * This is a suspend function that should be called from a coroutine context.
      * From Kotlin suspend contexts, this version will be automatically selected.
@@ -98,7 +107,7 @@ class AttentiveEventTracker private constructor() {
      *
      * @param event The event to record
      */
-    suspend fun recordEvent(event: Event) {
+    internal suspend fun recordEventSuspend(event: Event) {
         verifyInitialized()
 
         if(config.apiVersion == ApiVersion.OLD) {
