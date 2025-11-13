@@ -6,6 +6,9 @@ import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenProvider
 import com.attentive.androidsdk.tracking.AppLaunchTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -42,46 +45,13 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    /**
-     * Records an event. Uses callback-based approach for non-suspend contexts.
-     * From Java, this is the version that will be called.
-     *
-     * Supports the following event types:
-     * - PurchaseEvent -> Maps to Purchase EventMetadata
-     * - ProductViewEvent -> Maps to ProductView EventMetadata
-     * - AddToCartEvent -> Maps to AddToCart EventMetadata
-     * - CustomEvent -> Maps to MobileCustomEvent EventMetadata
-     *
-     * @param event The event to record
-     * @param callback Optional callback to handle success or failure
-     */
-    @JvmOverloads
-    fun recordEvent(event: Event, callback: AttentiveApiCallback? = null) {
-        verifyInitialized()
-
-        config?.let {
-            if(it.apiVersion == ApiVersion.OLD) {
-                it.attentiveApi.sendEvent(event, it.userIdentifiers, it.domain, callback)
-            } else {
-                it.attentiveApi.recordEventCall(
-                    event,
-                    it.userIdentifiers,
-                    it.domain,
-                    callback ?: object : AttentiveApiCallback {
-                        override fun onSuccess() {
-                            Timber.d("Event recorded successfully")
-                        }
-
-                        override fun onFailure(message: String?) {
-                            Timber.e("Failed to record event: $message")
-                        }
-                    }
-                )
-            }
+    fun recordEvent(event: Event) {
+        CoroutineScope(Dispatchers.IO).launch {
+            recordEventSuspend(event)
         }
     }
 
-    /**
+        /**
      * Records an event (suspend version).
      * This is a suspend function that should be called from a coroutine context.
      * From Kotlin suspend contexts, this version will be automatically selected.
@@ -98,7 +68,7 @@ class AttentiveEventTracker private constructor() {
      *
      * @param event The event to record
      */
-    suspend fun recordEvent(event: Event) {
+    internal suspend fun recordEventSuspend(event: Event) {
         verifyInitialized()
 
         if(config.apiVersion == ApiVersion.OLD) {
