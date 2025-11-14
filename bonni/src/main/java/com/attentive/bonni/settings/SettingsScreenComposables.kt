@@ -49,12 +49,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.edit
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
+import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.bonni.BonniApp
+import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
+import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PREFS
 import com.attentive.bonni.R
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
@@ -64,15 +70,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import timber.log.Timber
-import androidx.core.content.edit
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.attentive.androidsdk.internal.util.Constants
-import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
-import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
-import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PREFS
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 data class SettingItem(
     val title: String,
@@ -189,6 +188,10 @@ fun SettingsList(creative: Creative, navHostController: NavHostController) {
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
     creativeSettings.add("Show Creatives" to { creative.trigger() })
+    creativeSettings.add("Clear Cookies (ignore filtering rules for next creative)" to {
+        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+        android.webkit.CookieManager.getInstance().flush()
+    })
 
 
     val pushSettings = mutableListOf<Pair<String, () -> Unit>>()
