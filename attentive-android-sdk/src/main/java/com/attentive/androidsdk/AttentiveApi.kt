@@ -868,8 +868,38 @@ private fun sendEventInternalAsync(
     domain: String,
     callback: AttentiveApiCallback?
 ) {
+    if (callback == null) {
+        // If no callback, just send all requests without tracking
+        for (eventRequest in eventRequests) {
+            sendEventInternalAsync(eventRequest, userIdentifiers, domain, null)
+        }
+        return
+    }
+
+    var completedRequests = 0
+    var hasError = false
+    val totalRequests = eventRequests.size
+
     for (eventRequest in eventRequests) {
-        sendEventInternalAsync(eventRequest, userIdentifiers, domain, callback)
+        sendEventInternalAsync(eventRequest, userIdentifiers, domain, object : AttentiveApiCallback {
+            override fun onSuccess() {
+                synchronized(this@AttentiveApi) {
+                    completedRequests++
+                    if (completedRequests == totalRequests && !hasError) {
+                        callback.onSuccess()
+                    }
+                }
+            }
+
+            override fun onFailure(message: String?) {
+                synchronized(this@AttentiveApi) {
+                    if (!hasError) {
+                        hasError = true
+                        callback.onFailure(message)
+                    }
+                }
+            }
+        })
     }
 }
 
@@ -935,6 +965,7 @@ private fun sendEventInternalAsync(
             }
 
             Timber.i("Sent the '${eventRequest.type}' request successfully.")
+            callback?.onSuccess()
         }
     })
 }
