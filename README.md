@@ -22,8 +22,7 @@ implementation 'com.attentive:attentive-android-sdk:VERSION_NUMBER'
 
 ## Usage
 
-See the [Java Example Project](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/example/src/main/java/com/attentive/example) 
-or the [Kotlin Example Project](https://github.com/attentive-mobile/attentive-android-sdk/tree/main/example-kotlin/src/main/java/com/attentive/example_kotlin)
+See the [Bonni Example Project](https://github.com/attentive-mobile/attentive-android-sdk/tree/main/bonni/src/main/java/com/attentive/bonni)
 for a sample of how the Attentive Android SDK is used.
 
 __*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
