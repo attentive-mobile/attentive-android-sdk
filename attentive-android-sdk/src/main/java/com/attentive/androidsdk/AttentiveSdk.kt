@@ -3,6 +3,7 @@ package com.attentive.androidsdk
 import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
+import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
@@ -15,6 +16,44 @@ import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
 
 object AttentiveSdk {
+
+    private var _config: AttentiveConfig? = null
+
+    /**
+     * Gets the initialized config. Throws if not initialized.
+     * @throws IllegalStateException if the SDK has not been initialized
+     */
+    private val config: AttentiveConfig
+        get() = _config ?: throw IllegalStateException(
+            "AttentiveSdk must be initialized with AttentiveSdk.initialize(config) before calling this method. " +
+            "Please call AttentiveSdk.initialize() in your Application.onCreate() method."
+        )
+
+    /**
+     * Initializes the Attentive SDK with the provided configuration.
+     * This should be called once during app initialization, typically in your Application.onCreate() method.
+     *
+     * @param config The AttentiveConfig containing domain, mode, and other SDK settings
+     */
+    @JvmStatic
+    fun initialize(config: AttentiveConfig) {
+        synchronized(AttentiveSdk::class.java) {
+            this._config = config
+            AttentiveEventTracker.instance.initialize(config)
+        }
+    }
+
+    /**
+     * Checks if the SDK has been initialized.
+     *
+     * @return true if the SDK has been initialized, false otherwise
+     */
+    @JvmStatic
+    fun isInitialized(): Boolean = _config != null
+
+    fun sendEvent(event: Event){
+        AttentiveEventTracker.instance.recordEvent(event)
+    }
 
     /**
      * Determines whether the given Firebase RemoteMessage is from Attentive.
@@ -37,9 +76,9 @@ object AttentiveSdk {
         email: String = "",
         phoneNumber: String = ""
     ) {
-            if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
-            }
+        if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
+            Timber.e("Invalid phone number: $phoneNumber")
+        }
 
         AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
@@ -48,10 +87,9 @@ object AttentiveSdk {
         email: String = "",
         phoneNumber: String = ""
     ) {
-
-            if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
-            }
+        if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
+            Timber.e("Invalid phone number: $phoneNumber")
+        }
         AttentiveEventTracker.instance.optOut(email, phoneNumber)
     }
 
@@ -132,9 +170,9 @@ object AttentiveSdk {
             }
         }
 
-        val domain = AttentiveEventTracker.instance.config.domain
+        val domain = config.domain
         CoroutineScope(Dispatchers.IO).launch {
-            AttentiveEventTracker.instance.config.attentiveApi.sendUserUpdate(domain, email, number)
+            config.attentiveApi.sendUserUpdate(domain, email, number)
         }
     }
 

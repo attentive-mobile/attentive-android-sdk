@@ -51,10 +51,10 @@ val attentiveConfig = AttentiveConfig.Builder()
         .build()
 ```
 
-### Initialize the Event Tracker
+### Initialize the SDK
 ```kotlin
-// Right after defining the config, initialize the Event Tracker in order to send ecommerce and identification events *
-AttentiveEventTracker.getInstance().initialize(attentiveConfig);
+// Right after defining the config, initialize the SDK in order to send ecommerce and identification events
+AttentiveSdk.initialize(attentiveConfig)
 ```
 
 ## Step 2 - Identify the current user
@@ -142,7 +142,7 @@ val purchaseEvent = PurchaseEvent.Builder(listOf(item), order).cart(cart).build(
 
 
 // Record the PurchaseEvent
-AttentiveEventTracker.instance.recordEvent(purchaseEvent)
+AttentiveSdk.sendEvent(purchaseEvent)
 ```
 
 For the ProductViewEvent and AddToCartEvent you can build the event with a deeplink to the product/products 
@@ -159,7 +159,7 @@ val addToCartEvent = AddToCartEvent.Builder()
             .deeplink("https://mydeeplink.com/products/32432423")
             .build()
 
-AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+AttentiveSdk.sendEvent(addToCartEvent)
 ```
 
 You can also implement `CustomEvent` to send application-specific event schemas. These are simply key/value pairs which will be transmitted and stores in Attentive's systems for later use. Please discuss with your CSM to understand how and where these events can be use in orchestration.
@@ -171,7 +171,7 @@ val customEvent =
             CustomEvent.Builder("Concert Viewed", mapOf("band" to "The Beatles"))
                 .build()
 
-AttentiveEventTracker.instance.recordEvent(customEvent)
+AttentiveSdk.sendEvent(customEvent)
 ```
 
 

@@ -21,6 +21,11 @@ class AttentiveEventTracker private constructor() {
     lateinit var config: AttentiveConfig
     internal lateinit var launchTracker: AppLaunchTracker
 
+    @Deprecated(
+        message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
+        replaceWith = ReplaceWith("AttentiveSdk.initialize(config)", "com.attentive.androidsdk.AttentiveSdk"),
+        level = DeprecationLevel.WARNING
+    )
     fun initialize(config: AttentiveConfig) {
         Timber.d(
             "Initializing Attentive SDK with attn domain %s and mode %s",
@@ -179,7 +184,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optOut( email: String = "", phoneNumber: String = "",) {
+    internal suspend fun optOut( email: String = "", phoneNumber: String = "") {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt out.")
