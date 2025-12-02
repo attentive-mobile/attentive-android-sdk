@@ -43,14 +43,6 @@ object AttentiveSdk {
         }
     }
 
-    /**
-     * Checks if the SDK has been initialized.
-     *
-     * @return true if the SDK has been initialized, false otherwise
-     */
-    @JvmStatic
-    fun isInitialized(): Boolean = _config != null
-
     fun sendEvent(event: Event){
         AttentiveEventTracker.instance.recordEvent(event)
     }

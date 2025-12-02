@@ -85,14 +85,14 @@ class AttentiveEventTracker private constructor() {
                     config.domain,
                     object : AttentiveApiCallback {
                         override fun onSuccess() {
-                            Timber.d("Event recorded successfully (OLD API)")
+                            Timber.d("Event recorded successfully")
                             if (continuation.isActive) {
                                 continuation.resume(Unit)
                             }
                         }
 
                         override fun onFailure(message: String?) {
-                            Timber.e("Failed to record event (OLD API): $message")
+                            Timber.e("Failed to record event: $message")
                             if (continuation.isActive) {
                                 continuation.resume(Unit) // Resume anyway, don't throw
                             }
