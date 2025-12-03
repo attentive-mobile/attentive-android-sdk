@@ -3,6 +3,7 @@ package com.attentive.bonni.product
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.ProductViewEvent
@@ -57,7 +58,7 @@ class ProductViewModel : ViewModel() {
             }
 
             val addToCartEvent = AddToCartEvent.Builder().items(listOf(product.item)).build()
-            AttentiveEventTracker.instance.recordEvent(addToCartEvent)
+            AttentiveSdk.recordEvent(addToCartEvent)
             updateCartItemCount()
         }
     }
@@ -78,11 +79,11 @@ class ProductViewModel : ViewModel() {
        // AttentiveEventTracker.instance.recordEvent(event)
 
         CoroutineScope(Dispatchers.IO).launch {
-            AttentiveEventTracker.instance.recordEvent(event)
+            AttentiveSdk.recordEvent(event)
 
             if (cartItems.isNotEmpty()) {
                 val cartEvent = AddToCartEvent.Builder().items(cartItems).build()
-                AttentiveEventTracker.instance.recordEvent(cartEvent)
+                AttentiveSdk.recordEvent(cartEvent)
             }
         }
 
