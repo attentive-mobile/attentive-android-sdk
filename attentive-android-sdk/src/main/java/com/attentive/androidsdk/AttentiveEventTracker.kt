@@ -23,7 +23,10 @@ class AttentiveEventTracker private constructor() {
 
     @Deprecated(
         message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
-        replaceWith = ReplaceWith("AttentiveSdk.initialize(config)", "com.attentive.androidsdk.AttentiveSdk"),
+        replaceWith = ReplaceWith(
+            "AttentiveSdk.initialize(config)",
+            "com.attentive.androidsdk.AttentiveSdk"
+        ),
         level = DeprecationLevel.WARNING
     )
     fun initialize(config: AttentiveConfig) {
@@ -50,13 +53,17 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
+    @Deprecated(
+        "This function will be removed in a future release.",
+        ReplaceWith("AttentiveSdk.recordEvent(event)")
+    )
     fun recordEvent(event: Event) {
         CoroutineScope(Dispatchers.IO).launch {
             recordEventSuspend(event)
         }
     }
 
-        /**
+    /**
      * Records an event (suspend version).
      * This is a suspend function that should be called from a coroutine context.
      * From Kotlin suspend contexts, this version will be automatically selected.
@@ -76,7 +83,7 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun recordEventSuspend(event: Event) {
         verifyInitialized()
 
-        if(config.apiVersion == ApiVersion.OLD) {
+        if (config.apiVersion == ApiVersion.OLD) {
             // Wrap the callback-based old API in a suspend function
             suspendCancellableCoroutine { continuation ->
                 config.attentiveApi.sendEvent(
@@ -167,7 +174,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optIn(email: String = "", phoneNumber: String = "" ) {
+    internal suspend fun optIn(email: String = "", phoneNumber: String = "") {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt in.")
@@ -184,7 +191,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optOut( email: String = "", phoneNumber: String = "") {
+    internal suspend fun optOut(email: String = "", phoneNumber: String = "") {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt out.")

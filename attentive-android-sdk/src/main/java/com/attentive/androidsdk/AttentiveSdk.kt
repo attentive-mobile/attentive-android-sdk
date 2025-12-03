@@ -43,7 +43,7 @@ object AttentiveSdk {
         }
     }
 
-    fun sendEvent(event: Event){
+    fun recordEvent(event: Event){
         AttentiveEventTracker.instance.recordEvent(event)
     }
 
