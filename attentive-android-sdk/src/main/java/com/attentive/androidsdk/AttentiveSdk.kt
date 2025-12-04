@@ -133,9 +133,7 @@ object AttentiveSdk {
         }
 
         val domain = AttentiveEventTracker.instance.config.domain
-        CoroutineScope(Dispatchers.IO).launch {
-            AttentiveEventTracker.instance.config.attentiveApi.sendUserUpdate(domain, email, number)
-        }
+        AttentiveEventTracker.instance.config.attentiveApi.sendUserUpdate(domain, email, number)
     }
 
     interface PushTokenCallback {

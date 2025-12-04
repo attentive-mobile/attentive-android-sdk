@@ -83,10 +83,16 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
             .addPathSegment("e")
 
-        private val testPoint: HttpUrl.Builder
+    private val retrofitEventsEndpoint: HttpUrl.Builder
         get() = HttpUrl.Builder()
             .scheme("https")
             .host(ATTENTIVE_EVENTS_ENDPOINT_HOST)
+
+    private val retrofitMobileEndpoint: HttpUrl.Builder
+        get() = HttpUrl.Builder()
+            .scheme("https")
+            .host(ATTENTIVE_MOBILE_ENDPOINT_HOST)
+
 
 
 
@@ -121,14 +127,17 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
 
     val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(testPoint.build())
+        .baseUrl(retrofitMobileEndpoint.build())
         .client(httpClient)
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(
+            com.google.gson.GsonBuilder()
+                .create()
+        ))
         .build()
 
     val api: RetrofitApiService = retrofit.create(RetrofitApiService::class.java)
 
-    internal suspend fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
+    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
         AttentiveEventTracker.instance.config.clearUser()
 
         val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
@@ -161,20 +170,34 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
         AttentiveEventTracker.instance.config.identify(builder.build())
 
-
-        api.updateUserSuspend(
+        api.updateUser(
             UserUpdateRequest(
                 company = domain,
                 userId = visitorId,
                 pushToken = pushToken,
-                tokenProvider = "fcm:",
-                sdkVersion = AppInfo.attentiveSDKVersion,
+                tokenProvider = "fcm",
+                sdkVersion = "mobile-app-${AppInfo.attentiveSDKVersion}",
                 metadata = contactInfo
             )
-        )
+        ).enqueue(object : retrofit2.Callback<Unit> {
+            override fun onResponse(
+                call: retrofit2.Call<Unit>,
+                response: retrofit2.Response<Unit>
+            ) {
+                if(response.isSuccessful) {
+                    Timber.i("Successfully sent user update")
+                } else {
+                    Timber.e("Failed to send user update: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: retrofit2.Call<kotlin.Unit?>, t: kotlin.Throwable) {
+               Timber.e("Failed to send user update: ${t.message}")
+            }
+        })
     }
 
-    /**
+            /**
      * Sends an event using the new BaseEventRequest format
      * This method supports the following event types:
      * - PurchaseEvent -> Purchase EventMetadata
@@ -185,7 +208,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
      * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
      * This is a suspend function that should be called from a coroutine context.
      */
-    suspend fun recordEvent(
+    internal suspend fun recordEvent(
         event: Event,
         userIdentifiers: UserIdentifiers,
         domain: String
@@ -237,7 +260,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
      *
      * @return A Call object that can be used to execute the request. Returns null if validation fails.
      */
-    fun recordEventCall(
+   internal fun recordEventCall(
         event: Event,
         userIdentifiers: UserIdentifiers,
         domain: String,
@@ -272,7 +295,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 )
                 Timber.d("Sending event JSON: $eventDataJson")
 
-                val call = api.sendEventCall(eventDataJson)
+                val call = api.sendEvent(eventDataJson)
                 call.enqueue(object : retrofit2.Callback<Unit> {
                     override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
                         if (response.isSuccessful) {
@@ -1497,10 +1520,12 @@ companion object {
 }
 
 /***
- * Represents whether the app was launched directly or through a push notification.
+ * Represents whether the app was launched from or through a push notification.
  */
 enum class LaunchType(val value: String) {
+    //Opened from push notification
     DIRECT_OPEN("o"),
+    //Opened from launcher
     APP_LAUNCHED("al");
 
     companion object {

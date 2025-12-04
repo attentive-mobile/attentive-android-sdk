@@ -114,7 +114,6 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
         )
 
         if (items.isNotEmpty()) {
-            Timber.d("items is not empty")
             ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
         } else {
             Timber.d("items is empty")
@@ -130,7 +129,6 @@ fun ProductsGrid(
 ) {
     LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
         items(products.size) { index ->
-            Timber.d("ProductsGrid: index: $index and image id: ${products[index].imageId}")
             ProductCard(index, products[index], onProductViewed, onAddToCart)
         }
     }
