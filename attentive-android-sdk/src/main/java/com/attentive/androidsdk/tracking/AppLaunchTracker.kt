@@ -18,7 +18,7 @@ import kotlinx.serialization.json.JsonObject
 import org.json.JSONObject
 import timber.log.Timber
 
-class AppLaunchTracker(
+internal class AppLaunchTracker(
     internal val application: Application,
     internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle
 ) : DefaultLifecycleObserver {

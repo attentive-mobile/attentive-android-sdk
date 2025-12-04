@@ -40,7 +40,7 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildAttentiveApi(okHttpClient: OkHttpClient, domain: String): AttentiveApi {
+    internal fun buildAttentiveApi(okHttpClient: OkHttpClient, domain: String): AttentiveApi {
         val client = okHttpClient.newBuilder().addInterceptor(GeoAdjustedDomainInterceptor(okHttpClient, domain)).build()
         return AttentiveApi(client, domain)
     }
