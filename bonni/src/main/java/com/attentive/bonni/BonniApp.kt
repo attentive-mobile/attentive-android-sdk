@@ -4,7 +4,6 @@ import android.app.Application
 import android.graphics.Color
 import androidx.compose.ui.Modifier
 import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
@@ -47,7 +46,7 @@ class BonniApp : Application() {
                 .build()
 
 
-        AttentiveEventTracker.instance.initialize(attentiveConfig)
+        AttentiveSdk.initialize(attentiveConfig)
 
         // Restore user identifiers if they exist (using identify to preserve visitorId)
         if(email != null || phone != null){

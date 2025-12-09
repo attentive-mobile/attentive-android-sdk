@@ -21,6 +21,14 @@ class AttentiveEventTracker private constructor() {
     lateinit var config: AttentiveConfig
     internal lateinit var launchTracker: AppLaunchTracker
 
+    @Deprecated(
+        message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
+        replaceWith = ReplaceWith(
+            "AttentiveSdk.initialize(config)",
+            "com.attentive.androidsdk.AttentiveSdk"
+        ),
+        level = DeprecationLevel.WARNING
+    )
     fun initialize(config: AttentiveConfig) {
         Timber.d(
             "Initializing Attentive SDK with attn domain %s and mode %s",
@@ -45,13 +53,17 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
+    @Deprecated(
+        "This function will be removed in a future release.",
+        ReplaceWith("AttentiveSdk.recordEvent(event)")
+    )
     fun recordEvent(event: Event) {
         CoroutineScope(Dispatchers.IO).launch {
             recordEventSuspend(event)
         }
     }
 
-        /**
+    /**
      * Records an event (suspend version).
      * This is a suspend function that should be called from a coroutine context.
      * From Kotlin suspend contexts, this version will be automatically selected.
@@ -71,7 +83,7 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun recordEventSuspend(event: Event) {
         verifyInitialized()
 
-        if(config.apiVersion == ApiVersion.OLD) {
+        if (config.apiVersion == ApiVersion.OLD) {
             // Wrap the callback-based old API in a suspend function
             suspendCancellableCoroutine { continuation ->
                 config.attentiveApi.sendEvent(
@@ -80,14 +92,14 @@ class AttentiveEventTracker private constructor() {
                     config.domain,
                     object : AttentiveApiCallback {
                         override fun onSuccess() {
-                            Timber.d("Event recorded successfully (OLD API)")
+                            Timber.d("Event recorded successfully")
                             if (continuation.isActive) {
                                 continuation.resume(Unit)
                             }
                         }
 
                         override fun onFailure(message: String?) {
-                            Timber.e("Failed to record event (OLD API): $message")
+                            Timber.e("Failed to record event: $message")
                             if (continuation.isActive) {
                                 continuation.resume(Unit) // Resume anyway, don't throw
                             }
@@ -162,7 +174,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optIn(email: String = "", phoneNumber: String = "" ) {
+    internal suspend fun optIn(email: String = "", phoneNumber: String = "") {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt in.")
@@ -179,7 +191,7 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optOut( email: String = "", phoneNumber: String = "",) {
+    internal suspend fun optOut(email: String = "", phoneNumber: String = "") {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt out.")
