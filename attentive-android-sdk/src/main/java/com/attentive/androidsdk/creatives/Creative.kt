@@ -75,7 +75,6 @@ class Creative internal constructor(
     internal val isCreativeOpen = AtomicBoolean(false)
     internal val isCreativeOpening = AtomicBoolean(false)
     internal val isCreativeDestroyed = AtomicBoolean(false)
-    private val hasHandledFirstOpen = AtomicBoolean(false)
 
     // Bounding rectangle for touch event filtering (in pixels)
     private var creativeBounds: android.graphics.Rect? = null
@@ -130,6 +129,10 @@ class Creative internal constructor(
             Timber.d("Set webview background color to transparent")
 
             // Set up touch listener to filter events based on creative bounds
+            // Suppress ClickableViewAccessibility: We're only filtering touches by bounds, not implementing
+            // click logic. Touches inside bounds return false to let WebView handle them normally (including
+            // accessibility), touches outside are intentionally blocked with no action needed.
+            @SuppressLint("ClickableViewAccessibility")
             view.setOnTouchListener { v, event ->
                 val bounds = creativeBounds
 
@@ -287,10 +290,8 @@ class Creative internal constructor(
             Timber.e("Creative listener cannot be attached!")
         }
 
-        if (attentiveConfig.mode == AttentiveConfig.Mode.PRODUCTION) {
-            Timber.d("Setting background color to transparent")
-            view.setBackgroundColor(Color.TRANSPARENT)
-        }
+        view.setBackgroundColor(Color.TRANSPARENT)
+
         return view
     }
 
@@ -438,13 +439,7 @@ class Creative internal constructor(
                 }
 
                 // Handle simple string messages
-//                if (messageData.equals("CLOSE", ignoreCase = true)) {
-//                    closeCreative()
-//                } else if (messageData.equals("OPEN", ignoreCase = true)) {
-//                    openCreative()
-//                } else if (messageData.equals("TIMED OUT", ignoreCase = true)) {
-//                    onCreativeTimedOut()
-//                } else if (messageData.equals(
+//         if (messageData.equals(
 //                        "document-visibility: true",
 //                        ignoreCase = true
 //                    ) && isCreativeOpen.get()
@@ -513,7 +508,6 @@ class Creative internal constructor(
             Timber.d("handler post")
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
-            hasHandledFirstOpen.set(false)  // Reset so next trigger can handle OPEN
             creativeBounds = null  // Clear bounding rectangle so touches pass through
             Timber.d("Cleared creative bounds")
             if (webView != null) {

@@ -24,7 +24,7 @@ class BonniApp : Application() {
 
     private fun initAttentiveTracker() {
         val prefs =  getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
-        val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"vs")!!
+        val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
         val email = prefs.getString(ATTENTIVE_EMAIL_PREFS, null)
         val phone = prefs.getString(ATTENTIVE_PHONE_PREFS, null)
         val apiVersion = try {
