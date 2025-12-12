@@ -18,13 +18,13 @@ class BonniApp : Application() {
         super.onCreate()
         appInstance = this
         initAttentiveTracker()
-        Timber.plant(Timber.DebugTree())
+        // Timber tree is planted by AttentiveSdk based on logLevel config
         AppDatabase.getInstance().initWithMockProducts()
     }
 
     private fun initAttentiveTracker() {
         val prefs =  getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
-        val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"games")!!
+        val domain = prefs.getString(ATTENTIVE_DOMAIN_PREFS,"vs")!!
         val email = prefs.getString(ATTENTIVE_EMAIL_PREFS, null)
         val phone = prefs.getString(ATTENTIVE_PHONE_PREFS, null)
         val apiVersion = try {
@@ -40,8 +40,9 @@ class BonniApp : Application() {
                 .domain(domain)
                 .notificationIconId(R.drawable.bonni_logo)
                 .notificationIconBackgroundColor(R.color.purple_200)
-                .mode(AttentiveConfig.Mode.DEBUG)
+                .mode(AttentiveConfig.Mode.PRODUCTION)
                 .logLevel(AttentiveLogLevel.VERBOSE)
+                .skipFatigueOnCreatives(true)
                 .apiVersion(apiVersion)
                 .build()
 
