@@ -11,7 +11,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -421,12 +420,8 @@ class Creative internal constructor(
                                 }
                             }
                             "RESIZE_FRAME" -> {
-                                Timber.d("Resizing frame: %s", messageData)
+                                Timber.d("Resize frame: %s", messageData)
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
-                            }
-                            "IMPRESSION" -> {
-                                Timber.d("Creative impression: %s", messageData)
-                                // Handle impression tracking here
                             }
                             "CLOSE" -> closeCreative()
                             "TIMED OUT" -> onCreativeTimedOut()
@@ -437,19 +432,6 @@ class Creative internal constructor(
                 } catch (e: Exception) {
                     Timber.e("Error parsing JSON message: %s", e.message)
                 }
-
-                // Handle simple string messages
-//         if (messageData.equals(
-//                        "document-visibility: true",
-//                        ignoreCase = true
-//                    ) && isCreativeOpen.get()
-//                ) {
-//                    Timber.d("document-visibility: true and creative is open, closing creative")
-//                    // Ignoring reacting to document visibility for now to bring the behavior in line with iOS.
-//                    // This is because the creative can be closed by the user and we don't want to close
-//                    // the creative automatically when the document visibility changes.
-//                    //closeCreative()
-//                }
             }
         }
     }
