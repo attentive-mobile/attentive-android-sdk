@@ -368,7 +368,7 @@ class Creative internal constructor(
         Timber.d("createCreativeListener() called")
         return WebMessageListener { view: WebView?, message: WebMessageCompat, sourceOrigin: Uri?, isMainFrame: Boolean, replyProxy: JavaScriptReplyProxy? ->
             val messageData = message.data
-            //Timber.d("Creative message data %s", messageData)
+            Timber.d("Creative message data %s", messageData)
             if (messageData != null) {
                 // Try to parse as JSON for structured messages
                 try {
