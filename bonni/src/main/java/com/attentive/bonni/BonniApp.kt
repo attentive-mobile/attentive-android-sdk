@@ -18,7 +18,7 @@ class BonniApp : Application() {
         super.onCreate()
         appInstance = this
         initAttentiveTracker()
-        Timber.plant(Timber.DebugTree())
+        // Timber tree is planted by AttentiveSdk based on logLevel config
         AppDatabase.getInstance().initWithMockProducts()
     }
 
@@ -40,8 +40,9 @@ class BonniApp : Application() {
                 .domain(domain)
                 .notificationIconId(R.drawable.bonni_logo)
                 .notificationIconBackgroundColor(R.color.purple_200)
-                .mode(AttentiveConfig.Mode.DEBUG)
+                .mode(AttentiveConfig.Mode.PRODUCTION)
                 .logLevel(AttentiveLogLevel.VERBOSE)
+                .skipFatigueOnCreatives(true)
                 .apiVersion(apiVersion)
                 .build()
 

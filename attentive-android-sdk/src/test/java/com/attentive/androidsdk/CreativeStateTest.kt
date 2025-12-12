@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.creatives
 
-import PassThroughWebView
 import android.app.Activity
 import android.os.Handler
 import android.view.View
@@ -38,7 +37,7 @@ import org.mockito.kotlin.whenever
 class CreativeStateTest {
 
     private lateinit var parentView: View
-    private lateinit var webView: PassThroughWebView
+    private lateinit var webView: WebView
     private lateinit var creative: Creative
     private val testDispatcher = StandardTestDispatcher()
     private val handler: Handler = mock()
@@ -56,7 +55,7 @@ class CreativeStateTest {
 
         val webSettings = mock<WebSettings>{}
 
-        webView = mock<PassThroughWebView> {
+        webView = mock<WebView> {
             on { settings } doReturn webSettings
         }
 
@@ -113,7 +112,7 @@ class CreativeStateTest {
     @Test
     fun testCreativeOpensCorrectly() {
         creative.isWebViewReady = true
-        creative.openCreative()
+        creative.openCreative(height = 100, width = 200)
         testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
         assertTrue(creative.isCreativeOpen.get())
         assertFalse(creative.isCreativeOpening.get())
@@ -139,10 +138,10 @@ class CreativeStateTest {
 
     @Test
     fun testNewCreativeCanBeOpenedAfterPreviousCreativeDestroyed(){
-        creative.openCreative()
+        creative.openCreative(height = 100, width = 200)
         creative.destroy()
         creative = spy(createRealCreative(parentView, webView ))
-        creative.openCreative()
+        creative.openCreative(height = 100, width = 200)
         testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
         assertTrue(creative.isCreativeOpen.get())
     }

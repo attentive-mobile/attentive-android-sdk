@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.creatives
 
-import PassThroughWebView
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
@@ -12,7 +11,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -40,7 +38,7 @@ class Creative internal constructor(
     private var parentView: View,
     private var activity: Activity,
     @set:VisibleForTesting
-    internal var webView: PassThroughWebView? = null,
+    internal var webView: WebView? = null,
     @SuppressLint("SupportAnnotationUsage") @VisibleForTesting
     private val handler: Handler = Handler(Looper.getMainLooper())
 ) {
@@ -76,6 +74,9 @@ class Creative internal constructor(
     internal val isCreativeOpen = AtomicBoolean(false)
     internal val isCreativeOpening = AtomicBoolean(false)
     internal val isCreativeDestroyed = AtomicBoolean(false)
+
+    // Bounding rectangle for touch event filtering (in pixels)
+    private var creativeBounds: android.graphics.Rect? = null
 
 
     init {
@@ -118,12 +119,46 @@ class Creative internal constructor(
 
     private fun addWebViewToParent() {
         changeWebViewVisibility(false)
+        // Make WebView fullscreen - touch events will be filtered by bounding rect
         val width = parentView.width
         val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width,height)
-        webView?.let {
-            it.setBackgroundColor(Color.TRANSPARENT)
+        val layoutParams = ViewGroup.LayoutParams(width, height)
+        webView?.let { view ->
+            view.setBackgroundColor(Color.TRANSPARENT)
             Timber.d("Set webview background color to transparent")
+
+            // Set up touch listener to filter events based on creative bounds
+            // Suppress ClickableViewAccessibility: We're only filtering touches by bounds, not implementing
+            // click logic. Touches inside bounds return false to let WebView handle them normally (including
+            // accessibility), touches outside are intentionally blocked with no action needed.
+            @SuppressLint("ClickableViewAccessibility")
+            view.setOnTouchListener { v, event ->
+                val bounds = creativeBounds
+
+                // If no bounds set or creative not open, pass all touches through
+                if (bounds == null || !isCreativeOpen.get()) {
+                    Timber.d("No bounds or creative not open - passing touch through")
+                    return@setOnTouchListener false
+                }
+
+                val x = event.x.toInt()
+                val y = event.y.toInt()
+
+                // Check if touch is within the creative's bounding rectangle
+                val isInBounds = bounds.contains(x, y)
+
+                if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                    Timber.d("Touch at ($x, $y) - inBounds=$isInBounds (bounds=$bounds)")
+                }
+
+                if (isInBounds) {
+                    // Touch is inside creative - let WebView handle it
+                    false // Return false to let WebView's normal touch handling work
+                } else {
+                    // Touch is outside creative - consume it so it doesn't reach WebView
+                    true
+                }
+            }
         }
 
         (parentView as ViewGroup).addView(webView, layoutParams)
@@ -224,9 +259,9 @@ class Creative internal constructor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    internal fun createWebView(parentView: View): PassThroughWebView {
+    internal fun createWebView(parentView: View): WebView {
         // Use Activity context to ensure proper resources for WebView
-        val view = PassThroughWebView(activity)
+        val view = WebView(activity)
         val webSettings = view.settings
 
         // Security settings, allow JavaScript to run
@@ -254,10 +289,8 @@ class Creative internal constructor(
             Timber.e("Creative listener cannot be attached!")
         }
 
-        if (attentiveConfig.mode == AttentiveConfig.Mode.PRODUCTION) {
-            Timber.d("Setting background color to transparent")
-            view.setBackgroundColor(Color.TRANSPARENT)
-        }
+        view.setBackgroundColor(Color.TRANSPARENT)
+
         return view
     }
 
@@ -293,7 +326,6 @@ class Creative internal constructor(
                 if (view.progress == 100) {
                     Timber.d("Page finished loading")
                     view.loadUrl(CREATIVE_LISTENER_JS)
-                    webView?.injectStateWatcher()
                 }
             }
 
@@ -337,29 +369,68 @@ class Creative internal constructor(
             val messageData = message.data
             Timber.d("Creative message data %s", messageData)
             if (messageData != null) {
-                Timber.d(
-                    "messageData is not null message:%s message:%s %s %s",
-                    messageData,
-                    message,
-                    sourceOrigin,
-                    isMainFrame
-                )
-                if (messageData.equals("CLOSE", ignoreCase = true)) {
-                    closeCreative()
-                } else if (messageData.equals("OPEN", ignoreCase = true)) {
-                    openCreative()
-                } else if (messageData.equals("TIMED OUT", ignoreCase = true)) {
-                    onCreativeTimedOut()
-                } else if (messageData.equals(
-                        "document-visibility: true",
-                        ignoreCase = true
-                    ) && isCreativeOpen.get()
-                ) {
-                    Timber.d("document-visibility: true and creative is open, closing creative")
-                    // Ignoring reacting to document visibility for now to bring the behavior in line with iOS.
-                    // This is because the creative can be closed by the user and we don't want to close
-                    // the creative automatically when the document visibility changes.
-                    //closeCreative()
+                // Try to parse as JSON for structured messages
+                try {
+                    if (messageData.startsWith("{")) {
+                        val jsonObject = org.json.JSONObject(messageData)
+                        val action = jsonObject.optString("action", "")
+
+                        // Helper function to parse px values
+                        fun parsePx(value: String?): Float? {
+                            if (value == null) return null
+                            val trimmed = value.trim()
+                            if (!trimmed.endsWith("px")) return null
+                            return trimmed.removeSuffix("px").toFloatOrNull()
+                        }
+
+                        when (action.uppercase()) {
+                            "OPEN" -> {
+                                Timber.d("Opening creative: %s", messageData)
+
+                                val style = jsonObject.optJSONObject("style")
+                                if (style != null) {
+                                    val width = parsePx(style.optString("width"))
+                                    val height = parsePx(style.optString("height"))
+                                    val left = parsePx(style.optString("left"))
+                                    val bottom = parsePx(style.optString("bottom"))
+
+                                    if (width != null && height != null && width > 0 && height > 0 &&
+                                        left != null && bottom != null && left >= 0 && bottom >= 0) {
+                                        val displayMetrics = activity.resources.displayMetrics
+                                        val density = displayMetrics.density
+                                        val parentHeight = parentView.height.toFloat()
+
+                                        val widthPx = (width * density).toInt()
+                                        val heightPx = (height * density).toInt()
+                                        val leftPx = (left * density).toInt()
+                                        val bottomPx = (bottom * density).toInt()
+                                        val topPx = (parentHeight - bottomPx - heightPx).toInt()
+
+                                        Timber.d("OPEN - opening with dimensions width=$widthPx, height=$heightPx, left=$leftPx, top=$topPx (parentHeight=$parentHeight)")
+                                        openCreative(heightPx, widthPx, leftPx, topPx)
+                                    } else {
+                                        Timber.d("OPEN - invalid dimensions, using defaults")
+                                        val displayMetrics = activity.resources.displayMetrics
+                                        openCreative(displayMetrics.heightPixels, displayMetrics.widthPixels, 0, 0)
+                                    }
+                                } else {
+                                    Timber.d("OPEN - no style, using defaults")
+                                    val displayMetrics = activity.resources.displayMetrics
+                                    openCreative(displayMetrics.heightPixels, displayMetrics.widthPixels, 0, 0)
+                                }
+                            }
+                            "RESIZE_FRAME" -> {
+                                Timber.d("Resize frame: %s", messageData)
+                                // Ignore RESIZE_FRAME, we're using OPEN messages instead
+                            }
+                            "CLOSE" -> closeCreative()
+                            "TIMED OUT" -> onCreativeTimedOut()
+                            else -> Timber.d("Unknown action: %s", action)
+                        }
+                        return@WebMessageListener
+                    }
+                } catch (e: Exception) {
+                    Timber.e("Error parsing JSON message: %s", e.message)
                 }
             }
         }
@@ -374,29 +445,35 @@ class Creative internal constructor(
         isCreativeOpen.set(false)
     }
 
-    internal fun openCreative() {
-        Timber.d("openCreative() called")
+    internal fun openCreative(height: Int, width: Int, left: Int = 0, top: Int = 0) {
+        Timber.d("openCreative() called with height=$height, width=$width, left=$left, top=$top")
         CoroutineScope(Dispatchers.Main).launch {
             Timber.d("handler post")
             isCreativeOpening.set(false)
-            if (isCreativeOpen.get()) {
-                Timber.w("Attempted to trigger creative, but creative is currently open. Taking no action")
-                return@launch
-            }
+
             // Host apps have reported webView NPEs here. The current thinking is that destroy gets
             // called just before this callback is executed. If destroy was previously called then it's
             // okay to ignore these callbacks since the host app has told us the creative should no longer
             // be displayed.
             if (webView != null) {
+                // Set the bounding rectangle for touch event filtering
+                // WebView stays fullscreen, but touches outside this rect will be ignored
+                creativeBounds = android.graphics.Rect(
+                    left,
+                    top,
+                    left + width,
+                    top + height
+                )
+                Timber.d("Set creative bounds: left=$left, top=$top, width=$width, height=$height (bounds=$creativeBounds)")
+
+                // Make WebView visible
                 changeWebViewVisibility(true)
-                Timber.d("WebView requestLayout()")
-                webView!!.requestLayout()
-                isCreativeOpening.set(false)
-                isCreativeOpen.set(true)
-                if (triggerCallback != null) {
-                    triggerCallback!!.onOpen()
+
+                // Only fire callback once on first open
+                if (!isCreativeOpen.getAndSet(true)) {
+                    triggerCallback?.onOpen()
                 }
-                Timber.d("WebView correctly displayed")
+                Timber.d("Creative opened with touch bounds set")
             } else {
                 Timber.w("The creative loaded but the WebView is null. Ignoring.")
                 isCreativeOpening.set(false)
@@ -413,6 +490,8 @@ class Creative internal constructor(
             Timber.d("handler post")
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
+            creativeBounds = null  // Clear bounding rectangle so touches pass through
+            Timber.d("Cleared creative bounds")
             if (webView != null) {
                 changeWebViewVisibility(false)
                 Timber.d("clearCache() called")
@@ -451,8 +530,9 @@ class Creative internal constructor(
                 "    false);\n" +
                 "    window.addEventListener('message',\n" +
                 "        function(event){\n" +
-                "            if (event.data && event.data.__attentive && event.data.__attentive.action === 'CLOSE') {\n" +
-                "                CREATIVE_LISTENER.postMessage('CLOSE');\n" +
+                "            if (event.data && event.data.__attentive) {\n" +
+                "                console.log(event.data.__attentive);\n " +
+                "                CREATIVE_LISTENER.postMessage(JSON.stringify(event.data.__attentive));\n" +
                 "            }\n" +
                 "        },\n" +
                 "    false);\n" +
@@ -461,7 +541,6 @@ class Creative internal constructor(
                 "        e =document.querySelector('iframe');\n" +
                 "        if(e && e.id === 'attentive_creative') {\n" +
                 "           clearInterval(interval);\n" +
-                "           CREATIVE_LISTENER.postMessage('OPEN');\n" +
                 "           if (timeoutHandle != null) {\n" +
                 "               clearTimeout(timeoutHandle);\n" +
                 "           }\n" +
