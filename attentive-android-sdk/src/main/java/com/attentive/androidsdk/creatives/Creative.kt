@@ -88,10 +88,7 @@ class Creative internal constructor(
             webView,
             handler
         )
-        Timber.i("parentView class name = %s", parentView.javaClass.name)
-        Timber.i("parentView type = %s", parentView::class.java)
-        Timber.i("parentView width = %s", parentView.width)
-        Timber.i("parentView height = %s", parentView.height)
+        Timber.i("parentView width = %s height = %s", parentView.width, parentView.height)
         Timber.i("Android version: %s", Build.VERSION.SDK_INT)
         this.webViewClient = createWebViewClient()
         this.creativeListener = createCreativeListener()
@@ -99,7 +96,7 @@ class Creative internal constructor(
 
         CoroutineScope(Dispatchers.Main).launch {
             if (webView == null) {
-                Timber.i("Creating WebView on main thread")
+                Timber.d("Creating WebView on main thread")
                 webView = createWebView(parentView)
                 addWebViewToParent()
             }
@@ -111,7 +108,7 @@ class Creative internal constructor(
         this.creativeUrlFormatter = CreativeUrlFormatter()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Timber.i("Registering activity lifecycle callbacks")
+            Timber.d("Registering activity lifecycle callbacks")
             // Delegate to CreativeActivityCallbacks to handle lifecycle events
             activity.registerActivityLifecycleCallbacks(CreativeActivityCallbacks(this))
         }
@@ -125,7 +122,7 @@ class Creative internal constructor(
         val layoutParams = ViewGroup.LayoutParams(width, height)
         webView?.let { view ->
             view.setBackgroundColor(Color.TRANSPARENT)
-            Timber.i("Set webview background color to transparent")
+            Timber.d("Set webview background color to transparent")
 
             // Set up touch listener to filter events based on creative bounds
             // Suppress ClickableViewAccessibility: We're only filtering touches by bounds, not implementing
@@ -170,7 +167,7 @@ class Creative internal constructor(
      * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
      */
     fun trigger(callback: CreativeTriggerCallback? = null, creativeId: String? = null) {
-        Timber.i("trigger method called with parameters: %s, %s", callback, creativeId)
+        Timber.i("trigger method called with parameters - callback: %s, creativeId: %s", callback, creativeId)
 
         triggerCallback = callback
 
@@ -281,7 +278,7 @@ class Creative internal constructor(
 
         // Add listener for creative OPEN / CLOSE events
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            Timber.i("Adding WebMessageListener")
+            Timber.d("Adding WebMessageListener")
             WebViewCompat.addWebMessageListener(
                 view, "CREATIVE_LISTENER", CREATIVE_LISTENER_ALLOWED_ORIGINS, creativeListener
             )
@@ -420,12 +417,13 @@ class Creative internal constructor(
                                 }
                             }
                             "RESIZE_FRAME" -> {
-                                Timber.i("Resize frame: %s", messageData)
+                                Timber.d("Resize frame: %s", messageData)
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
                             }
+                            "IMPRESSION" -> Timber.d("Impression: %s", messageData)
                             "CLOSE" -> closeCreative()
                             "TIMED OUT" -> onCreativeTimedOut()
-                            else -> Timber.i("Unknown action: %s", action)
+                            else -> Timber.d("Unknown action: %s", action)
                         }
                         return@WebMessageListener
                     }
@@ -448,7 +446,6 @@ class Creative internal constructor(
     internal fun openCreative(height: Int, width: Int, left: Int = 0, top: Int = 0) {
         Timber.i("openCreative() called with height=$height, width=$width, left=$left, top=$top")
         CoroutineScope(Dispatchers.Main).launch {
-            Timber.i("handler post")
             isCreativeOpening.set(false)
 
             // Host apps have reported webView NPEs here. The current thinking is that destroy gets
@@ -487,14 +484,13 @@ class Creative internal constructor(
     internal fun closeCreative() {
         Timber.i("closeCreative() called")
         CoroutineScope(Dispatchers.Main).launch {
-            Timber.i("handler post")
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
             creativeBounds = null  // Clear bounding rectangle so touches pass through
             Timber.i("Cleared creative bounds")
             if (webView != null) {
                 changeWebViewVisibility(false)
-                Timber.i("clearCache() called")
+                Timber.i("webview clearCache() called")
                 webView!!.clearCache(true)
                 if (triggerCallback != null) {
                     triggerCallback!!.onClose()
@@ -510,7 +506,7 @@ class Creative internal constructor(
 
 
     private fun changeWebViewVisibility(visible: Boolean) {
-        Timber.i("changeWebViewVisibility() called with parameter %s", visible)
+        Timber.i("changeWebViewVisibility() called, make visible: %s", visible)
         if (webView != null) {
             if (visible) {
                 webView!!.visibility = View.VISIBLE

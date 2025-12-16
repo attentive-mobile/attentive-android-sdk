@@ -57,10 +57,10 @@ internal class AppLaunchTracker(
                 } == true
 
                 if (wasLaunchedFromNotification) {
-                    Timber.d("Launched from notification")
+                    Timber.i("Launched from notification")
                     launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
                 } else {
-                    Timber.d("Launched from launcher")
+                    Timber.i("Launched from launcher")
                 }
 
 

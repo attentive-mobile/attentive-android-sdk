@@ -48,7 +48,7 @@ import timber.log.Timber
     }
 
     override fun identify(clientUserId: String) {
-        Timber.d("identify called with clientUserId: %s", clientUserId)
+        Timber.i("identify called with clientUserId: %s", clientUserId)
         ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
         identify(UserIdentifiers.Builder().withClientUserId(clientUserId).build())
     }
@@ -56,13 +56,13 @@ import timber.log.Timber
     override fun identify(userIdentifiers: UserIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
-        Timber.d("identify called with userIdentifiers: %s", this.userIdentifiers)
+        Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
 
 
     override fun clearUser() {
-        Timber.d("clearUser called")
+        Timber.i("clearUser called")
         val newVisitorId = visitorService.createNewVisitorId()
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
     }

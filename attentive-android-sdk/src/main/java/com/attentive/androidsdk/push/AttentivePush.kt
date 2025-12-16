@@ -79,7 +79,7 @@ internal class AttentivePush {
     }
 
     internal fun sendNotification(remoteMessage: RemoteMessage) {
-        Timber.d("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
+        Timber.i("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
 
