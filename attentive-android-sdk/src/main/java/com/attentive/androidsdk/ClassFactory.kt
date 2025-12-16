@@ -31,8 +31,6 @@ object ClassFactory {
             logging.setLevel(HttpLoggingInterceptor.Level.BODY)
         } else if(logLevel == AttentiveLogLevel.STANDARD){
             logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
-        } else if(logLevel == AttentiveLogLevel.LIGHT){
-            logging.setLevel(HttpLoggingInterceptor.Level.NONE)
         }
         return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
     }

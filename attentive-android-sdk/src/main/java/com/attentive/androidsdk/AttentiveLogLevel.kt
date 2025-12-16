@@ -2,8 +2,7 @@ package com.attentive.androidsdk
 
 enum class AttentiveLogLevel(val id: Int) {
     VERBOSE(1),
-    STANDARD(2),
-    LIGHT(3);
+    STANDARD(2);
 
     companion object {
         fun fromId(logLevelId: Int): AttentiveLogLevel? {

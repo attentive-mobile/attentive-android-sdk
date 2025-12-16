@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.internal.util.AppInfo
-import com.attentive.androidsdk.internal.util.LightTree
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 
@@ -35,11 +34,7 @@ class AttentiveSettingsService : Service() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        if (AppInfo.isDebuggable(this)) {
-            Timber.plant(DebugTree())
-        } else {
-            Timber.plant(LightTree())
-        }
+        Timber.plant(DebugTree())
         return null
     }
 
