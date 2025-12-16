@@ -24,7 +24,9 @@ object ClassFactory {
 
     @JvmStatic
     fun buildOkHttpClient(logLevel: AttentiveLogLevel?, interceptor: Interceptor): OkHttpClient {
-        val logging = HttpLoggingInterceptor()
+        val logging = HttpLoggingInterceptor { message ->
+            Timber.tag("OkHttp").d(message)
+        }
         if(logLevel == AttentiveLogLevel.VERBOSE){
             logging.setLevel(HttpLoggingInterceptor.Level.BODY)
         } else if(logLevel == AttentiveLogLevel.STANDARD){

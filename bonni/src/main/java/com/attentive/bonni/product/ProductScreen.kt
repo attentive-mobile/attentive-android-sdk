@@ -113,11 +113,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 16.dp)
         )
 
-        if (items.isNotEmpty()) {
             ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
-        } else {
-            Timber.d("items is empty")
-        }
     }
 }
 

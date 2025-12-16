@@ -33,8 +33,6 @@ internal class AppLaunchTracker(
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
-        Timber.d("App moved to foreground")
-
         AttentiveEventTracker.instance.config?.applicationContext?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 AttentiveEventTracker.instance.registerPushToken(it)
@@ -46,7 +44,6 @@ internal class AppLaunchTracker(
         lifecycle.addObserver(this)
 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            Timber.d("App was already in foreground at registration")
             onStart(ProcessLifecycleOwner.get())
         }
     }
@@ -55,25 +52,21 @@ internal class AppLaunchTracker(
         application.registerActivityLifecycleCallbacks(object :
             Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                Timber.d("Activity created: ${activity.localClassName}")
                 var wasLaunchedFromNotification = activity.intent?.extras?.run {
                     getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
                 } == true
-
-                Timber.d("Launched from notification: $wasLaunchedFromNotification")
 
                 if (wasLaunchedFromNotification) {
                     Timber.d("Launched from notification")
                     launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
                 } else {
-                    Timber.d("Launched normally")
+                    Timber.d("Launched from launcher")
                 }
 
 
             }
 
             override fun onActivityStarted(activity: Activity) {
-                Timber.d("Activity started: ${activity.localClassName}")
                 CoroutineScope(Dispatchers.IO).launch {
                     if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
                         activity.intent.extras.run {
@@ -103,26 +96,14 @@ internal class AppLaunchTracker(
             }
 
 
-            override fun onActivityResumed(activity: Activity) {
-                Timber.d("Activity resumed: ${activity.localClassName}")
-            }
-
-            override fun onActivityPaused(activity: Activity) {
-                Timber.d("Activity paused: ${activity.localClassName}")
-            }
-
             override fun onActivityStopped(activity: Activity) {
-                Timber.d("onActivityStopped: ${activity.localClassName}")
                 launchEvents.clear()
             }
 
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-                Timber.d("onActivitySaveInstanceState: ${activity.localClassName}")
-            }
-
-            override fun onActivityDestroyed(activity: Activity) {
-                Timber.d("onActivityDestroyed: ${activity.localClassName}")
-            }
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
         })
     }
 

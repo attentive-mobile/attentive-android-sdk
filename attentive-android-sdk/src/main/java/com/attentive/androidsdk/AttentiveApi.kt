@@ -346,6 +346,7 @@ fun sendUserIdentifiersCollectedEvent(
     userIdentifiers: UserIdentifiers,
     callback: AttentiveApiCallback
 ) {
+    Timber.i("Send user identifiers $userIdentifiers")
     // first get the geo-adjusted domain, and then call the events endpoint
     getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
         override fun onFailure(reason: String?) {
@@ -369,7 +370,7 @@ fun sendEvent(
     domain: String,
     callback: AttentiveApiCallback? = null
 ) {
-    Timber.d("sendEvent called with event: %s", event.javaClass.name)
+    Timber.d("sendEvent called with event: %s \n userIdentifiers: %s \n domain: %s", event, userIdentifiers, domain)
     getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
         override fun onFailure(reason: String?) {
             Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
