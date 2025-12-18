@@ -13,7 +13,7 @@ import timber.log.Timber
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
-        Timber.d("Refreshed token: $token")
+        Timber.i("Refreshed token: $token")
         super.onNewToken(token)
         CoroutineScope(Dispatchers.IO).launch {
             AttentiveEventTracker.instance.registerPushToken(this@AttentiveFirebaseMessagingService)
@@ -22,8 +22,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Timber.d("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
-        Timber.d(remoteMessage.data.toString())
+        Timber.i("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
 
         if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
             AttentiveSdk.sendNotification(remoteMessage)

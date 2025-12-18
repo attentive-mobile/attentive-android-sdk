@@ -28,11 +28,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
 
     internal fun initWithMockProducts() {
-        Timber.d("initWithMockProducts")
         CoroutineScope(Dispatchers.IO).launch {
             val count = productItemDao().getAll().first().count()
             if( count > 0) {
-                Timber.d("${count}Products already exist, skipping initialization")
                 return@launch
             }
             val itemCount = 4
@@ -54,7 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
                 Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
                     .price(BigDecimal(13)).build()
             )
-            for (i in 0..(itemCount - 1)) {
+            for (i in 0..<itemCount) {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
                 val product = ExampleProduct("$i", item, imageIds[i])

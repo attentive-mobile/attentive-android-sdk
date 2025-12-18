@@ -346,16 +346,14 @@ AttentiveSdk.updateUser(email = "someOptionalEmail", phone = "someOptionalPhone"
 ### Log Level
 All Attentive logs can be filtered by the string "Attentive"
 
-We currently support 3 log levels. Each level is more verbose than the next one.
+We currently support 2 log levels. Each level is more verbose than the next one.
 The log levels will dictate sdk and network logging levels
-You can configure the log level on the Builder for the AttentiveConfig. Please keep 
-in mind that this configuration only works for debuggable builds.
+You can configure the log level on the Builder for the AttentiveConfig.
 ```kotlin
     VERBOSE(1),
-    STANDARD(2),
-    LIGHT(3);
+    STANDARD(2);
 
     // To set it on the builder
-    .logLevel(AttentiveLogLevel.LIGHT)
+    .logLevel(AttentiveLogLevel.STANDARD)
 ```
 

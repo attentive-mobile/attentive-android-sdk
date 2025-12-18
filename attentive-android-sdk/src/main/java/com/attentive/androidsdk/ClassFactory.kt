@@ -1,6 +1,7 @@
 package com.attentive.androidsdk
 
 import android.content.Context
+import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
 import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import com.attentive.androidsdk.internal.util.AppInfo
@@ -24,13 +25,11 @@ object ClassFactory {
 
     @JvmStatic
     fun buildOkHttpClient(logLevel: AttentiveLogLevel?, interceptor: Interceptor): OkHttpClient {
-        val logging = HttpLoggingInterceptor()
+        val logging = HttpLoggingInterceptor(AttentiveHttpLogger())
         if(logLevel == AttentiveLogLevel.VERBOSE){
             logging.setLevel(HttpLoggingInterceptor.Level.BODY)
         } else if(logLevel == AttentiveLogLevel.STANDARD){
             logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
-        } else if(logLevel == AttentiveLogLevel.LIGHT){
-            logging.setLevel(HttpLoggingInterceptor.Level.NONE)
         }
         return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
     }

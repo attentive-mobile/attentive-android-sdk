@@ -92,7 +92,7 @@ class AttentiveEventTracker private constructor() {
                     config.domain,
                     object : AttentiveApiCallback {
                         override fun onSuccess() {
-                            Timber.d("Event recorded successfully")
+                            Timber.i("Event recorded successfully")
                             if (continuation.isActive) {
                                 continuation.resume(Unit)
                             }
@@ -113,21 +113,21 @@ class AttentiveEventTracker private constructor() {
     }
 
     internal suspend fun registerPushToken(context: Context) {
-        Timber.d("registerPushToken")
+        Timber.i("registerPushToken")
         verifyInitialized()
         var token = ""
 
         TokenProvider.getInstance().getToken(context).run {
             if (isSuccess) {
                 token = getOrNull()?.token ?: ""
-                Timber.d("Push token fetched successfully: $token")
+                Timber.i("Push token fetched successfully: $token")
             } else {
                 Timber.e("Failed to fetch push token: ${exceptionOrNull()?.message}")
             }
         }
 
         if (token.isNotEmpty()) {
-            Timber.d("A push token exists, will register with a non empty token")
+            Timber.d("A push token exists, will register with token $token")
             config.let {
                 it.attentiveApi.registerPushToken(
                     token = token,

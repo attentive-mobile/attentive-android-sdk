@@ -9,17 +9,17 @@ class VerboseTree : Timber.Tree() {
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         val attentiveMessage = "Attentive: $message"
         if (priority == Log.ERROR) {
-            Log.e(tag, attentiveMessage, t)
+            if (t != null) Log.e(tag, attentiveMessage, t) else Log.e(tag, attentiveMessage)
         } else if (priority == Log.WARN) {
-            Log.w(tag, attentiveMessage, t)
+            if (t != null) Log.w(tag, attentiveMessage, t) else Log.w(tag, attentiveMessage)
         } else if (priority == Log.INFO) {
-            Log.i(tag, attentiveMessage, t)
+            if (t != null) Log.i(tag, attentiveMessage, t) else Log.i(tag, attentiveMessage)
         } else if (priority == Log.DEBUG) {
-            Log.d(tag, attentiveMessage, t)
+            if (t != null) Log.d(tag, attentiveMessage, t) else Log.d(tag, attentiveMessage)
         } else if (priority == Log.VERBOSE) {
-            Log.v(tag, attentiveMessage, t)
+            if (t != null) Log.v(tag, attentiveMessage, t) else Log.v(tag, attentiveMessage)
         } else if (priority == Log.ASSERT) {
-            Log.wtf(tag, attentiveMessage, t)
+            if (t != null) Log.wtf(tag, attentiveMessage, t) else Log.wtf(tag, attentiveMessage)
         }
     }
 }
