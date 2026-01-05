@@ -6,7 +6,6 @@ import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.internal.util.AppInfo
-import com.attentive.androidsdk.internal.util.LightTree
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
@@ -48,7 +47,7 @@ import timber.log.Timber
     }
 
     override fun identify(clientUserId: String) {
-        Timber.d("identify called with clientUserId: %s", clientUserId)
+        Timber.i("identify called with clientUserId: %s", clientUserId)
         ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
         identify(UserIdentifiers.Builder().withClientUserId(clientUserId).build())
     }
@@ -56,13 +55,13 @@ import timber.log.Timber
     override fun identify(userIdentifiers: UserIdentifiers) {
         ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
-        Timber.d("identify called with userIdentifiers: %s", this.userIdentifiers)
+        Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
 
 
     override fun clearUser() {
-        Timber.d("clearUser called")
+        Timber.i("clearUser called")
         val newVisitorId = visitorService.createNewVisitorId()
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
     }
@@ -104,10 +103,6 @@ import timber.log.Timber
             settingsService: SettingsService,
             context: Context
         ) {
-            if (!AppInfo.isDebuggable(context)) {
-                Timber.plant(LightTree())
-                return
-            }
             val settingsLogLevel = settingsService.logLevel
             if (settingsLogLevel != null) {
                 setLogLevel(settingsLogLevel)
@@ -126,7 +121,6 @@ import timber.log.Timber
             when (logLevel) {
                 AttentiveLogLevel.VERBOSE -> Timber.plant(VerboseTree())
                 AttentiveLogLevel.STANDARD -> Timber.plant(StandardTree())
-                AttentiveLogLevel.LIGHT -> Timber.plant(LightTree())
             }
         }
     }
@@ -139,7 +133,7 @@ import timber.log.Timber
         @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
-        internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.LIGHT
+        internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 

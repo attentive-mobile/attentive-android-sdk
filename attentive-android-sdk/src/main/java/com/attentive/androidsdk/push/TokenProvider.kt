@@ -17,7 +17,6 @@ class TokenProvider {
     internal var token: String? = null
 
     internal suspend fun getToken(context: Context): Result<TokenFetchResult> {
-        Timber.d("getToken")
         return getTokenFromFirebase(context)
     }
 
@@ -28,7 +27,6 @@ class TokenProvider {
                 if (task.isSuccessful) {
                     val resultToken = task.result
                     token = task.result
-                    Timber.d("Token: $token")
                     continuation.resume(
                         Result.success(
                             TokenFetchResult(

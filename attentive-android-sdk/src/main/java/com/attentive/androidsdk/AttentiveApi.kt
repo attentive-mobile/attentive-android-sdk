@@ -213,7 +213,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         userIdentifiers: UserIdentifiers,
         domain: String
     ) {
-        Timber.d("recordEvent called with event: %s", event.javaClass.name)
+        Timber.i("recordEvent called with event: %s", event.javaClass.name)
 
         // Validate that we have a visitorId
         if (userIdentifiers.visitorId.isNullOrEmpty()) {
@@ -266,7 +266,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         domain: String,
         callback: AttentiveApiCallback
     ) {
-        Timber.d("recordEventCall called with event: %s", event.javaClass.name)
+        Timber.i("recordEventCall called with event: %s", event.javaClass.name)
 
         if (userIdentifiers.visitorId.isNullOrEmpty()) {
             Timber.e("Cannot send event: visitorId is required but is null or empty")
@@ -346,6 +346,7 @@ fun sendUserIdentifiersCollectedEvent(
     userIdentifiers: UserIdentifiers,
     callback: AttentiveApiCallback
 ) {
+    Timber.i("Send user identifiers $userIdentifiers")
     // first get the geo-adjusted domain, and then call the events endpoint
     getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
         override fun onFailure(reason: String?) {
@@ -369,7 +370,7 @@ fun sendEvent(
     domain: String,
     callback: AttentiveApiCallback? = null
 ) {
-    Timber.d("sendEvent called with event: %s", event.javaClass.name)
+    Timber.d("sendEvent called with event: %s \n userIdentifiers: %s \n domain: %s", event, userIdentifiers, domain)
     getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
         override fun onFailure(reason: String?) {
             Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
@@ -1076,7 +1077,7 @@ internal fun registerPushToken(
         }
 
         override fun onResponse(call: Call, response: Response) {
-            Timber.d("Push request success with response ${response.message}")
+            Timber.i("Push request success with response ${response.message}")
         }
     })
 }
@@ -1221,7 +1222,7 @@ private fun sendDirectOpenStatusInternal(
         }
 
         override fun onResponse(call: Call, response: Response) {
-            Timber.d("Push request success with response ${response.message}")
+            Timber.i("Push request success with response ${response.message}")
         }
     })
 }
@@ -1297,7 +1298,7 @@ internal fun sendOptInSubscriptionStatus(
                     }
 
                     override fun onResponse(call: Call, response: Response) {
-                        Timber.d("Opt-in subscription request success: ${response.message}")
+                        Timber.i("Opt-in subscription request success: ${response.message}")
                     }
                 })
             }
@@ -1376,7 +1377,7 @@ internal fun sendOptOutSubscriptionStatus(
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    Timber.d("Opt-out subscription request success: ${response.message}")
+                    Timber.i("Opt-out subscription request success: ${response.message}")
                 }
             })
         }
