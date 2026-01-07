@@ -125,6 +125,8 @@ The SDK provides three methods for managing user identity:
 - **`clearUser()`** – Clear all identifiers for the current user (used on logout)
 - **`updateUser()`** – Switch to a different user (automatically calls `clearUser()` first)
 
+- Warning: Avoid using hardcoded identifiers like email/phone number in your application's distributed test builds. This will cause every new device to associate a new push token with the same user info on our backend.
+
 #### Common Use Cases:
 
 **1. Anonymous user (default state)**
