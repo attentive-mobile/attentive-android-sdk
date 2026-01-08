@@ -117,6 +117,55 @@ attentiveConfig.clearUser();
 // When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
 ```
 
+### Managing User Identity
+
+The SDK provides three methods for managing user identity:
+
+- **`identify()`** – Add or enrich information about the current user
+- **`clearUser()`** – Clear all identifiers for the current user (used on logout)
+- **`updateUser()`** – Switch to a different user (automatically calls `clearUser()` first)
+
+- Warning: Avoid using hardcoded identifiers like email/phone number in your application's distributed test builds. This will cause every new device to associate a new push token with the same user info on our backend.
+
+#### Common Use Cases:
+
+**1. Anonymous user (default state)**
+
+No action required. The SDK automatically tracks events as anonymous until identifiers are provided.
+
+**2. First login (user provides email and/or phone)**
+
+Call `identify()` to attach identifiers to the current anonymous user.
+
+```kotlin
+val userIdentifiers = UserIdentifiers.Builder()
+    .withEmail("user@example.com")
+    .withPhone("+15551234567")
+    .build()
+attentiveConfig.identify(userIdentifiers)
+```
+
+**3. User logs out**
+
+Call `clearUser()` to remove identifiers.
+
+```kotlin
+attentiveConfig.clearUser()
+```
+
+**4. Different user logs in on the same device**
+
+Call `updateUser()` which automatically clears old identifiers and sets new ones.
+
+```kotlin
+AttentiveSdk.updateUser(email = "newuser@example.com", phone = "+15559876543")
+```
+
+#### Notes
+- If the same person logs in again with the same identifiers, the SDK continues to treat the device as belonging to them
+- At least one identifier (email or phone) must be provided when calling `identify()` or `updateUser()`
+- Use `updateUser()` only when switching users; otherwise prefer `identify()` for enriching the current user's profile
+
 ## Step 3 - Record user events
 
 Next, call Attentive's event functions when each important event happens in your app, so that Attentive can understand user behavior. These events allow Attentive to trigger journeys, attribute revenue, and more. 
@@ -226,11 +275,23 @@ See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive
 #### 3. Destroy the Creative
 ```kotlin
 // Destroy the creative and it's associated WebView.
-creative.destroy();
+creative.destroy()
 ```
 __*** NOTE 1: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources.***__
 __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the destroy lifecycle callback of the activity if the activity is provided to automatically clear up resources and avoid memory leaks.***__
 
+#### 4. Skip Fatigue on Creative
+
+For debugging purposes, you can skip fatigue rule evaluation to show your creative every time. Default value is `false`.
+
+```kotlin
+val attentiveConfig = AttentiveConfig.Builder()
+    .applicationContext(getApplicationContext())
+    .domain("YOUR_ATTENTIVE_DOMAIN")
+    .mode(AttentiveConfig.Mode.DEBUG)
+    .skipFatigueOnCreatives(true)
+    .build()
+```
 
 ## Step 4 - Integrate With Push
 
@@ -305,7 +366,12 @@ First check that is a message from Attentive, then send it over.
 ```
 
 ### Deeplinking
-The SDK will package a ```PendingIntent``` with the notification that will trigger when tapped. If no deep link is provided via the attentive web ui, the launcher activity will be opened when then notification is tapped. You must setup your host app with an ```intent filter``` for the deeplink you provided to launch your desired activity.
+
+The SDK will package a `PendingIntent` with the notification that will trigger when tapped. If no deep link is provided via the Attentive web UI, the launcher activity will be opened when the notification is tapped.
+
+#### Setup
+
+You must set up your host app with an `intent-filter` for the deep link you provided to launch your desired activity.
 
 ## Other functionality
 
