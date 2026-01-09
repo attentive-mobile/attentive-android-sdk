@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.inbox.InboxState
+import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
@@ -11,6 +13,9 @@ import com.attentive.androidsdk.push.TokenFetchResult
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
@@ -29,6 +34,58 @@ object AttentiveSdk {
             "Please call AttentiveSdk.initialize() in your Application.onCreate() method."
         )
 
+    // Inbox state management
+    private val _inboxState = MutableStateFlow(InboxState())
+
+    /**
+     * Subscribe to the inbox state stream to receive updates when messages change.
+     * This StateFlow emits a new InboxState whenever messages are updated.
+     */
+    val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
+
+    /**
+     * Initializes the inbox with mock messages for local testing.
+     * TODO: Remove this function once the backend API is ready.
+     */
+    @VisibleForTesting
+    internal fun initializeMockInbox() {
+        val mockMessages = listOf(
+            Message(
+                id = "msg_001",
+                title = "Welcome to Attentive!",
+                body = "Thanks for joining us. Check out our latest offers.",
+                timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
+                isRead = false,
+                imageUrl = "https://example.com/welcome.jpg",
+                actionUrl = "https://example.com/offers"
+            ),
+            Message(
+                id = "msg_002",
+                title = "New Sale Alert",
+                body = "50% off on all items this weekend!",
+                timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
+                isRead = true,
+                imageUrl = "https://example.com/sale.jpg",
+                actionUrl = "https://example.com/sale"
+            ),
+            Message(
+                id = "msg_003",
+                title = "Your Order Has Shipped",
+                body = "Your order #12345 is on its way!",
+                timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                isRead = false,
+                actionUrl = "https://example.com/track/12345"
+            )
+        )
+
+        _inboxState.value = InboxState(
+            messages = mockMessages,
+            unreadCount = mockMessages.count { !it.isRead }
+        )
+
+        Timber.d("Initialized inbox with ${mockMessages.size} mock messages")
+    }
+
     /**
      * Initializes the Attentive SDK with the provided configuration.
      * This should be called once during app initialization, typically in your Application.onCreate() method.
@@ -40,6 +97,8 @@ object AttentiveSdk {
         synchronized(AttentiveSdk::class.java) {
             this._config = config
             AttentiveEventTracker.instance.initialize(config)
+
+            initializeMockInbox()
         }
     }
 
@@ -181,5 +240,72 @@ object AttentiveSdk {
         CoroutineScope(Dispatchers.IO).launch {
             AttentiveEventTracker.instance.registerPushToken(context)
         }
+    }
+
+    // Inbox Message Functions
+
+    /**
+     * Gets all messages from the current inbox state.
+     * This is a lightweight operation that returns the current snapshot of messages.
+     * Call this function every time the app comes to the foreground.
+     *
+     * @return List of all messages in the inbox
+     */
+    fun getAllMessages(): List<Message> {
+        return inboxState.value.messages
+    }
+
+    /**
+     * Gets the count of unread messages from the current inbox state.
+     * This is a lightweight operation that returns the current unread count.
+     *
+     * @return The number of unread messages
+     */
+    fun getUnreadCount(): Int {
+        return inboxState.value.unreadCount
+    }
+
+    /**
+     * Marks a message as read and emits a new inbox state.
+     * TODO: This will send an update to the backend once the API is ready.
+     *
+     * @param messageId The ID of the message to mark as read
+     */
+    fun markRead(messageId: String) {
+        val currentState = _inboxState.value
+        val updatedMessages = currentState.messages.map { message ->
+            if (message.id == messageId) {
+                message.copy(isRead = true)
+            } else {
+                message
+            }
+        }
+        _inboxState.value = InboxState(
+            messages = updatedMessages,
+            unreadCount = updatedMessages.count { !it.isRead }
+        )
+        Timber.d("Message $messageId marked as read")
+    }
+
+    /**
+     * Marks a message as unread and emits a new inbox state.
+     * TODO: This will send an update to the backend once the API is ready.
+     *
+     * @param messageId The ID of the message to mark as unread
+     */
+    fun markUnread(messageId: String) {
+        val currentState = _inboxState.value
+        val updatedMessages = currentState.messages.map { message ->
+            if (message.id == messageId) {
+                message.copy(isRead = false)
+            } else {
+                message
+            }
+        }
+        _inboxState.value = InboxState(
+            messages = updatedMessages,
+            unreadCount = updatedMessages.count { !it.isRead }
+        )
+        Timber.d("Message $messageId marked as unread")
     }
 }
