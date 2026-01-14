@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.Price
 import com.attentive.bonni.R
@@ -67,9 +69,32 @@ fun ProductScreen(
 fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val items by viewModel.productItemsFlow.collectAsState()
+    val inboxState by AttentiveSdk.inboxState.collectAsState()
 
     Column {
         SimpleToolbar(title = "Products", actions = {
+            BadgedBox(
+                modifier = Modifier.padding(4.dp),
+                badge = {
+                    if (inboxState.unreadCount > 0) {
+                        Badge(containerColor = Color.White, contentColor = Color.Black) {
+                            Text(text = inboxState.unreadCount.toString())
+                        }
+                    }
+                }
+            ) {
+                IconButton(
+                    onClick = {
+                        navHostController.navigate(Routes.InboxScreen.name)
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MailOutline,
+                        tint = colorResource(id = R.color.attentive_black),
+                        contentDescription = "Inbox"
+                    )
+                }
+            }
             BadgedBox(
                 modifier = Modifier.padding(4.dp),
                 badge = {
