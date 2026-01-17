@@ -50,7 +50,6 @@ object AttentiveSdk {
     @VisibleForTesting
     internal fun initializeMockInbox() {
         val mockMessages =
-
             listOf(
             Message(
                 id = "msg_001",
@@ -99,8 +98,6 @@ object AttentiveSdk {
             this._config = config
             AttentiveEventTracker.instance.initialize(config)
 
-            // Initialize mock inbox for local development
-            // TODO: Remove this call once the backend API is ready
             initializeMockInbox()
         }
     }
