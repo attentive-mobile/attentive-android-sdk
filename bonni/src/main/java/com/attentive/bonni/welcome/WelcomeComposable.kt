@@ -51,6 +51,7 @@ import androidx.navigation.navDeepLink
 import com.attentive.bonni.R
 import com.attentive.bonni.Routes
 import com.attentive.bonni.cart.CartScreen
+import com.attentive.bonni.inbox.InboxScreen
 import com.attentive.bonni.settings.debug.DebugScreenComposables
 import com.attentive.bonni.settings.SettingsScreen
 import com.attentive.bonni.product.ProductScreen
@@ -182,6 +183,9 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(Routes.DebugScreen.name) {
                 DebugScreenComposables(navController)
+            }
+            composable(Routes.InboxScreen.name) {
+                InboxScreen(navController)
             }
         }
     }

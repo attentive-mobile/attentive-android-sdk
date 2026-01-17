@@ -49,14 +49,14 @@ object AttentiveSdk {
      */
     @VisibleForTesting
     internal fun initializeMockInbox() {
-        val mockMessages = listOf(
+        val mockMessages =
+            listOf(
             Message(
                 id = "msg_001",
                 title = "Welcome to Attentive!",
                 body = "Thanks for joining us. Check out our latest offers.",
                 timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
                 isRead = false,
-                imageUrl = "https://example.com/welcome.jpg",
                 actionUrl = "https://example.com/offers"
             ),
             Message(
@@ -65,7 +65,7 @@ object AttentiveSdk {
                 body = "50% off on all items this weekend!",
                 timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
                 isRead = true,
-                imageUrl = "https://example.com/sale.jpg",
+                imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
                 actionUrl = "https://example.com/sale"
             ),
             Message(

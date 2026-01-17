@@ -10,4 +10,5 @@ enum class Routes() {
     PaymentScreen,
     ThankYouScreen,
     SettingsScreen,
+    InboxScreen,
 }
