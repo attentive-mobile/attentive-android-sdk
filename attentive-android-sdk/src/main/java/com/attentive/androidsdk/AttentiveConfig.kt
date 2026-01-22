@@ -27,7 +27,7 @@ import timber.log.Timber
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
-    var apiVersion = ApiVersion.OLD
+    var apiVersion = ApiVersion.NEW
 
     init {
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
