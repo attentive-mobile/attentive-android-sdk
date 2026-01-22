@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
@@ -94,6 +95,18 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                         contentDescription = "Inbox"
                     )
                 }
+            }
+            // Legacy inbox using View system wrapper
+            IconButton(
+                onClick = {
+                    navHostController.navigate(Routes.LegacyInboxScreen.name)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.List,
+                    tint = colorResource(id = R.color.attentive_black),
+                    contentDescription = "Inbox (Legacy View)"
+                )
             }
             BadgedBox(
                 modifier = Modifier.padding(4.dp),

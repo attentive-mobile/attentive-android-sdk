@@ -4,6 +4,9 @@ import android.content.Context
 import android.util.AttributeSet
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.AbstractComposeView
@@ -49,17 +52,18 @@ class AttentiveInboxView @JvmOverloads constructor(
 ) : AbstractComposeView(context, attrs, defStyleAttr) {
 
     // Color properties with defaults matching AttentiveInbox composable
-    private var backgroundColor: Color = Color.White
-    private var unreadIndicatorColor: Color = Color(0xFFFFC5B9)
-    private var titleTextColor: Color = Color(0xFF1A1E22)
-    private var bodyTextColor: Color = Color.DarkGray
-    private var timestampTextColor: Color = Color.Gray
-    private var swipeBackgroundColor: Color = Color(0xFFFFC5B9)
+    // Using mutableStateOf so Compose automatically recomposes when these change
+    private var backgroundColor by mutableStateOf(Color.White)
+    private var unreadIndicatorColor by mutableStateOf(Color(0xFFFFC5B9))
+    private var titleTextColor by mutableStateOf(Color(0xFF1A1E22))
+    private var bodyTextColor by mutableStateOf(Color.DarkGray)
+    private var timestampTextColor by mutableStateOf(Color.Gray)
+    private var swipeBackgroundColor by mutableStateOf(Color(0xFFFFC5B9))
 
     // Font properties (nullable - use system defaults when null)
-    private var titleFontFamily: FontFamily? = null
-    private var bodyFontFamily: FontFamily? = null
-    private var timestampFontFamily: FontFamily? = null
+    private var titleFontFamily by mutableStateOf<FontFamily?>(null)
+    private var bodyFontFamily by mutableStateOf<FontFamily?>(null)
+    private var timestampFontFamily by mutableStateOf<FontFamily?>(null)
 
     init {
         // Parse XML attributes if provided
@@ -179,15 +183,8 @@ class AttentiveInboxView @JvmOverloads constructor(
         )
     }
 
-    /**
-     * Helper to trigger recomposition when properties change
-     */
-    private fun triggerRecomposition() {
-        disposeComposition()
-        createComposition()
-    }
-
     // Public setters for programmatic customization
+    // Note: Since we use mutableStateOf, Compose automatically recomposes when these properties change
 
     /**
      * Sets the background color of the inbox
@@ -195,7 +192,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setInboxBackgroundColor(color: Int) {
         backgroundColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -204,7 +200,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setUnreadIndicatorColor(color: Int) {
         unreadIndicatorColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -213,7 +208,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setTitleTextColor(color: Int) {
         titleTextColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -222,7 +216,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setBodyTextColor(color: Int) {
         bodyTextColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -231,7 +224,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setTimestampTextColor(color: Int) {
         timestampTextColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -240,7 +232,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setSwipeBackgroundColor(color: Int) {
         swipeBackgroundColor = Color(color)
-        triggerRecomposition()
     }
 
     /**
@@ -249,7 +240,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setTitleFontFamily(fontResId: Int) {
         titleFontFamily = FontFamily(Font(fontResId))
-        triggerRecomposition()
     }
 
     /**
@@ -258,7 +248,6 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setBodyFontFamily(fontResId: Int) {
         bodyFontFamily = FontFamily(Font(fontResId))
-        triggerRecomposition()
     }
 
     /**
@@ -267,6 +256,5 @@ class AttentiveInboxView @JvmOverloads constructor(
      */
     fun setTimestampFontFamily(fontResId: Int) {
         timestampFontFamily = FontFamily(Font(fontResId))
-        triggerRecomposition()
     }
 }
