@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.inbox.Style
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -166,7 +169,7 @@ private fun MessageList(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(Color.White)
     ) {
         items(messages, key = { it.id }) { message ->
             MessageItem(
@@ -266,72 +269,193 @@ private fun MessageItem(
             }
         }
     ) {
-        val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
+        when (message.style) {
+            Style.Small -> SmallMessageContent(
+                message = message,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onClick = onClick
+            )
+            Style.Large -> LargeMessageContent(
+                message = message,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onClick = onClick
+            )
+        }
+    }
+}
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(backgroundColor)
-                .clickable(onClick = onClick)
-                .padding(16.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // Unread indicator
+@Composable
+private fun SmallMessageContent(
+    message: Message,
+    unreadIndicatorColor: Color,
+    titleTextColor: Color,
+    bodyTextColor: Color,
+    timestampTextColor: Color,
+    titleFontFamily: FontFamily?,
+    bodyFontFamily: FontFamily?,
+    timestampFontFamily: FontFamily?,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Unread indicator
+        if (!message.isRead) {
+            Spacer(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(unreadIndicatorColor, shape = CircleShape)
+                    .align(Alignment.Top)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        } else {
+            Spacer(modifier = Modifier.width(20.dp))
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = message.title,
+                fontSize = 16.sp,
+                fontFamily = titleFontFamily ?: FontFamily.Default,
+                fontWeight = if (message.isRead) FontWeight.Normal else FontWeight.Bold,
+                color = titleTextColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = message.body,
+                fontSize = 14.sp,
+                fontFamily = bodyFontFamily ?: FontFamily.Default,
+                fontWeight = FontWeight.Normal,
+                color = bodyTextColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Display image if available
+        message.imageUrl?.let { imageUrl ->
+            Spacer(modifier = Modifier.width(12.dp))
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Message image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.LightGray)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = formatTimestamp(message.timestamp),
+            fontSize = 12.sp,
+            fontFamily = timestampFontFamily ?: FontFamily.Default,
+            color = timestampTextColor
+        )
+    }
+}
+
+@Composable
+private fun LargeMessageContent(
+    message: Message,
+    unreadIndicatorColor: Color,
+    titleTextColor: Color,
+    bodyTextColor: Color,
+    timestampTextColor: Color,
+    titleFontFamily: FontFamily?,
+    bodyFontFamily: FontFamily?,
+    timestampFontFamily: FontFamily?,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(0.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Unread indicator at top of card
             if (!message.isRead) {
                 Spacer(
                     modifier = Modifier
+                        .padding(12.dp)
                         .size(8.dp)
                         .background(unreadIndicatorColor, shape = CircleShape)
-                        .align(Alignment.Top)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-            } else {
-                Spacer(modifier = Modifier.width(20.dp))
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            // Image takes up ~80% of card height (use aspect ratio)
+            message.imageUrl?.let { imageUrl ->
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Message image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(Color.LightGray)
+                )
+            }
+
+            // Title and body below image
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
                 Text(
                     text = message.title,
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     fontFamily = titleFontFamily ?: FontFamily.Default,
-                    fontWeight = if (message.isRead) FontWeight.Normal else FontWeight.Bold,
+                    fontWeight = if (message.isRead) FontWeight.Medium else FontWeight.Bold,
                     color = titleTextColor,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = message.body,
                     fontSize = 14.sp,
                     fontFamily = bodyFontFamily ?: FontFamily.Default,
                     fontWeight = FontWeight.Normal,
                     color = bodyTextColor,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-
-            // Display image if available
-            message.imageUrl?.let { imageUrl ->
-                Spacer(modifier = Modifier.width(12.dp))
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = "Message image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatTimestamp(message.timestamp),
+                    fontSize = 12.sp,
+                    fontFamily = timestampFontFamily ?: FontFamily.Default,
+                    color = timestampTextColor
                 )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = formatTimestamp(message.timestamp),
-                fontSize = 12.sp,
-                fontFamily = timestampFontFamily ?: FontFamily.Default,
-                color = timestampTextColor
-            )
         }
     }
 }

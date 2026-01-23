@@ -6,6 +6,7 @@ import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
+import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
@@ -57,7 +58,8 @@ object AttentiveSdk {
                 body = "Thanks for joining us. Check out our latest offers.",
                 timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
                 isRead = false,
-                actionUrl = "https://example.com/offers"
+                actionUrl = "https://example.com/offers",
+                style = Style.Small
             ),
             Message(
                 id = "msg_002",
@@ -66,7 +68,8 @@ object AttentiveSdk {
                 timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
                 isRead = true,
                 imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
-                actionUrl = "https://example.com/sale"
+                actionUrl = "https://example.com/sale",
+                style = Style.Small
             ),
             Message(
                 id = "msg_003",
@@ -74,8 +77,19 @@ object AttentiveSdk {
                 body = "Your order #12345 is on its way!",
                 timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
                 isRead = false,
-                actionUrl = "https://example.com/track/12345"
-            )
+                actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                style = Style.Large
+            ),
+                Message(
+                    id = "msg_004",
+                    title = "Your Order Has Shipped",
+                    body = "Your order #12345 is on its way!",
+                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                    isRead = false,
+                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    style = Style.Small
+                )
         )
 
         _inboxState.value = InboxState(
