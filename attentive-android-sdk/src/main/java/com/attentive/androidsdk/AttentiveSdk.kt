@@ -308,4 +308,22 @@ object AttentiveSdk {
         )
         Timber.d("Message $messageId marked as unread")
     }
+
+    /**
+     * Deletes a message from the inbox and emits a new inbox state.
+     * TODO: This will send a delete request to the backend once the API is ready.
+     *
+     * @param messageId The ID of the message to delete
+     */
+    fun deleteMessage(messageId: String) {
+        val currentState = _inboxState.value
+        val updatedMessages = currentState.messages.filter { message ->
+            message.id != messageId
+        }
+        _inboxState.value = InboxState(
+            messages = updatedMessages,
+            unreadCount = updatedMessages.count { !it.isRead }
+        )
+        Timber.d("Message $messageId deleted from inbox")
+    }
 }

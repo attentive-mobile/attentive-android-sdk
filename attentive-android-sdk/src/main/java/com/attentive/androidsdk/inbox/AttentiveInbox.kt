@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -179,7 +180,8 @@ private fun MessageList(
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
                 onClick = { onMessageClick(message) },
-                onSwipe = { AttentiveSdk.markUnread(message.id) }
+                onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
+                onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
             )
             HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
         }
@@ -199,13 +201,20 @@ private fun MessageItem(
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
-    onSwipe: () -> Unit
+    onSwipeMarkUnread: () -> Unit,
+    onSwipeDelete: () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Swipe right → delete
+                    onSwipeDelete()
+                    true // Dismiss the item (remove from list)
+                }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onSwipe()
+                    // Swipe left → mark as unread
+                    onSwipeMarkUnread()
                     false // Don't dismiss, just trigger action
                 }
                 else -> false
@@ -215,18 +224,42 @@ private fun MessageItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
         backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Arrangement.Start
+                SwipeToDismissBoxValue.EndToStart -> Arrangement.End
+                else -> Arrangement.End
+            }
+            val icon = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Filled.Delete
+                SwipeToDismissBoxValue.EndToStart -> Icons.Filled.MailOutline
+                else -> Icons.Filled.MailOutline
+            }
+            val iconDescription = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> "Delete"
+                SwipeToDismissBoxValue.EndToStart -> "Mark as unread"
+                else -> "Mark as unread"
+            }
+            val bgColor = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Color.Red
+                SwipeToDismissBoxValue.EndToStart -> swipeBackgroundColor
+                else -> swipeBackgroundColor
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(swipeBackgroundColor)
+                    .background(bgColor)
                     .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = alignment,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Filled.MailOutline,
-                    contentDescription = "Mark as unread",
+                    imageVector = icon,
+                    contentDescription = iconDescription,
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
