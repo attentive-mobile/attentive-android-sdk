@@ -418,7 +418,9 @@ private fun LargeMessageContent(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(16.dp)
                         .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color.LightGray)
                 )
             }
