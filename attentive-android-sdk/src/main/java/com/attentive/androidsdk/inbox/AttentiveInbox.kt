@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.R
 import com.attentive.androidsdk.inbox.Style
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -75,12 +77,12 @@ import java.util.Locale
 @Composable
 fun AttentiveInbox(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.White,
-    unreadIndicatorColor: Color = Color(0xFFFFC5B9),
-    titleTextColor: Color = Color(0xFF1A1E22),
-    bodyTextColor: Color = Color.DarkGray,
-    timestampTextColor: Color = Color.Gray,
-    swipeBackgroundColor: Color = Color(0xFFFFC5B9),
+    backgroundColor: Color = colorResource(R.color.attentive_inbox_background),
+    unreadIndicatorColor: Color = colorResource(R.color.attentive_inbox_unread_indicator),
+    titleTextColor: Color = colorResource(R.color.attentive_inbox_title_text),
+    bodyTextColor: Color = colorResource(R.color.attentive_inbox_body_text),
+    timestampTextColor: Color = colorResource(R.color.attentive_inbox_timestamp_text),
+    swipeBackgroundColor: Color = colorResource(R.color.attentive_inbox_swipe_background),
     titleFontFamily: FontFamily? = null,
     bodyFontFamily: FontFamily? = null,
     timestampFontFamily: FontFamily? = null,
@@ -211,12 +213,10 @@ private fun MessageItem(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    // Swipe right → delete
                     onSwipeDelete()
-                    true // Dismiss the item (remove from list)
+                    true
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    // Swipe left → mark as unread
                     onSwipeMarkUnread()
                     false // Don't dismiss, just trigger action
                 }
@@ -410,7 +410,7 @@ private fun LargeMessageContent(
                 )
             }
 
-            // Image takes up ~80% of card height (use aspect ratio)
+            // Image takes up 80% of card height
             message.imageUrl?.let { imageUrl ->
                 AsyncImage(
                     model = imageUrl,

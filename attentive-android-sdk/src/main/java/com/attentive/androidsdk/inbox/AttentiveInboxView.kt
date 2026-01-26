@@ -3,6 +3,7 @@ package com.attentive.androidsdk.inbox
 import android.content.Context
 import android.util.AttributeSet
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,14 +52,14 @@ class AttentiveInboxView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : AbstractComposeView(context, attrs, defStyleAttr) {
 
-    // Color properties with defaults matching AttentiveInbox composable
+    // Color properties - loaded from resources in init block
     // Using mutableStateOf so Compose automatically recomposes when these change
-    private var backgroundColor by mutableStateOf(Color.White)
-    private var unreadIndicatorColor by mutableStateOf(Color(0xFFFFC5B9))
-    private var titleTextColor by mutableStateOf(Color(0xFF1A1E22))
-    private var bodyTextColor by mutableStateOf(Color.DarkGray)
-    private var timestampTextColor by mutableStateOf(Color.Gray)
-    private var swipeBackgroundColor by mutableStateOf(Color(0xFFFFC5B9))
+    private var backgroundColor by mutableStateOf(Color.Unspecified)
+    private var unreadIndicatorColor by mutableStateOf(Color.Unspecified)
+    private var titleTextColor by mutableStateOf(Color.Unspecified)
+    private var bodyTextColor by mutableStateOf(Color.Unspecified)
+    private var timestampTextColor by mutableStateOf(Color.Unspecified)
+    private var swipeBackgroundColor by mutableStateOf(Color.Unspecified)
 
     // Font properties (nullable - use system defaults when null)
     private var titleFontFamily by mutableStateOf<FontFamily?>(null)
@@ -66,7 +67,14 @@ class AttentiveInboxView @JvmOverloads constructor(
     private var timestampFontFamily by mutableStateOf<FontFamily?>(null)
 
     init {
-        // Parse XML attributes if provided
+        backgroundColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_background))
+        unreadIndicatorColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_unread_indicator))
+        titleTextColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_title_text))
+        bodyTextColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_body_text))
+        timestampTextColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_timestamp_text))
+        swipeBackgroundColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_swipe_background))
+
+        // Parse XML attributes if provided (these override the resource defaults)
         attrs?.let { parseAttributes(it) }
     }
 
@@ -82,7 +90,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 backgroundColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_backgroundColor,
-                        android.graphics.Color.WHITE
+                        ContextCompat.getColor(context, R.color.attentive_inbox_background)
                     )
                 )
             }
@@ -91,7 +99,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 unreadIndicatorColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_unreadIndicatorColor,
-                        0xFFFFC5B9.toInt()
+                        ContextCompat.getColor(context, R.color.attentive_inbox_unread_indicator)
                     )
                 )
             }
@@ -100,7 +108,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 titleTextColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_titleTextColor,
-                        0xFF1A1E22.toInt()
+                        ContextCompat.getColor(context, R.color.attentive_inbox_title_text)
                     )
                 )
             }
@@ -109,7 +117,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 bodyTextColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_bodyTextColor,
-                        android.graphics.Color.DKGRAY
+                        ContextCompat.getColor(context, R.color.attentive_inbox_body_text)
                     )
                 )
             }
@@ -118,7 +126,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 timestampTextColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_timestampTextColor,
-                        android.graphics.Color.GRAY
+                        ContextCompat.getColor(context, R.color.attentive_inbox_timestamp_text)
                     )
                 )
             }
@@ -127,7 +135,7 @@ class AttentiveInboxView @JvmOverloads constructor(
                 swipeBackgroundColor = Color(
                     typedArray.getColor(
                         R.styleable.AttentiveInboxView_attentive_swipeBackgroundColor,
-                        0xFFFFC5B9.toInt()
+                        ContextCompat.getColor(context, R.color.attentive_inbox_swipe_background)
                     )
                 )
             }
