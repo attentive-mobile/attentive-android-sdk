@@ -11,4 +11,5 @@ enum class Routes() {
     ThankYouScreen,
     SettingsScreen,
     InboxScreen,
+    LegacyInboxScreen,
 }

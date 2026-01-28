@@ -39,16 +39,7 @@ fun SimpleToolbar(
 ) {
     TopAppBar(
         title = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = 56.dp,
-                        end = 56.dp
-                    ), // Add padding to account for navigationIcon and actions
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-            }
+            Text(text = title)
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = BonniPink,

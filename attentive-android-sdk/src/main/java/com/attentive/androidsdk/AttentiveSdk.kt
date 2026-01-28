@@ -6,6 +6,7 @@ import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
+import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
@@ -31,7 +32,7 @@ object AttentiveSdk {
     private val config: AttentiveConfig
         get() = _config ?: throw IllegalStateException(
             "AttentiveSdk must be initialized with AttentiveSdk.initialize(config) before calling this method. " +
-            "Please call AttentiveSdk.initialize() in your Application.onCreate() method."
+                    "Please call AttentiveSdk.initialize() in your Application.onCreate() method."
         )
 
     // Inbox state management
@@ -51,32 +52,45 @@ object AttentiveSdk {
     internal fun initializeMockInbox() {
         val mockMessages =
             listOf(
-            Message(
-                id = "msg_001",
-                title = "Welcome to Attentive!",
-                body = "Thanks for joining us. Check out our latest offers.",
-                timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
-                isRead = false,
-                actionUrl = "https://example.com/offers"
-            ),
-            Message(
-                id = "msg_002",
-                title = "New Sale Alert",
-                body = "50% off on all items this weekend!",
-                timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
-                isRead = true,
-                imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
-                actionUrl = "https://example.com/sale"
-            ),
-            Message(
-                id = "msg_003",
-                title = "Your Order Has Shipped",
-                body = "Your order #12345 is on its way!",
-                timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
-                isRead = false,
-                actionUrl = "https://example.com/track/12345"
+                Message(
+                    id = "msg_001",
+                    title = "Welcome to Attentive!",
+                    body = "Thanks for joining us. Check out our latest offers.",
+                    timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
+                    isRead = false,
+                    actionUrl = "https://example.com/offers",
+                    style = Style.Small
+                ),
+                Message(
+                    id = "msg_002",
+                    title = "New Sale Alert",
+                    body = "50% off on all items this weekend!",
+                    timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
+                    isRead = true,
+                    imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
+                    actionUrl = "https://example.com/sale",
+                    style = Style.Small
+                ),
+                Message(
+                    id = "msg_003",
+                    title = "Your Order Has Shipped",
+                    body = "Your order #12345 is on its way!",
+                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                    isRead = false,
+                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    style = Style.Large
+                ),
+                Message(
+                    id = "msg_004",
+                    title = "Your Order Has Shipped",
+                    body = "Your order #12345 is on its way!",
+                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                    isRead = false,
+                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    style = Style.Small
+                )
             )
-        )
 
         _inboxState.value = InboxState(
             messages = mockMessages,
@@ -102,7 +116,7 @@ object AttentiveSdk {
         }
     }
 
-    fun recordEvent(event: Event){
+    fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
     }
 
@@ -116,8 +130,9 @@ object AttentiveSdk {
             "title: ${remoteMessage.notification?.title}, body: ${remoteMessage.notification?.body}"
         )
 
-        val isAttentiveMessage = remoteMessage.data.containsKey(Constants.Companion.KEY_NOTIFICATION_TITLE) ||
-                remoteMessage.data.containsKey("attentiveData")
+        val isAttentiveMessage =
+            remoteMessage.data.containsKey(Constants.Companion.KEY_NOTIFICATION_TITLE) ||
+                    remoteMessage.data.containsKey("attentiveData")
 
         Timber.d("isAttentiveMessage: $isAttentiveMessage")
         return isAttentiveMessage
@@ -207,8 +222,8 @@ object AttentiveSdk {
         }
     }
 
-    fun updateUser(email: String? = null, phoneNumber: String? = null){
-        if(email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()){
+    fun updateUser(email: String? = null, phoneNumber: String? = null) {
+        if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
             Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
             return
         }
@@ -307,5 +322,23 @@ object AttentiveSdk {
             unreadCount = updatedMessages.count { !it.isRead }
         )
         Timber.d("Message $messageId marked as unread")
+    }
+
+    /**
+     * Deletes a message from the inbox and emits a new inbox state.
+     * TODO: This will send a delete request to the backend once the API is ready.
+     *
+     * @param messageId The ID of the message to delete
+     */
+    fun deleteMessage(messageId: String) {
+        val currentState = _inboxState.value
+        val updatedMessages = currentState.messages.filter { message ->
+            message.id != messageId
+        }
+        _inboxState.value = InboxState(
+            messages = updatedMessages,
+            unreadCount = updatedMessages.count { !it.isRead }
+        )
+        Timber.d("Message $messageId deleted from inbox")
     }
 }

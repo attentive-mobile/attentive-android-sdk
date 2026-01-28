@@ -52,6 +52,7 @@ import com.attentive.bonni.R
 import com.attentive.bonni.Routes
 import com.attentive.bonni.cart.CartScreen
 import com.attentive.bonni.inbox.InboxScreen
+import com.attentive.bonni.inbox.LegacyInboxScreen
 import com.attentive.bonni.settings.debug.DebugScreenComposables
 import com.attentive.bonni.settings.SettingsScreen
 import com.attentive.bonni.product.ProductScreen
@@ -186,6 +187,9 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(Routes.InboxScreen.name) {
                 InboxScreen(navController)
+            }
+            composable(Routes.LegacyInboxScreen.name) {
+                LegacyInboxScreen(navController)
             }
         }
     }
