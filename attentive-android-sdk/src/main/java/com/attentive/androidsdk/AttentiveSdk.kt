@@ -83,11 +83,11 @@ object AttentiveSdk {
                 ),
                 Message(
                     id = "msg_004",
-                    title = "Your Order Has Shipped",
-                    body = "Your order #12345 is on its way!",
+                    title = "Your cart is waiting",
+                    body = "Pickup where you left off!",
                     timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
                     isRead = false,
-                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    actionUrl = "bonni://cart",
                     style = Style.Small
                 )
             )

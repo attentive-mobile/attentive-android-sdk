@@ -1,5 +1,7 @@
 package com.attentive.androidsdk.inbox
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +49,7 @@ import coil3.compose.AsyncImage
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import com.attentive.androidsdk.inbox.Style
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -88,6 +92,7 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
 
     if (inboxState.messages.isEmpty()) {
@@ -110,10 +115,17 @@ fun AttentiveInbox(
             titleFontFamily = titleFontFamily,
             bodyFontFamily = bodyFontFamily,
             timestampFontFamily = timestampFontFamily,
-            onMessageClick = onMessageClick ?: { message ->
+            onMessageClick = onMessageClick ?: { message: Message ->
                 if (!message.isRead) {
                     AttentiveSdk.markRead(message.id)
                 }
+
+                // Handle deep link if actionUrl is present
+                message.actionUrl?.let { url ->
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(intent)
+                }
+                Unit
             },
             modifier = modifier
         )
