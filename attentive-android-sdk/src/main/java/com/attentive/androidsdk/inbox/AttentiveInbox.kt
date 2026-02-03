@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,8 +34,15 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +56,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import com.attentive.androidsdk.inbox.Style
@@ -94,8 +107,41 @@ fun AttentiveInbox(
 ) {
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
+    val listState = rememberLazyListState()
 
-    if (inboxState.messages.isEmpty()) {
+    // Scroll detection for infinite scrolling
+    LaunchedEffect(listState) {
+        var lastTriggeredAt = 0L  // Track when we last triggered to prevent rapid re-triggers
+
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = layoutInfo.totalItemsCount
+
+            lastVisibleItem?.index to totalItems
+        }
+        .collect { (lastVisibleIndex, totalItems) ->
+            val now = System.currentTimeMillis()
+
+            // Only trigger if:
+            // 1. Near end of list
+            // 2. Not currently loading
+            // 3. Has more messages
+            // 4. At least 500ms since last trigger (debounce)
+            if (lastVisibleIndex != null &&
+                lastVisibleIndex >= totalItems - 5 &&
+                !inboxState.isLoadingMore &&
+                inboxState.hasMoreMessages &&
+                (now - lastTriggeredAt) > 500
+            ) {
+                lastTriggeredAt = now
+                Timber.d("Pagination trigger: index=$lastVisibleIndex, total=$totalItems")
+                AttentiveSdk.loadMoreInboxMessages()
+            }
+        }
+    }
+
+    if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
         EmptyInboxView(
             titleTextColor = titleTextColor,
             bodyTextColor = bodyTextColor,
@@ -106,6 +152,8 @@ fun AttentiveInbox(
     } else {
         MessageList(
             messages = inboxState.messages,
+            isLoadingMore = inboxState.isLoadingMore,
+            listState = listState,
             backgroundColor = backgroundColor,
             unreadIndicatorColor = unreadIndicatorColor,
             titleTextColor = titleTextColor,
@@ -168,6 +216,8 @@ private fun EmptyInboxView(
 @Composable
 private fun MessageList(
     messages: List<Message>,
+    isLoadingMore: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     backgroundColor: Color,
     unreadIndicatorColor: Color,
     titleTextColor: Color,
@@ -181,26 +231,52 @@ private fun MessageList(
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        items(messages, key = { it.id }) { message ->
-            MessageItem(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                swipeBackgroundColor = swipeBackgroundColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = { onMessageClick(message) },
-                onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
-                onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
-            )
-            HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+        items(
+            items = messages,
+            key = { it.id },
+            contentType = { it.style }  // Optimize recycling based on message style
+        ) { message ->
+            Column(
+                modifier = Modifier.animateItem()  // Smooth animation when items move
+            ) {
+                MessageItem(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    swipeBackgroundColor = swipeBackgroundColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = { onMessageClick(message) },
+                    onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
+                    onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
+                )
+                HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+            }
+        }
+
+        // Loading indicator at bottom
+        if (isLoadingMore) {
+            item(key = "loading_indicator") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
         }
     }
 }
@@ -234,7 +310,9 @@ private fun MessageItem(
                 }
                 else -> false
             }
-        }
+        },
+        // Require swiping 75% of the width to trigger - prevents accidental swipes during scrolling
+        positionalThreshold = { totalDistance -> totalDistance * 0.75f }
     )
 
     SwipeToDismissBox(
@@ -368,8 +446,13 @@ private fun SmallMessageContent(
         // Display image if available
         message.imageUrl?.let { imageUrl ->
             Spacer(modifier = Modifier.width(12.dp))
+            val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
+                .data(imageUrl)
+                .crossfade(200)  // Smooth crossfade animation
+                .build()
+
             AsyncImage(
-                model = imageUrl,
+                model = imageRequest,
                 contentDescription = "Message image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -424,8 +507,13 @@ private fun LargeMessageContent(
 
             // Image takes up 80% of card height
             message.imageUrl?.let { imageUrl ->
+                val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)  // Smooth crossfade animation
+                    .build()
+
                 AsyncImage(
-                    model = imageUrl,
+                    model = imageRequest,
                     contentDescription = "Message image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
