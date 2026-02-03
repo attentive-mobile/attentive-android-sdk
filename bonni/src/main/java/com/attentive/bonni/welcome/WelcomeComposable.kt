@@ -67,11 +67,6 @@ fun WelcomeScreenContent(
 ) {
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
-    val signedIn by viewModel.signedIn.collectAsState()
-
-    LaunchedEffect(signedIn) {
-        if (signedIn) navController.navigate(Routes.ProductScreenRoute.name)
-    }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(
@@ -94,7 +89,7 @@ fun WelcomeScreenContent(
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.padding(top = 106.dp)
                 ) {
-                    SignInButton(viewModel)
+                    SignInButton(navController, viewModel)
                     Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
 
@@ -106,11 +101,15 @@ fun WelcomeScreenContent(
 
 
 @Composable
-fun SignInButton(viewModel: SignUpSignInViewModel? = null) {
+fun SignInButton(
+    navController: NavHostController,
+    viewModel: SignUpSignInViewModel? = null
+) {
     Button(
         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
         onClick = {
             viewModel?.restorePreviousUser()
+            navController.navigate(Routes.ProductScreenRoute.name)
         },
         shape = RectangleShape,
         modifier = Modifier
@@ -254,11 +253,7 @@ fun SignUpForm(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var submitIsVisible by remember { mutableStateOf(false) }
-    val signedIn by viewModel.signedIn.collectAsState()
 
-    LaunchedEffect(signedIn) {
-        if (signedIn) navHostController.navigate(Routes.ProductScreenRoute.name)
-    }
     if (isVisible) {
         Column {
             TextField(
@@ -282,7 +277,7 @@ fun SignUpForm(
             if (submitIsVisible) {
                 Button(onClick = {
                     viewModel.onSignUp(email, password)
-
+                    navHostController.navigate(Routes.ProductScreenRoute.name)
                 }) {
                     Text("Submit")
                 }
@@ -300,12 +295,6 @@ fun SignInForm(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    val signedIn = viewModel.signedIn.collectAsState()
-
-    LaunchedEffect(signedIn) {
-        if (signedIn.value) navHostController.navigate(Routes.ProductScreenRoute.name)
-    }
-
     if (isVisible) {
         Column {
             TextField(
@@ -320,6 +309,7 @@ fun SignInForm(
             )
             Button(onClick = {
                 viewModel.onSignIn(email, password)
+                navHostController.navigate(Routes.ProductScreenRoute.name)
             }) {
                 Text("Submit")
             }
