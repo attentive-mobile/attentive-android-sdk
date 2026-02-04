@@ -112,6 +112,7 @@ fun AttentiveInbox(
     // Scroll detection for infinite scrolling
     LaunchedEffect(listState) {
         var lastTriggeredAt = 0L  // Track when we last triggered to prevent rapid re-triggers
+        var lastTriggeredIndex = -1  // Track last index that triggered to prevent auto-cascading
 
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
@@ -125,15 +126,18 @@ fun AttentiveInbox(
 
             // Only trigger if:
             // 1. Near end of list
-            // 2. Not currently loading
-            // 3. Has more messages
-            // 4. At least 500ms since last trigger (debounce)
+            // 2. User has scrolled forward (prevents auto-cascading on large viewports)
+            // 3. Not currently loading
+            // 4. Has more messages
+            // 5. At least 500ms since last trigger (debounce)
             if (lastVisibleIndex != null &&
                 lastVisibleIndex >= totalItems - 5 &&
+                lastVisibleIndex > lastTriggeredIndex &&
                 !inboxState.isLoadingMore &&
                 inboxState.hasMoreMessages &&
                 (now - lastTriggeredAt) > 500
             ) {
+                lastTriggeredIndex = lastVisibleIndex
                 lastTriggeredAt = now
                 Timber.d("Pagination trigger: index=$lastVisibleIndex, total=$totalItems")
                 AttentiveSdk.loadMoreInboxMessages()
