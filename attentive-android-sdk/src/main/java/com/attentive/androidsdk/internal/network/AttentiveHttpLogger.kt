@@ -80,7 +80,9 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
             }
             // Headers
             isCollectingHeaders && message.contains(": ") -> {
-                headerBuffer.add(message)
+                synchronized(headerBuffer) {
+                    headerBuffer.add(message)
+                }
             }
             // Everything else
             else -> {
@@ -119,15 +121,18 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
     }
 
     private fun flushHeaders() {
-        if (headerBuffer.isNotEmpty()) {
-            // Group headers together, 3 per line for readability
-            val grouped = headerBuffer.chunked(3).joinToString("\n") { group ->
-                "  ${group.joinToString(" | ")}"
-            }
-            val requestId = currentRequestId.get()
-            Timber.tag("OkHttp").i("[$requestId] Headers:\n$grouped")
-            headerBuffer.clear()
+        // Make a defensive copy to avoid concurrent modification issues
+        val headers = synchronized(headerBuffer) {
+            if (headerBuffer.isEmpty()) return
+            headerBuffer.toList().also { headerBuffer.clear() }
         }
+
+        // Group headers together, 3 per line for readability
+        val grouped = headers.chunked(3).joinToString("\n") { group ->
+            "  ${group.joinToString(" | ")}"
+        }
+        val requestId = currentRequestId.get()
+        Timber.tag("OkHttp").i("[$requestId] Headers:\n$grouped")
     }
 
     private fun extractAndLogUrlParams(message: String) {
