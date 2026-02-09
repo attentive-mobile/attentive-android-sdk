@@ -2,8 +2,12 @@ package com.attentive.androidsdk.inbox
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,30 +34,31 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -61,11 +67,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
-import com.attentive.androidsdk.inbox.Style
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -216,7 +224,6 @@ private fun EmptyInboxView(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageList(
     messages: List<Message>,
@@ -285,7 +292,49 @@ private fun MessageList(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Swipe direction for the custom swipe-to-dismiss.
+ */
+private enum class SwipeDirection {
+    None,
+    StartToEnd,  // Delete (swipe right)
+    EndToStart   // Mark unread (swipe left)
+}
+
+/**
+ * Custom swipe-to-dismiss implementation with angle-based gesture detection.
+ *
+ * ## Why Custom Implementation?
+ * Material3's SwipeToDismissBox doesn't support angle-based gesture detection. It starts
+ * tracking horizontal movement immediately, which causes problems in a vertical LazyColumn:
+ * when users scroll vertically, their finger naturally moves diagonally, and SwipeToDismissBox
+ * catches that horizontal component, causing items to shift sideways during scroll.
+ *
+ * ## How It Works
+ * This implementation uses a two-phase approach:
+ *
+ * ### Phase 1: Direction Decision (first ~15dp of movement)
+ * - Track both horizontal (X) and vertical (Y) movement
+ * - Don't consume any events yet (let LazyColumn see them too)
+ * - After 15dp total movement, decide: is this horizontal or vertical?
+ * - If horizontal movement > vertical movement → it's a swipe gesture
+ * - If vertical movement >= horizontal movement → it's a scroll gesture
+ *
+ * ### Phase 2: Gesture Handling
+ * - If horizontal: consume all events (prevent LazyColumn scroll), update swipe offset
+ * - If vertical: stop handling, let LazyColumn scroll normally
+ *
+ * ## Pointer Event Passes
+ * Compose processes pointer events in multiple passes. We use `PointerEventPass.Initial`
+ * to see events BEFORE the LazyColumn's scroll handler. This lets us decide whether to
+ * intercept (horizontal) or pass through (vertical).
+ *
+ * ## Event Consumption
+ * When we call `change.consume()`, we mark the event as "handled". Other gesture handlers
+ * (like LazyColumn's scroll) check this and skip consumed events. By NOT consuming during
+ * the decision phase, both handlers can track the gesture. Once we decide it's horizontal,
+ * we start consuming to take exclusive control.
+ */
 @Composable
 private fun MessageItem(
     message: Message,
@@ -301,54 +350,154 @@ private fun MessageItem(
     onSwipeMarkUnread: () -> Unit,
     onSwipeDelete: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onSwipeDelete()
-                    true
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onSwipeMarkUnread()
-                    false // Don't dismiss, just trigger action
-                }
-                else -> false
-            }
-        },
-        // Require swiping 75% of the width to trigger - prevents accidental swipes during scrolling
-        positionalThreshold = { totalDistance -> totalDistance * 0.75f }
-    )
+    // Coroutine scope for launching animations
+    val scope = rememberCoroutineScope()
 
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            val alignment = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Arrangement.Start
-                SwipeToDismissBoxValue.EndToStart -> Arrangement.End
-                else -> Arrangement.End
+    // Animatable tracks the horizontal offset of the message content.
+    // Positive = swiped right (delete), Negative = swiped left (mark unread)
+    val offsetX = remember { Animatable(0f) }
+
+    // Track item width to calculate percentage-based thresholds
+    val itemWidth = remember { mutableFloatStateOf(0f) }
+
+    // Derive swipe direction from current offset for UI updates (background color, icon)
+    val swipeDirection = when {
+        offsetX.value > 0 -> SwipeDirection.StartToEnd  // Swiping right → delete
+        offsetX.value < 0 -> SwipeDirection.EndToStart  // Swiping left → mark unread
+        else -> SwipeDirection.None
+    }
+
+    // How far user must swipe to trigger the action (10% of item width)
+    val actionThreshold = itemWidth.floatValue * 0.10f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Capture item width when laid out
+            .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
+            // Custom gesture handler
+            .pointerInput(Unit) {
+                // How much movement before we decide horizontal vs vertical (15dp)
+                // This is the "slop" - small movements are ignored to avoid accidental triggers
+\                 val directionDecisionThreshold = 15.dp.toPx()
+
+                // awaitEachGesture restarts this block for each new gesture (finger down → up)
+                awaitEachGesture {
+                    // Wait for finger down. Using Initial pass to see events before LazyColumn.
+                    // requireUnconsumed=false means we see the event even if something else consumed it.
+                    awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+
+                    // Accumulators for total movement in each direction
+                    var totalDragX = 0f
+                    var totalDragY = 0f
+
+                    // Phase 1 state: have we decided the gesture direction yet?
+                    var directionDecided = false
+
+                    // Phase 2 state: is this a horizontal swipe we should handle?
+                    var isHorizontalGesture = false
+
+                    // Main gesture tracking loop - runs until finger lifts
+                    while (true) {
+                        // Get next pointer event (finger move or up)
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull() ?: break
+
+                        // Check if finger was lifted
+                        if (!change.pressed) {
+                            // Gesture ended - if we were handling a horizontal swipe, finish it
+                            if (isHorizontalGesture) {
+                                change.consume()
+                                scope.launch {
+                                    val currentOffset = offsetX.value
+                                    when {
+                                        // Swiped right past threshold → trigger delete
+                                        currentOffset > actionThreshold -> {
+                                            // Animate item off screen to the right, then call delete
+                                            offsetX.animateTo(itemWidth.floatValue, tween(150))
+                                            onSwipeDelete()
+                                        }
+                                        // Swiped left past threshold → trigger mark unread
+                                        currentOffset < -actionThreshold -> {
+                                            // Call action, then animate back to original position
+                                            onSwipeMarkUnread()
+                                            offsetX.animateTo(0f, tween(200))
+                                        }
+                                        // Didn't swipe far enough → just snap back
+                                        else -> {
+                                            offsetX.animateTo(0f, tween(200))
+                                        }
+                                    }
+                                }
+                            }
+                            break  // Exit loop, gesture is done
+                        }
+
+                        // Get how much finger moved since last event
+                        val dragAmount = change.positionChange()
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+
+                        // Phase 1: Decide gesture direction (only once, after enough movement)
+                        if (!directionDecided) {
+                            val totalMovement = abs(totalDragX) + abs(totalDragY)
+
+                            // Once we've moved past the slop threshold, decide direction
+                            if (totalMovement > directionDecisionThreshold) {
+                                directionDecided = true
+
+                                // Simple rule: if more horizontal than vertical, it's a swipe
+                                isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
+                            }
+                        }
+
+                        // Phase 2: Handle the gesture based on decided direction
+                        if (isHorizontalGesture) {
+                            // This is a horizontal swipe - take control!
+                            // Consume the event so LazyColumn doesn't try to scroll
+                            change.consume()
+
+                            // Update the visual offset to follow the finger
+                            scope.launch {
+                                offsetX.snapTo(offsetX.value + dragAmount.x)
+                            }
+                        }
+                        // If not horizontal (or not decided yet), we DON'T consume.
+                        // This lets LazyColumn receive the events and scroll normally.
+                    }
+                }
             }
-            val icon = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Icons.Filled.Delete
-                SwipeToDismissBoxValue.EndToStart -> Icons.Filled.MailOutline
-                else -> Icons.Filled.MailOutline
+    ) {
+        // ===== BACKGROUND LAYER =====
+        // This shows behind the message content when swiping (red for delete, blue for unread)
+        // Only rendered when there's actual offset (optimization)
+        if (offsetX.value != 0f) {
+            // Choose colors and icons based on swipe direction
+            val bgColor = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> Color.Red              // Delete = red
+                SwipeDirection.EndToStart -> swipeBackgroundColor   // Mark unread = themed color
+                SwipeDirection.None -> Color.Transparent
             }
-            val iconDescription = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> "Delete"
-                SwipeToDismissBoxValue.EndToStart -> "Mark as unread"
-                else -> "Mark as unread"
+            val icon = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> Icons.Filled.Delete
+                SwipeDirection.EndToStart -> Icons.Filled.MailOutline
+                SwipeDirection.None -> Icons.Filled.MailOutline
             }
-            val bgColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Color.Red
-                SwipeToDismissBoxValue.EndToStart -> swipeBackgroundColor
-                else -> swipeBackgroundColor
+            val iconDescription = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> "Delete"
+                SwipeDirection.EndToStart -> "Mark as unread"
+                SwipeDirection.None -> ""
+            }
+            // Align icon to the side being revealed
+            val alignment = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> Arrangement.Start  // Icon on left when swiping right
+                SwipeDirection.EndToStart -> Arrangement.End    // Icon on right when swiping left
+                SwipeDirection.None -> Arrangement.End
             }
 
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .background(bgColor)
                     .padding(horizontal = 20.dp),
                 horizontalArrangement = alignment,
@@ -362,30 +511,39 @@ private fun MessageItem(
                 )
             }
         }
-    ) {
-        when (message.style) {
-            Style.Small -> SmallMessageContent(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = onClick
-            )
-            Style.Large -> LargeMessageContent(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = onClick
-            )
+
+        // ===== FOREGROUND LAYER =====
+        // This is the actual message content that slides left/right during swipe.
+        // The offset modifier moves it horizontally based on offsetX, revealing
+        // the background layer underneath.
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }  // Apply horizontal offset
+        ) {
+            when (message.style) {
+                Style.Small -> SmallMessageContent(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = onClick
+                )
+                Style.Large -> LargeMessageContent(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = onClick
+                )
+            }
         }
     }
 }
