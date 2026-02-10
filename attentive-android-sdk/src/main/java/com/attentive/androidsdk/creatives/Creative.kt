@@ -90,6 +90,13 @@ class Creative internal constructor(
         )
         Timber.i("parentView width = %s height = %s", parentView.width, parentView.height)
         Timber.i("Android version: %s", Build.VERSION.SDK_INT)
+
+        // Log WebView provider info for diagnostics
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val webViewPackage = WebView.getCurrentWebViewPackage()
+            Timber.i("WebView provider: ${webViewPackage?.packageName} v${webViewPackage?.versionName}")
+        }
+
         this.webViewClient = createWebViewClient()
         this.creativeListener = createCreativeListener()
 
@@ -98,11 +105,18 @@ class Creative internal constructor(
             if (webView == null) {
                 Timber.d("Creating WebView on main thread")
                 webView = createWebView(parentView)
-                addWebViewToParent()
+                if (webView != null) {
+                    addWebViewToParent()
+                } else {
+                    Timber.e("WebView creation failed - creative will not be available")
+                }
             }
-            isWebViewReady = true
-            triggerQueue.forEach { it() }
-            triggerQueue.clear()
+            // Only mark ready and process queue if webView exists
+            if (webView != null) {
+                isWebViewReady = true
+                triggerQueue.forEach { it() }
+                triggerQueue.clear()
+            }
         }
 
         this.creativeUrlFormatter = CreativeUrlFormatter()
@@ -256,39 +270,47 @@ class Creative internal constructor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    internal fun createWebView(parentView: View): WebView {
-        // Use Activity context to ensure proper resources for WebView
-        val view = WebView(activity)
-        val webSettings = view.settings
+    /***
+     * @return a new WebView instance or null if WebView creation fails see https://issuetracker.google.com/issues/457969917
+     */
+    internal fun createWebView(parentView: View): WebView? {
+        return try {
+            val view = WebView(activity)
+            val webSettings = view.settings
 
-        // Security settings, allow JavaScript to run
-        webSettings.allowFileAccessFromFileURLs = false
-        webSettings.allowUniversalAccessFromFileURLs = false
-        webSettings.allowFileAccess = false
-        webSettings.javaScriptEnabled = true
-        webSettings.domStorageEnabled = true
+            // Security settings, allow JavaScript to run
+            webSettings.allowFileAccessFromFileURLs = false
+            webSettings.allowUniversalAccessFromFileURLs = false
+            webSettings.allowFileAccess = false
+            webSettings.javaScriptEnabled = true
+            webSettings.domStorageEnabled = true
 
-        view.webViewClient = webViewClient
-        view.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-                Timber.d("onConsoleMessage + ${consoleMessage.message()}")
-                return true
+            view.webViewClient = webViewClient
+            view.webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                    Timber.d("onConsoleMessage + ${consoleMessage.message()}")
+                    return true
+                }
             }
+
+            // Add listener for creative OPEN / CLOSE events
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                Timber.d("Adding WebMessageListener")
+                WebViewCompat.addWebMessageListener(
+                    view, "CREATIVE_LISTENER", CREATIVE_LISTENER_ALLOWED_ORIGINS, creativeListener
+                )
+            } else {
+                Timber.e("Creative listener cannot be attached!")
+            }
+
+            view.setBackgroundColor(Color.TRANSPARENT)
+
+            view
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to create WebView - current webview version may be broken. " +
+                "See: https://issuetracker.google.com/issues/457969917")
+            null
         }
-
-        // Add listener for creative OPEN / CLOSE events
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            Timber.d("Adding WebMessageListener")
-            WebViewCompat.addWebMessageListener(
-                view, "CREATIVE_LISTENER", CREATIVE_LISTENER_ALLOWED_ORIGINS, creativeListener
-            )
-        } else {
-            Timber.e("Creative listener cannot be attached!")
-        }
-
-        view.setBackgroundColor(Color.TRANSPARENT)
-
-        return view
     }
 
     private fun createWebViewClient(): WebViewClient {
