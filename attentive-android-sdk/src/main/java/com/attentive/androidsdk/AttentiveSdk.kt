@@ -144,37 +144,44 @@ object AttentiveSdk {
             Timber.d("Loading more inbox messages from offset ${currentState.currentOffset}")
             _inboxState.value = currentState.copy(isLoadingMore = true)
 
-            // Simulate network delay
-            delay(500)
+            try {
+                // Simulate network delay
+                delay(500)
 
-            // Generate mock messages based on current offset
-            val startIndex = currentState.currentOffset
-            val mockMessages = List(INBOX_PAGE_SIZE) { index ->
-                Message(
-                    id = "msg_${startIndex + index}",
-                    title = "Message ${startIndex + index + 1}",
-                    body = "This is the content of message number ${startIndex + index + 1}",
-                    timestamp = System.currentTimeMillis() - (startIndex + index) * 3600000L,
-                    isRead = (startIndex + index) % 3 == 0,
-                    imageUrl = if ((startIndex + index) % 5 == 0) "https://picsum.photos/200/300?random=${startIndex + index}" else null,
-                    style = if ((startIndex + index) % 5 == 0) Style.Large else Style.Small
+                // Generate mock messages based on current offset
+                val startIndex = currentState.currentOffset
+                val mockMessages = List(INBOX_PAGE_SIZE) { index ->
+                    Message(
+                        id = "msg_${startIndex + index}",
+                        title = "Message ${startIndex + index + 1}",
+                        body = "This is the content of message number ${startIndex + index + 1}",
+                        timestamp = System.currentTimeMillis() - (startIndex + index) * 3600000L,
+                        isRead = (startIndex + index) % 3 == 0,
+                        imageUrl = if ((startIndex + index) % 5 == 0) "https://picsum.photos/200/300?random=${startIndex + index}" else null,
+                        style = if ((startIndex + index) % 5 == 0) Style.Large else Style.Small
+                    )
+                }
+
+                val updatedMessages = currentState.messages + mockMessages
+                val totalMockMessages = 100  // Mock total
+                //todo hasMore pagination value should come from backend
+                val hasMore = updatedMessages.size < totalMockMessages
+
+                _inboxState.value = InboxState(
+                    messages = updatedMessages,
+                    unreadCount = updatedMessages.count { !it.isRead },
+                    isLoadingMore = false,
+                    hasMoreMessages = hasMore,
+                    currentOffset = currentState.currentOffset + mockMessages.size
                 )
+
+                Timber.d("Loaded ${mockMessages.size} more messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
+            } finally {
+                // Clear isLoadingMore when loading fails via cancellation or exception
+                if (_inboxState.value.isLoadingMore) {
+                    _inboxState.value = _inboxState.value.copy(isLoadingMore = false)
+                }
             }
-
-            val updatedMessages = currentState.messages + mockMessages
-            val totalMockMessages = 100  // Mock total
-            //todo hasMore pagination value should come from backend
-            val hasMore = updatedMessages.size < totalMockMessages
-
-            _inboxState.value = InboxState(
-                messages = updatedMessages,
-                unreadCount = updatedMessages.count { !it.isRead },
-                isLoadingMore = false,
-                hasMoreMessages = hasMore,
-                currentOffset = currentState.currentOffset + mockMessages.size
-            )
-
-            Timber.d("Loaded ${mockMessages.size} more messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
         }
     }
 
