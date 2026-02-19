@@ -624,7 +624,7 @@ private fun SmallMessageContent(
             Spacer(modifier = Modifier.width(12.dp))
             val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(imageUrl)
-                .crossfade(200)  // Smooth crossfade animation
+                .crossfade(200)
                 .build()
 
             AsyncImage(
@@ -685,7 +685,7 @@ private fun LargeMessageContent(
             message.imageUrl?.let { imageUrl ->
                 val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
                     .data(imageUrl)
-                    .crossfade(200)  // Smooth crossfade animation
+                    .crossfade(200)
                     .build()
 
                 AsyncImage(
