@@ -297,12 +297,30 @@ private fun MessageList(
  */
 private enum class SwipeDirection {
     None,
-    StartToEnd,  // Delete (swipe right)
-    EndToStart   // Mark unread (swipe left)
+    StartToEnd,  // Swipe right
+    EndToStart   // Swipe left
 }
 
 /**
- * Custom swipe-to-dismiss implementation with angle-based gesture detection.
+ * Configuration for a swipe action (left or right).
+ *
+ * @param backgroundColor Background color revealed during swipe
+ * @param icon Icon to display in the revealed background
+ * @param iconDescription Accessibility description for the icon
+ * @param onAction Callback invoked when swipe threshold is reached
+ * @param animateOffScreen If true, animates content off screen before calling onAction (for delete).
+ *                         If false, calls onAction immediately then animates back (for mark unread).
+ */
+private data class SwipeActionConfig(
+    val backgroundColor: Color,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconDescription: String,
+    val onAction: () -> Unit,
+    val animateOffScreen: Boolean = false
+)
+
+/**
+ * A reusable swipe-to-action composable with angle-based gesture detection.
  *
  * ## Why Custom Implementation?
  * Material3's SwipeToDismissBox doesn't support angle-based gesture detection. It starts
@@ -334,7 +352,158 @@ private enum class SwipeDirection {
  * (like LazyColumn's scroll) check this and skip consumed events. By NOT consuming during
  * the decision phase, both handlers can track the gesture. Once we decide it's horizontal,
  * we start consuming to take exclusive control.
+ *
+ * @param swipeLeftAction Configuration for swipe-left action (null to disable)
+ * @param swipeRightAction Configuration for swipe-right action (null to disable)
+ * @param actionThresholdFraction Fraction of item width required to trigger action (default 10%)
+ * @param content The content to display that will slide during swipe
  */
+@Composable
+private fun SwipeToAction(
+    swipeLeftAction: SwipeActionConfig?,
+    swipeRightAction: SwipeActionConfig?,
+    actionThresholdFraction: Float = 0.10f,
+    content: @Composable () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    // Animatable tracks the horizontal offset of the content.
+    // Positive = swiped right, Negative = swiped left
+    val offsetX = remember { Animatable(0f) }
+
+    // Track item width to calculate percentage-based thresholds
+    val itemWidth = remember { mutableFloatStateOf(0f) }
+
+    // Derive swipe direction from current offset for UI updates
+    val swipeDirection = when {
+        offsetX.value > 0 -> SwipeDirection.StartToEnd
+        offsetX.value < 0 -> SwipeDirection.EndToStart
+        else -> SwipeDirection.None
+    }
+
+    // How far user must swipe to trigger the action
+    val actionThreshold = itemWidth.floatValue * actionThresholdFraction
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
+            .pointerInput(Unit) {
+                // How much movement before we decide horizontal vs vertical (15dp)
+                val directionDecisionThreshold = 15.dp.toPx()
+
+                awaitEachGesture {
+                    awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+
+                    var totalDragX = 0f
+                    var totalDragY = 0f
+                    var directionDecided = false
+                    var isHorizontalGesture = false
+
+                    while (true) {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull() ?: break
+
+                        if (!change.pressed) {
+                            // Gesture ended
+                            if (isHorizontalGesture) {
+                                change.consume()
+                                scope.launch {
+                                    val currentOffset = offsetX.value
+                                    when {
+                                        // Swiped right past threshold
+                                        currentOffset > actionThreshold && swipeRightAction != null -> {
+                                            if (swipeRightAction.animateOffScreen) {
+                                                offsetX.animateTo(itemWidth.floatValue, tween(150))
+                                            }
+                                            swipeRightAction.onAction()
+                                            if (!swipeRightAction.animateOffScreen) {
+                                                offsetX.animateTo(0f, tween(200))
+                                            }
+                                        }
+                                        // Swiped left past threshold
+                                        currentOffset < -actionThreshold && swipeLeftAction != null -> {
+                                            if (swipeLeftAction.animateOffScreen) {
+                                                offsetX.animateTo(-itemWidth.floatValue, tween(150))
+                                            }
+                                            swipeLeftAction.onAction()
+                                            if (!swipeLeftAction.animateOffScreen) {
+                                                offsetX.animateTo(0f, tween(200))
+                                            }
+                                        }
+                                        // Didn't swipe far enough
+                                        else -> {
+                                            offsetX.animateTo(0f, tween(200))
+                                        }
+                                    }
+                                }
+                            }
+                            break
+                        }
+
+                        val dragAmount = change.positionChange()
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+
+                        if (!directionDecided) {
+                            val totalMovement = abs(totalDragX) + abs(totalDragY)
+                            if (totalMovement > directionDecisionThreshold) {
+                                directionDecided = true
+                                isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
+                            }
+                        }
+
+                        if (isHorizontalGesture) {
+                            change.consume()
+                            scope.launch {
+                                offsetX.snapTo(offsetX.value + dragAmount.x)
+                            }
+                        }
+                    }
+                }
+            }
+    ) {
+        // Background layer - revealed during swipe
+        if (offsetX.value != 0f) {
+            val config = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> swipeRightAction
+                SwipeDirection.EndToStart -> swipeLeftAction
+                SwipeDirection.None -> null
+            }
+
+            config?.let {
+                val alignment = when (swipeDirection) {
+                    SwipeDirection.StartToEnd -> Arrangement.Start
+                    else -> Arrangement.End
+                }
+
+                Row(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(it.backgroundColor)
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = alignment,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = it.icon,
+                        contentDescription = it.iconDescription,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // Foreground layer - slides during swipe
+        Box(
+            modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+        ) {
+            content()
+        }
+    }
+}
+
 @Composable
 private fun MessageItem(
     message: Message,
@@ -350,200 +519,45 @@ private fun MessageItem(
     onSwipeMarkUnread: () -> Unit,
     onSwipeDelete: () -> Unit
 ) {
-    // Coroutine scope for launching animations
-    val scope = rememberCoroutineScope()
-
-    // Animatable tracks the horizontal offset of the message content.
-    // Positive = swiped right (delete), Negative = swiped left (mark unread)
-    val offsetX = remember { Animatable(0f) }
-
-    // Track item width to calculate percentage-based thresholds
-    val itemWidth = remember { mutableFloatStateOf(0f) }
-
-    // Derive swipe direction from current offset for UI updates (background color, icon)
-    val swipeDirection = when {
-        offsetX.value > 0 -> SwipeDirection.StartToEnd  // Swiping right → delete
-        offsetX.value < 0 -> SwipeDirection.EndToStart  // Swiping left → mark unread
-        else -> SwipeDirection.None
-    }
-
-    // How far user must swipe to trigger the action (10% of item width)
-    val actionThreshold = itemWidth.floatValue * 0.10f
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            // Capture item width when laid out
-            .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
-            // Custom gesture handler
-            .pointerInput(Unit) {
-                // How much movement before we decide horizontal vs vertical (15dp)
-                // This is the "slop" - small movements are ignored to avoid accidental triggers
-\                 val directionDecisionThreshold = 15.dp.toPx()
-
-                // awaitEachGesture restarts this block for each new gesture (finger down → up)
-                awaitEachGesture {
-                    // Wait for finger down. Using Initial pass to see events before LazyColumn.
-                    // requireUnconsumed=false means we see the event even if something else consumed it.
-                    awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
-
-                    // Accumulators for total movement in each direction
-                    var totalDragX = 0f
-                    var totalDragY = 0f
-
-                    // Phase 1 state: have we decided the gesture direction yet?
-                    var directionDecided = false
-
-                    // Phase 2 state: is this a horizontal swipe we should handle?
-                    var isHorizontalGesture = false
-
-                    // Main gesture tracking loop - runs until finger lifts
-                    while (true) {
-                        // Get next pointer event (finger move or up)
-                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull() ?: break
-
-                        // Check if finger was lifted
-                        if (!change.pressed) {
-                            // Gesture ended - if we were handling a horizontal swipe, finish it
-                            if (isHorizontalGesture) {
-                                change.consume()
-                                scope.launch {
-                                    val currentOffset = offsetX.value
-                                    when {
-                                        // Swiped right past threshold → trigger delete
-                                        currentOffset > actionThreshold -> {
-                                            // Animate item off screen to the right, then call delete
-                                            offsetX.animateTo(itemWidth.floatValue, tween(150))
-                                            onSwipeDelete()
-                                        }
-                                        // Swiped left past threshold → trigger mark unread
-                                        currentOffset < -actionThreshold -> {
-                                            // Call action, then animate back to original position
-                                            onSwipeMarkUnread()
-                                            offsetX.animateTo(0f, tween(200))
-                                        }
-                                        // Didn't swipe far enough → just snap back
-                                        else -> {
-                                            offsetX.animateTo(0f, tween(200))
-                                        }
-                                    }
-                                }
-                            }
-                            break  // Exit loop, gesture is done
-                        }
-
-                        // Get how much finger moved since last event
-                        val dragAmount = change.positionChange()
-                        totalDragX += dragAmount.x
-                        totalDragY += dragAmount.y
-
-                        // Phase 1: Decide gesture direction (only once, after enough movement)
-                        if (!directionDecided) {
-                            val totalMovement = abs(totalDragX) + abs(totalDragY)
-
-                            // Once we've moved past the slop threshold, decide direction
-                            if (totalMovement > directionDecisionThreshold) {
-                                directionDecided = true
-
-                                // Simple rule: if more horizontal than vertical, it's a swipe
-                                isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
-                            }
-                        }
-
-                        // Phase 2: Handle the gesture based on decided direction
-                        if (isHorizontalGesture) {
-                            // This is a horizontal swipe - take control!
-                            // Consume the event so LazyColumn doesn't try to scroll
-                            change.consume()
-
-                            // Update the visual offset to follow the finger
-                            scope.launch {
-                                offsetX.snapTo(offsetX.value + dragAmount.x)
-                            }
-                        }
-                        // If not horizontal (or not decided yet), we DON'T consume.
-                        // This lets LazyColumn receive the events and scroll normally.
-                    }
-                }
-            }
+    SwipeToAction(
+        swipeLeftAction = SwipeActionConfig(
+            backgroundColor = swipeBackgroundColor,
+            icon = Icons.Filled.MailOutline,
+            iconDescription = "Mark as unread",
+            onAction = onSwipeMarkUnread,
+            animateOffScreen = false
+        ),
+        swipeRightAction = SwipeActionConfig(
+            backgroundColor = Color.Red,
+            icon = Icons.Filled.Delete,
+            iconDescription = "Delete",
+            onAction = onSwipeDelete,
+            animateOffScreen = true
+        )
     ) {
-        // ===== BACKGROUND LAYER =====
-        // This shows behind the message content when swiping (red for delete, blue for unread)
-        // Only rendered when there's actual offset (optimization)
-        if (offsetX.value != 0f) {
-            // Choose colors and icons based on swipe direction
-            val bgColor = when (swipeDirection) {
-                SwipeDirection.StartToEnd -> Color.Red              // Delete = red
-                SwipeDirection.EndToStart -> swipeBackgroundColor   // Mark unread = themed color
-                SwipeDirection.None -> Color.Transparent
-            }
-            val icon = when (swipeDirection) {
-                SwipeDirection.StartToEnd -> Icons.Filled.Delete
-                SwipeDirection.EndToStart -> Icons.Filled.MailOutline
-                SwipeDirection.None -> Icons.Filled.MailOutline
-            }
-            val iconDescription = when (swipeDirection) {
-                SwipeDirection.StartToEnd -> "Delete"
-                SwipeDirection.EndToStart -> "Mark as unread"
-                SwipeDirection.None -> ""
-            }
-            // Align icon to the side being revealed
-            val alignment = when (swipeDirection) {
-                SwipeDirection.StartToEnd -> Arrangement.Start  // Icon on left when swiping right
-                SwipeDirection.EndToStart -> Arrangement.End    // Icon on right when swiping left
-                SwipeDirection.None -> Arrangement.End
-            }
-
-            Row(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(bgColor)
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = alignment,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = iconDescription,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-
-        // ===== FOREGROUND LAYER =====
-        // This is the actual message content that slides left/right during swipe.
-        // The offset modifier moves it horizontally based on offsetX, revealing
-        // the background layer underneath.
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }  // Apply horizontal offset
-        ) {
-            when (message.style) {
-                Style.Small -> SmallMessageContent(
-                    message = message,
-                    unreadIndicatorColor = unreadIndicatorColor,
-                    titleTextColor = titleTextColor,
-                    bodyTextColor = bodyTextColor,
-                    timestampTextColor = timestampTextColor,
-                    titleFontFamily = titleFontFamily,
-                    bodyFontFamily = bodyFontFamily,
-                    timestampFontFamily = timestampFontFamily,
-                    onClick = onClick
-                )
-                Style.Large -> LargeMessageContent(
-                    message = message,
-                    unreadIndicatorColor = unreadIndicatorColor,
-                    titleTextColor = titleTextColor,
-                    bodyTextColor = bodyTextColor,
-                    timestampTextColor = timestampTextColor,
-                    titleFontFamily = titleFontFamily,
-                    bodyFontFamily = bodyFontFamily,
-                    timestampFontFamily = timestampFontFamily,
-                    onClick = onClick
-                )
-            }
+        when (message.style) {
+            Style.Small -> SmallMessageContent(
+                message = message,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onClick = onClick
+            )
+            Style.Large -> LargeMessageContent(
+                message = message,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onClick = onClick
+            )
         }
     }
 }
