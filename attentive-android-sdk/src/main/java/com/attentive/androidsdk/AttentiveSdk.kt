@@ -145,24 +145,30 @@ object AttentiveSdk {
             _inboxState.value = currentState.copy(isLoadingMore = true)
 
             try {
-                // Simulate network delay
-                delay(500)
+                // Capture offset before suspending - this determines which page to fetch
+                val offsetToFetch = currentState.currentOffset
 
-                // Generate mock messages based on current offset
-                val startIndex = currentState.currentOffset
+                // Simulate network delay
+                delay(5000)
+
+                // Generate mock messages based on the offset we requested
                 val mockMessages = List(INBOX_PAGE_SIZE) { index ->
                     Message(
-                        id = "msg_${startIndex + index}",
-                        title = "Message ${startIndex + index + 1}",
-                        body = "This is the content of message number ${startIndex + index + 1}",
-                        timestamp = System.currentTimeMillis() - (startIndex + index) * 3600000L,
-                        isRead = (startIndex + index) % 3 == 0,
-                        imageUrl = if ((startIndex + index) % 5 == 0) "https://picsum.photos/200/300?random=${startIndex + index}" else null,
-                        style = if ((startIndex + index) % 5 == 0) Style.Large else Style.Small
+                        id = "msg_${offsetToFetch + index}",
+                        title = "Message ${offsetToFetch + index + 1}",
+                        body = "This is the content of message number ${offsetToFetch + index + 1}",
+                        timestamp = System.currentTimeMillis() - (offsetToFetch + index) * 3600000L,
+                        isRead = (offsetToFetch + index) % 3 == 0,
+                        imageUrl = if ((offsetToFetch + index) % 5 == 0) "https://picsum.photos/200/300?random=${offsetToFetch + index}" else null,
+                        style = if ((offsetToFetch + index) % 5 == 0) Style.Large else Style.Small
                     )
                 }
 
-                val updatedMessages = currentState.messages + mockMessages
+                // Merge with the CURRENT state to preserve
+                // any changes to the made during the network call
+                // like deletions 
+                val latestState = _inboxState.value
+                val updatedMessages = latestState.messages + mockMessages
                 val totalMockMessages = 100  // Mock total
                 //todo hasMore pagination value should come from backend
                 val hasMore = updatedMessages.size < totalMockMessages
@@ -172,7 +178,7 @@ object AttentiveSdk {
                     unreadCount = updatedMessages.count { !it.isRead },
                     isLoadingMore = false,
                     hasMoreMessages = hasMore,
-                    currentOffset = currentState.currentOffset + mockMessages.size
+                    currentOffset = offsetToFetch + mockMessages.size
                 )
 
                 Timber.d("Loaded ${mockMessages.size} more messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
