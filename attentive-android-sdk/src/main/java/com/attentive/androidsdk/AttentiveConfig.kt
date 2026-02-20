@@ -71,7 +71,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     override fun changeDomain(domain: String) {
-        if (domain.isNotEmpty() && domain != this.domain) {
+        domain.verifyValidAttentiveDomain()
+        if (domain != this.domain) {
             this.domain = domain
             sendInfoEvent()
         }
