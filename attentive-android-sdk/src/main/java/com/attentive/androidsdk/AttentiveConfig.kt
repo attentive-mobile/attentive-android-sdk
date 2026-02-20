@@ -11,21 +11,25 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
- class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
+class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
     override val applicationContext = builder._context
     override var notificationIconId: Int = builder._notificationIconId
-    override var notificationIconBackgroundColorResource: Int = builder._notificationIconBackgroundColorResource
+    override var notificationIconBackgroundColorResource: Int =
+        builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
 
-    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    private val visitorService =
+        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
 
-    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+    override var userIdentifiers =
+        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     internal val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
-    private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
+    private val settingsService: SettingsService =
+        ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
     var apiVersion = ApiVersion.OLD
 
@@ -35,7 +39,8 @@ import timber.log.Timber
         apiVersion = builder.apiVersion
         configureLogging(logLevel, settingsService, builder._context)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
+        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+            logLevel,
             ClassFactory.buildUserAgentInterceptor(builder._context)
         )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
@@ -53,7 +58,6 @@ import timber.log.Timber
     }
 
     override fun identify(userIdentifiers: UserIdentifiers) {
-        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
@@ -125,12 +129,13 @@ import timber.log.Timber
         }
     }
 
-    class  Builder {
+    class Builder {
         internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var _notificationIconId: Int = 0
-        @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
+        @ColorRes
+        internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
@@ -144,17 +149,15 @@ import timber.log.Timber
 
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
         fun context(context: Application) = apply {
-            ParameterValidation.verifyNotNull(context, "context")
             _context = context
         }
 
         fun mode(mode: Mode) = apply {
-            ParameterValidation.verifyNotNull(mode, "mode")
             _mode = mode
         }
 
         fun domain(domain: String) = apply {
-            ParameterValidation.verifyNotEmpty(domain, "domain")
+            domain.verifyValidAttentiveDomain()
             _domain = domain
         }
 
@@ -168,14 +171,13 @@ import timber.log.Timber
 
         private val allowApiVersionOverride = false
         fun apiVersion(apiVersion: ApiVersion) = apply {
-            if(allowApiVersionOverride){
-            this.apiVersion = apiVersion
-                }
+            if (allowApiVersionOverride) {
+                this.apiVersion = apiVersion
+            }
         }
 
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
-            ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
             this.okHttpClient = okHttpClient
         }
 
@@ -186,7 +188,6 @@ import timber.log.Timber
         fun logLevel(logLevel: AttentiveLogLevel) = apply {
             this.logLevel = logLevel
         }
-
 
 
         fun build(): AttentiveConfig {
@@ -211,5 +212,14 @@ import timber.log.Timber
 
     enum class Mode {
         DEBUG, PRODUCTION
+    }
+}
+
+private fun String.verifyValidAttentiveDomain() {
+    if (this.isEmpty()) {
+        throw IllegalArgumentException("Domain cannot be empty")
+    }
+    if (this.contains("attn.tv") || this.contains(":") || this.contains("/")) {
+        throw IllegalArgumentException("The provided domain $this is not recognized. Please verify that the domain matches your Attentive settings.")
     }
 }

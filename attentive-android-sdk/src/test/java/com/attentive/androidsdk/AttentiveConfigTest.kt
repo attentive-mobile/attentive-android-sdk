@@ -231,6 +231,41 @@ class AttentiveConfigTest {
         Assert.assertEquals(DOMAIN, config.domain)
     }
 
+    @Test
+    fun domain_emptyString_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("")
+        }
+    }
+
+    @Test
+    fun domain_containsAttnTv_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("https://mycompany.attn.tv")
+        }
+    }
+
+    @Test
+    fun domain_containsColon_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("https://mycompany")
+        }
+    }
+
+    @Test
+    fun domain_containsSlash_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("mycompany/path")
+        }
+    }
+
+    @Test
+    fun domain_validDomain_doesNotThrow() {
+        val builder = AttentiveConfig.Builder().domain("mycompany")
+        // If we get here without exception, the test passes
+        Assert.assertNotNull(builder)
+    }
+
     private fun buildUserIdentifiers(): UserIdentifiers {
         return UserIdentifiers.Builder()
             .withClientUserId("clientId")
