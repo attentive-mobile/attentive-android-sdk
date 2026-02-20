@@ -212,23 +212,40 @@ class AttentiveConfigTest {
         // Assert
         Assert.assertEquals("newDomain", config.domain)
     }
+    
+    @Test
+    fun domain_emptyString_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("")
+        }
+    }
 
     @Test
-    fun changeDomain_emptyDomain() {
-        // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
-        val userIdentifiers = buildUserIdentifiers()
-        config.identify(userIdentifiers)
+    fun domain_containsAttnTv_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("https://mycompany.attn.tv")
+        }
+    }
 
-        // Act
-        config.changeDomain("")
+    @Test
+    fun domain_containsColon_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("https://mycompany")
+        }
+    }
 
-        // Assert
-        Assert.assertEquals(DOMAIN, config.domain)
+    @Test
+    fun domain_containsSlash_throwsException() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            AttentiveConfig.Builder().domain("mycompany/path")
+        }
+    }
+
+    @Test
+    fun domain_validDomain_doesNotThrow() {
+        val builder = AttentiveConfig.Builder().domain("mycompany")
+        // If we get here without exception, the test passes
+        Assert.assertNotNull(builder)
     }
 
     private fun buildUserIdentifiers(): UserIdentifiers {
