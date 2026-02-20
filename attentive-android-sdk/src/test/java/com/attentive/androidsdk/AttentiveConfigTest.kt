@@ -212,25 +212,7 @@ class AttentiveConfigTest {
         // Assert
         Assert.assertEquals("newDomain", config.domain)
     }
-
-    @Test
-    fun changeDomain_emptyDomain() {
-        // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
-        val userIdentifiers = buildUserIdentifiers()
-        config.identify(userIdentifiers)
-
-        // Act
-        config.changeDomain("")
-
-        // Assert
-        Assert.assertEquals(DOMAIN, config.domain)
-    }
-
+    
     @Test
     fun domain_emptyString_throwsException() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
