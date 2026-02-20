@@ -2,20 +2,27 @@ package com.attentive.androidsdk.inbox
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,36 +30,50 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
-import com.attentive.androidsdk.inbox.Style
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -94,8 +115,45 @@ fun AttentiveInbox(
 ) {
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
+    val listState = rememberLazyListState()
 
-    if (inboxState.messages.isEmpty()) {
+    // Scroll detection for infinite scrolling
+    LaunchedEffect(listState) {
+        var lastTriggeredAt = 0L  // Track when we last triggered to prevent rapid re-triggers
+        var lastTriggeredIndex = -1  // Track last index that triggered to prevent auto-cascading
+
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = layoutInfo.totalItemsCount
+
+            lastVisibleItem?.index to totalItems
+        }
+        .collect { (lastVisibleIndex, totalItems) ->
+            val now = System.currentTimeMillis()
+
+            // Only trigger if:
+            // 1. Near end of list
+            // 2. User has scrolled forward (prevents auto-cascading on large viewports)
+            // 3. Not currently loading
+            // 4. Has more messages
+            // 5. At least 500ms since last trigger (debounce)
+            if (lastVisibleIndex != null &&
+                lastVisibleIndex >= totalItems - 5 &&
+                lastVisibleIndex > lastTriggeredIndex &&
+                !inboxState.isLoadingMore &&
+                inboxState.hasMoreMessages &&
+                (now - lastTriggeredAt) > 500
+            ) {
+                lastTriggeredIndex = lastVisibleIndex
+                lastTriggeredAt = now
+                Timber.d("Pagination trigger: index=$lastVisibleIndex, total=$totalItems")
+                AttentiveSdk.loadMoreInboxMessages()
+            }
+        }
+    }
+
+    if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
         EmptyInboxView(
             titleTextColor = titleTextColor,
             bodyTextColor = bodyTextColor,
@@ -106,6 +164,8 @@ fun AttentiveInbox(
     } else {
         MessageList(
             messages = inboxState.messages,
+            isLoadingMore = inboxState.isLoadingMore,
+            listState = listState,
             backgroundColor = backgroundColor,
             unreadIndicatorColor = unreadIndicatorColor,
             titleTextColor = titleTextColor,
@@ -164,10 +224,11 @@ private fun EmptyInboxView(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageList(
     messages: List<Message>,
+    isLoadingMore: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     backgroundColor: Color,
     unreadIndicatorColor: Color,
     titleTextColor: Color,
@@ -181,31 +242,268 @@ private fun MessageList(
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        items(messages, key = { it.id }) { message ->
-            MessageItem(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                swipeBackgroundColor = swipeBackgroundColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = { onMessageClick(message) },
-                onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
-                onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
-            )
-            HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+        items(
+            items = messages,
+            key = { it.id },
+            contentType = { it.style }  // Optimize recycling based on message style
+        ) { message ->
+            Column(
+                modifier = Modifier.animateItem()  // Smooth animation when items move
+            ) {
+                MessageItem(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    swipeBackgroundColor = swipeBackgroundColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = { onMessageClick(message) },
+                    onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
+                    onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
+                )
+                HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+            }
+        }
+
+        // Loading indicator at bottom
+        if (isLoadingMore) {
+            item(key = "loading_indicator") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Swipe direction for the custom swipe-to-dismiss.
+ */
+private enum class SwipeDirection {
+    None,
+    StartToEnd,  // Swipe right
+    EndToStart   // Swipe left
+}
+
+/**
+ * Configuration for a swipe action (left or right).
+ *
+ * @param backgroundColor Background color revealed during swipe
+ * @param icon Icon to display in the revealed background
+ * @param iconDescription Accessibility description for the icon
+ * @param onAction Callback invoked when swipe threshold is reached
+ * @param animateOffScreen If true, animates content off screen before calling onAction (for delete).
+ *                         If false, calls onAction immediately then animates back (for mark unread).
+ */
+private data class SwipeActionConfig(
+    val backgroundColor: Color,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconDescription: String,
+    val onAction: () -> Unit,
+    val animateOffScreen: Boolean = false
+)
+
+/**
+ * A reusable swipe-to-action composable with angle-based gesture detection.
+ *
+ * ## Why Custom Implementation?
+ * Material3's SwipeToDismissBox doesn't support angle-based gesture detection. It starts
+ * tracking horizontal movement immediately, which causes problems in a vertical LazyColumn:
+ * when users scroll vertically, their finger naturally moves diagonally, and SwipeToDismissBox
+ * catches that horizontal component, causing items to shift sideways during scroll.
+ *
+ * ## How It Works
+ * This implementation uses a two-phase approach:
+ *
+ * ### Phase 1: Direction Decision (first ~15dp of movement)
+ * - Track both horizontal (X) and vertical (Y) movement
+ * - Don't consume any events yet (let LazyColumn see them too)
+ * - After 15dp total movement, decide: is this horizontal or vertical?
+ * - If horizontal movement > vertical movement → it's a swipe gesture
+ * - If vertical movement >= horizontal movement → it's a scroll gesture
+ *
+ * ### Phase 2: Gesture Handling
+ * - If horizontal: consume all events (prevent LazyColumn scroll), update swipe offset
+ * - If vertical: stop handling, let LazyColumn scroll normally
+ *
+ * ## Pointer Event Passes
+ * Compose processes pointer events in multiple passes. We use `PointerEventPass.Initial`
+ * to see events BEFORE the LazyColumn's scroll handler. This lets us decide whether to
+ * intercept (horizontal) or pass through (vertical).
+ *
+ * ## Event Consumption
+ * When we call `change.consume()`, we mark the event as "handled". Other gesture handlers
+ * (like LazyColumn's scroll) check this and skip consumed events. By NOT consuming during
+ * the decision phase, both handlers can track the gesture. Once we decide it's horizontal,
+ * we start consuming to take exclusive control.
+ *
+ * @param swipeLeftAction Configuration for swipe-left action (null to disable)
+ * @param swipeRightAction Configuration for swipe-right action (null to disable)
+ * @param actionThresholdFraction Fraction of item width required to trigger action (default 10%)
+ * @param content The content to display that will slide during swipe
+ */
+@Composable
+private fun SwipeToAction(
+    swipeLeftAction: SwipeActionConfig?,
+    swipeRightAction: SwipeActionConfig?,
+    actionThresholdFraction: Float = 0.10f,
+    content: @Composable () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    // Animatable tracks the horizontal offset of the content.
+    // Positive = swiped right, Negative = swiped left
+    val offsetX = remember { Animatable(0f) }
+
+    // Track item width to calculate percentage-based thresholds
+    val itemWidth = remember { mutableFloatStateOf(0f) }
+
+    // Derive swipe direction from current offset for UI updates
+    val swipeDirection = when {
+        offsetX.value > 0 -> SwipeDirection.StartToEnd
+        offsetX.value < 0 -> SwipeDirection.EndToStart
+        else -> SwipeDirection.None
+    }
+
+    // How far user must swipe to trigger the action
+    val actionThreshold = itemWidth.floatValue * actionThresholdFraction
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
+            .pointerInput(Unit) {
+                // How much movement before we decide horizontal vs vertical (15dp)
+                val directionDecisionThreshold = 15.dp.toPx()
+
+                awaitEachGesture {
+                    awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+
+                    var totalDragX = 0f
+                    var totalDragY = 0f
+                    var directionDecided = false
+                    var isHorizontalGesture = false
+
+                    while (true) {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull() ?: break
+
+                        if (!change.pressed) {
+                            // Gesture ended
+                            if (isHorizontalGesture) {
+                                change.consume()
+                                scope.launch {
+                                    val currentOffset = offsetX.value
+                                    when {
+                                        // Swiped right past threshold
+                                        currentOffset > actionThreshold && swipeRightAction != null -> {
+                                            if (swipeRightAction.animateOffScreen) {
+                                                offsetX.animateTo(itemWidth.floatValue, tween(150))
+                                            }
+                                            swipeRightAction.onAction()
+                                            if (!swipeRightAction.animateOffScreen) {
+                                                offsetX.animateTo(0f, tween(200))
+                                            }
+                                        }
+                                        // Swiped left past threshold
+                                        currentOffset < -actionThreshold && swipeLeftAction != null -> {
+                                            if (swipeLeftAction.animateOffScreen) {
+                                                offsetX.animateTo(-itemWidth.floatValue, tween(150))
+                                            }
+                                            swipeLeftAction.onAction()
+                                            if (!swipeLeftAction.animateOffScreen) {
+                                                offsetX.animateTo(0f, tween(200))
+                                            }
+                                        }
+                                        // Didn't swipe far enough
+                                        else -> {
+                                            offsetX.animateTo(0f, tween(200))
+                                        }
+                                    }
+                                }
+                            }
+                            break
+                        }
+
+                        val dragAmount = change.positionChange()
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+
+                        if (!directionDecided) {
+                            val totalMovement = abs(totalDragX) + abs(totalDragY)
+                            if (totalMovement > directionDecisionThreshold) {
+                                directionDecided = true
+                                isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
+                            }
+                        }
+
+                        if (isHorizontalGesture) {
+                            change.consume()
+                            scope.launch {
+                                offsetX.snapTo(offsetX.value + dragAmount.x)
+                            }
+                        }
+                    }
+                }
+            }
+    ) {
+        // Background layer - revealed during swipe
+        if (offsetX.value != 0f) {
+            val config = when (swipeDirection) {
+                SwipeDirection.StartToEnd -> swipeRightAction
+                SwipeDirection.EndToStart -> swipeLeftAction
+                SwipeDirection.None -> null
+            }
+
+            config?.let {
+                val alignment = when (swipeDirection) {
+                    SwipeDirection.StartToEnd -> Arrangement.Start
+                    else -> Arrangement.End
+                }
+
+                Row(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(it.backgroundColor)
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = alignment,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = it.icon,
+                        contentDescription = it.iconDescription,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // Foreground layer - slides during swipe
+        Box(
+            modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+        ) {
+            content()
+        }
+    }
+}
+
 @Composable
 private fun MessageItem(
     message: Message,
@@ -221,65 +519,21 @@ private fun MessageItem(
     onSwipeMarkUnread: () -> Unit,
     onSwipeDelete: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onSwipeDelete()
-                    true
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onSwipeMarkUnread()
-                    false // Don't dismiss, just trigger action
-                }
-                else -> false
-            }
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            val alignment = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Arrangement.Start
-                SwipeToDismissBoxValue.EndToStart -> Arrangement.End
-                else -> Arrangement.End
-            }
-            val icon = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Icons.Filled.Delete
-                SwipeToDismissBoxValue.EndToStart -> Icons.Filled.MailOutline
-                else -> Icons.Filled.MailOutline
-            }
-            val iconDescription = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> "Delete"
-                SwipeToDismissBoxValue.EndToStart -> "Mark as unread"
-                else -> "Mark as unread"
-            }
-            val bgColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Color.Red
-                SwipeToDismissBoxValue.EndToStart -> swipeBackgroundColor
-                else -> swipeBackgroundColor
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(bgColor)
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = alignment,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = iconDescription,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
+    SwipeToAction(
+        swipeLeftAction = SwipeActionConfig(
+            backgroundColor = swipeBackgroundColor,
+            icon = Icons.Filled.MailOutline,
+            iconDescription = "Mark as unread",
+            onAction = onSwipeMarkUnread,
+            animateOffScreen = false
+        ),
+        swipeRightAction = SwipeActionConfig(
+            backgroundColor = Color.Red,
+            icon = Icons.Filled.Delete,
+            iconDescription = "Delete",
+            onAction = onSwipeDelete,
+            animateOffScreen = true
+        )
     ) {
         when (message.style) {
             Style.Small -> SmallMessageContent(
@@ -368,8 +622,13 @@ private fun SmallMessageContent(
         // Display image if available
         message.imageUrl?.let { imageUrl ->
             Spacer(modifier = Modifier.width(12.dp))
+            val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
+                .data(imageUrl)
+                .crossfade(200)
+                .build()
+
             AsyncImage(
-                model = imageUrl,
+                model = imageRequest,
                 contentDescription = "Message image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -424,8 +683,13 @@ private fun LargeMessageContent(
 
             // Image takes up 80% of card height
             message.imageUrl?.let { imageUrl ->
+                val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)
+                    .build()
+
                 AsyncImage(
-                    model = imageUrl,
+                    model = imageRequest,
                     contentDescription = "Message image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

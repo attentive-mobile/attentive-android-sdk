@@ -14,10 +14,13 @@ import com.attentive.androidsdk.push.TokenFetchResult
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
 
@@ -44,60 +47,148 @@ object AttentiveSdk {
      */
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
+    // Pagination management
+    private val paginationLock = Mutex()
+    private const val INBOX_PAGE_SIZE = 20
+
     /**
      * Initializes the inbox with mock messages for local testing.
+     * Starts with original 4 messages, then generates 16 more for a total of 20 (first page).
      * TODO: Remove this function once the backend API is ready.
      */
     @VisibleForTesting
     internal fun initializeMockInbox() {
-        val mockMessages =
-            listOf(
-                Message(
-                    id = "msg_001",
-                    title = "Welcome to Attentive!",
-                    body = "Thanks for joining us. Check out our latest offers.",
-                    timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
-                    isRead = false,
-                    actionUrl = "https://example.com/offers",
-                    style = Style.Small
-                ),
-                Message(
-                    id = "msg_002",
-                    title = "New Sale Alert",
-                    body = "50% off on all items this weekend!",
-                    timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
-                    isRead = true,
-                    imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
-                    actionUrl = "https://example.com/sale",
-                    style = Style.Small
-                ),
-                Message(
-                    id = "msg_003",
-                    title = "Your Order Has Shipped",
-                    body = "Your order #12345 is on its way!",
-                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
-                    isRead = false,
-                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
-                    imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
-                    style = Style.Large
-                ),
-                Message(
-                    id = "msg_004",
-                    title = "Your cart is waiting",
-                    body = "Pickup where you left off!",
-                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
-                    isRead = false,
-                    actionUrl = "bonni://cart",
-                    style = Style.Small
-                )
+        // Original 4 messages
+        val originalMessages = listOf(
+            Message(
+                id = "msg_001",
+                title = "Welcome to Attentive!",
+                body = "Thanks for joining us. Check out our latest offers.",
+                timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
+                isRead = false,
+                actionUrl = "https://example.com/offers",
+                style = Style.Small
+            ),
+            Message(
+                id = "msg_002",
+                title = "New Sale Alert",
+                body = "50% off on all items this weekend!",
+                timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
+                isRead = true,
+                imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
+                actionUrl = "https://example.com/sale",
+                style = Style.Small
+            ),
+            Message(
+                id = "msg_003",
+                title = "Your Order Has Shipped",
+                body = "Your order #12345 is on its way!",
+                timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                isRead = false,
+                actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                style = Style.Large
+            ),
+            Message(
+                id = "msg_004",
+                title = "Your cart is waiting",
+                body = "Pickup where you left off!",
+                timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                isRead = false,
+                actionUrl = "bonni://cart",
+                style = Style.Small
             )
+        )
+
+        // Generate 16 additional messages to complete the first page (total 20)
+        val generatedMessages = List(16) { index ->
+            val messageNumber = index + 5 // Start from 5 since we have 4 original
+            Message(
+                id = "msg_${String.format("%03d", messageNumber)}",
+                title = "Message $messageNumber",
+                body = "This is the content of message number $messageNumber",
+                timestamp = System.currentTimeMillis() - (index + 4) * 3600000L,
+                isRead = messageNumber % 3 == 0,
+                imageUrl = if (messageNumber % 5 == 0) "https://picsum.photos/200/300?random=$messageNumber" else null,
+                style = if (messageNumber % 5 == 0) Style.Large else Style.Small
+            )
+        }
+
+        val mockMessages = originalMessages + generatedMessages
 
         _inboxState.value = InboxState(
             messages = mockMessages,
-            unreadCount = mockMessages.count { !it.isRead }
+            unreadCount = mockMessages.count { !it.isRead },
+            currentOffset = mockMessages.size,  // Start offset = 20
+            hasMoreMessages = true  // More messages available to load
         )
 
-        Timber.d("Initialized inbox with ${mockMessages.size} mock messages")
+        Timber.d("Initialized inbox with ${mockMessages.size} mock messages (4 original + 16 generated)")
+    }
+
+    /**
+     * Loads more inbox messages (pagination).
+     * Call this when the user scrolls near the end of the message list.
+     * This function uses mock data until the backend API is ready.
+     */
+    suspend fun loadMoreInboxMessages() {
+        paginationLock.withLock {
+            val currentState = _inboxState.value
+
+            // Guard: already loading or no more messages
+            if (currentState.isLoadingMore || !currentState.hasMoreMessages) {
+                Timber.d("Skipping loadMoreInboxMessages - isLoadingMore: ${currentState.isLoadingMore}, hasMoreMessages: ${currentState.hasMoreMessages}")
+                return
+            }
+
+            Timber.d("Loading more inbox messages from offset ${currentState.currentOffset}")
+            _inboxState.value = currentState.copy(isLoadingMore = true)
+
+            try {
+                // Capture offset before suspending - this determines which page to fetch
+                val offsetToFetch = currentState.currentOffset
+
+                // Simulate network delay
+                delay(5000)
+
+                // Generate mock messages based on the offset we requested
+                val mockMessages = List(INBOX_PAGE_SIZE) { index ->
+                    Message(
+                        id = "msg_${offsetToFetch + index}",
+                        title = "Message ${offsetToFetch + index + 1}",
+                        body = "This is the content of message number ${offsetToFetch + index + 1}",
+                        timestamp = System.currentTimeMillis() - (offsetToFetch + index) * 3600000L,
+                        isRead = (offsetToFetch + index) % 3 == 0,
+                        imageUrl = if ((offsetToFetch + index) % 5 == 0) "https://picsum.photos/200/300?random=${offsetToFetch + index}" else null,
+                        style = if ((offsetToFetch + index) % 5 == 0) Style.Large else Style.Small
+                    )
+                }
+
+                // Merge with the CURRENT state to preserve
+                // any changes to the made during the network call
+                // like deletions 
+                val latestState = _inboxState.value
+                val updatedMessages = latestState.messages + mockMessages
+                val totalMockMessages = 100  // Mock total
+                //todo hasMore pagination value should come from backend
+                val hasMore = updatedMessages.size < totalMockMessages
+
+                _inboxState.value = InboxState(
+                    messages = updatedMessages,
+                    unreadCount = updatedMessages.count { !it.isRead },
+                    isLoadingMore = false,
+                    hasMoreMessages = hasMore,
+                    currentOffset = offsetToFetch + mockMessages.size
+                )
+
+                Timber.d("Loaded ${mockMessages.size} more messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
+            } finally {
+                // Clear isLoadingMore when loading fails via cancellation or exception
+                if (_inboxState.value.isLoadingMore) {
+                    _inboxState.value = _inboxState.value.copy(isLoadingMore = false)
+                }
+            }
+        }
     }
 
     /**
@@ -295,7 +386,7 @@ object AttentiveSdk {
                 message
             }
         }
-        _inboxState.value = InboxState(
+        _inboxState.value = currentState.copy(
             messages = updatedMessages,
             unreadCount = updatedMessages.count { !it.isRead }
         )
@@ -317,7 +408,7 @@ object AttentiveSdk {
                 message
             }
         }
-        _inboxState.value = InboxState(
+        _inboxState.value = currentState.copy(
             messages = updatedMessages,
             unreadCount = updatedMessages.count { !it.isRead }
         )
@@ -335,7 +426,7 @@ object AttentiveSdk {
         val updatedMessages = currentState.messages.filter { message ->
             message.id != messageId
         }
-        _inboxState.value = InboxState(
+        _inboxState.value = currentState.copy(
             messages = updatedMessages,
             unreadCount = updatedMessages.count { !it.isRead }
         )

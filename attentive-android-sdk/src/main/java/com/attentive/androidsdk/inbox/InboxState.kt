@@ -8,5 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class InboxState(
     val messages: List<Message> = emptyList(),
-    val unreadCount: Int = messages.count { !it.isRead }
+    val unreadCount: Int = messages.count { !it.isRead },
+    val isLoadingMore: Boolean = false,
+    val hasMoreMessages: Boolean = true,
+    val currentOffset: Int = 0
 )
