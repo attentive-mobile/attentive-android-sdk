@@ -53,6 +53,15 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
+    /**
+     * Internal initialization function for use by AttentiveSdk.
+     * This avoids deprecation warnings when calling from within the SDK.
+     */
+    @Suppress("DEPRECATION")
+    internal fun initializeInternal(config: AttentiveConfig) {
+        initialize(config)
+    }
+
     @Deprecated(
         "This function will be removed in a future release.",
         ReplaceWith("AttentiveSdk.recordEvent(event)")

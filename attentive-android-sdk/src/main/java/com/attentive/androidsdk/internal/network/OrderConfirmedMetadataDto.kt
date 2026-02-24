@@ -19,6 +19,7 @@ object ProductListSerializer : KSerializer<List<ProductDto>?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("ProductList", PrimitiveKind.STRING)
 
+    @OptIn(ExperimentalSerializationApi::class)
     override fun serialize(encoder: Encoder, value: List<ProductDto>?) {
         if (value == null) {
             encoder.encodeNull()

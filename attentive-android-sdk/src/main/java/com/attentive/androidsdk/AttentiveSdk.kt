@@ -1,5 +1,6 @@
 package com.attentive.androidsdk
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
@@ -56,6 +57,7 @@ object AttentiveSdk {
      * Starts with original 4 messages, then generates 16 more for a total of 20 (first page).
      * TODO: Remove this function once the backend API is ready.
      */
+    @SuppressLint("DefaultLocale")
     @VisibleForTesting
     internal fun initializeMockInbox() {
         // Original 4 messages
@@ -201,8 +203,7 @@ object AttentiveSdk {
     fun initialize(config: AttentiveConfig) {
         synchronized(AttentiveSdk::class.java) {
             this._config = config
-            AttentiveEventTracker.instance.initialize(config)
-
+            AttentiveEventTracker.instance.initializeInternal(config)
             initializeMockInbox()
         }
     }

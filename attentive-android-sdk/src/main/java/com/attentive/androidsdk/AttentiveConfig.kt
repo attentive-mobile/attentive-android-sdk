@@ -174,6 +174,7 @@ import timber.log.Timber
         }
 
 
+        @Suppress("unused")
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
             this.okHttpClient = okHttpClient

@@ -93,7 +93,7 @@ class Creative internal constructor(
 
         // Log WebView provider info for diagnostics
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val webViewPackage = WebView.getCurrentWebViewPackage()
+            val webViewPackage = WebViewCompat.getCurrentWebViewPackage(activity)
             Timber.i("WebView provider: ${webViewPackage?.packageName} v${webViewPackage?.versionName}")
         }
 
@@ -143,7 +143,7 @@ class Creative internal constructor(
             // click logic. Touches inside bounds return false to let WebView handle them normally (including
             // accessibility), touches outside are intentionally blocked with no action needed.
             @SuppressLint("ClickableViewAccessibility")
-            view.setOnTouchListener { v, event ->
+            view.setOnTouchListener { _, event ->
                 val bounds = creativeBounds
 
                 // If no bounds set or creative not open, pass all touches through
@@ -237,7 +237,7 @@ class Creative internal constructor(
         Timber.i("Destroying creative")
         isCreativeOpen.set(false)
         isCreativeOpening.set(false)
-        if (parentView != null && webView != null) {
+        if (                                                                                                                                                                                             parentView != null && webView != null) {
             Timber.i("WebView removed from view hierarchy correctly")
             (parentView as ViewGroup).removeView(webView)
         }
