@@ -17,10 +17,11 @@ class UserAgentInterceptor(context: Context?) : Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         val request: Request = chain.request()
-        val requestWithUserAgentAdded = request.newBuilder().header(
-            USER_AGENT_HEADER_NAME,
-            userAgent
-        ).build()
+        val requestWithUserAgentAdded =
+            request.newBuilder().header(
+                USER_AGENT_HEADER_NAME,
+                userAgent,
+            ).build()
         return chain.proceed(requestWithUserAgentAdded)
     }
 
@@ -28,11 +29,12 @@ class UserAgentInterceptor(context: Context?) : Interceptor {
     val userAgent: String
         get() {
             val appName = AppInfo.getApplicationName(context)
-            val appNameEncoded = if (appName == null) {
-                ""
-            } else {
-                encodeForHeader(appName.replace(" ", "-"))
-            }
+            val appNameEncoded =
+                if (appName == null) {
+                    ""
+                } else {
+                    encodeForHeader(appName.replace(" ", "-"))
+                }
             return String.format(
                 "%s/%s (%s; Android %s; Android API Level %s) %s/%s",
                 appNameEncoded,
@@ -41,7 +43,7 @@ class UserAgentInterceptor(context: Context?) : Interceptor {
                 AppInfo.androidVersion,
                 AppInfo.androidLevel,
                 AppInfo.attentiveSDKName,
-                AppInfo.attentiveSDKVersion
+                AppInfo.attentiveSDKVersion,
             )
         }
 
@@ -59,10 +61,10 @@ class UserAgentInterceptor(context: Context?) : Interceptor {
         // URLEncoder also encodes some characters that are safe for headers (like dashes, dots)
         // so we decode those back for readability
         return encoded
-            .replace("+", "%20")  // URLEncoder uses + for spaces, but %20 is clearer
-            .replace("%2D", "-")  // dash
-            .replace("%2E", ".")  // dot
-            .replace("%5F", "_")  // underscore
+            .replace("+", "%20") // URLEncoder uses + for spaces, but %20 is clearer
+            .replace("%2D", "-") // dash
+            .replace("%2E", ".") // dot
+            .replace("%5F", "_") // underscore
     }
 
     companion object {

@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.internal.network
 
-import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable

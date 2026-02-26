@@ -4,7 +4,6 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
@@ -16,7 +15,10 @@ object BigDecimalSerializer : KSerializer<BigDecimal> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: BigDecimal) {
+    override fun serialize(
+        encoder: Encoder,
+        value: BigDecimal,
+    ) {
         encoder.encodeString(value.toPlainString())
     }
 
@@ -27,16 +29,19 @@ object BigDecimalSerializer : KSerializer<BigDecimal> {
 
 object CurrencySerializer : KSerializer<Currency> {
 // Custom serializer for Currency
-override val descriptor: SerialDescriptor =
-    PrimitiveSerialDescriptor("Currency", PrimitiveKind.STRING)
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("Currency", PrimitiveKind.STRING)
 
-override fun serialize(encoder: Encoder, value: Currency) {
-    encoder.encodeString(value.currencyCode)
-}
+    override fun serialize(
+        encoder: Encoder,
+        value: Currency,
+    ) {
+        encoder.encodeString(value.currencyCode)
+    }
 
-override fun deserialize(decoder: Decoder): Currency {
-    return Currency.getInstance(decoder.decodeString())
-}
+    override fun deserialize(decoder: Decoder): Currency {
+        return Currency.getInstance(decoder.decodeString())
+    }
 }
 
 @Serializable
@@ -44,7 +49,7 @@ data class Price(
     @Serializable(with = BigDecimalSerializer::class)
     var price: BigDecimal,
     @Serializable(with = CurrencySerializer::class)
-    val currency: Currency
+    val currency: Currency,
 ) {
     init {
         this.price = this.price.setScale(2, RoundingMode.DOWN)
@@ -54,6 +59,7 @@ data class Price(
     class Builder {
         @Serializable(with = BigDecimalSerializer::class)
         var price: BigDecimal? = null
+
         @Serializable(with = CurrencySerializer::class)
         var currency: Currency? = null
 

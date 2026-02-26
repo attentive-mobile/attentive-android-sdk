@@ -6,11 +6,26 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.nexus.publish)
+    alias(libs.plugins.ktlint)
     id 'checkstyle'
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+// Apply ktlint to all subprojects with Kotlin
+subprojects {
+    apply plugin: "org.jlleitschuh.gradle.ktlint"
+
+    ktlint {
+        android = true
+        outputToConsole = true
+        ignoreFailures = true  // Set to false once existing violations are fixed
+        filter {
+            exclude("**/AttentiveApi.kt")  // Contains fragile request strings
+        }
+    }
 }
 
 checkstyle {

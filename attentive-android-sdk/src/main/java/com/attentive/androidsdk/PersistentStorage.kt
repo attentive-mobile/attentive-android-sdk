@@ -9,7 +9,10 @@ class PersistentStorage(context: Context) {
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    fun save(key: String?, value: String?) {
+    fun save(
+        key: String?,
+        value: String?,
+    ) {
         // call "apply" instead of "commit". "apply" writes the changes to memory synchronously but to disk
         // asynchronously, yielding better performance. "commit" writes the changes to disk synchronously; this can be
         // a long operation, which can block the current thread.
@@ -21,7 +24,10 @@ class PersistentStorage(context: Context) {
      * @param key The key of the value
      * @param value The boolean value
      */
-    fun save(key: String, value: Boolean) {
+    fun save(
+        key: String,
+        value: Boolean,
+    ) {
         sharedPreferences.edit().putBoolean(key, value).apply()
     }
 
@@ -30,7 +36,10 @@ class PersistentStorage(context: Context) {
      * @param key The key of the value
      * @param value The int value
      */
-    fun save(key: String, value: Int) {
+    fun save(
+        key: String,
+        value: Int,
+    ) {
         sharedPreferences.edit().putInt(key, value).apply()
     }
 
@@ -49,7 +58,7 @@ class PersistentStorage(context: Context) {
      * @return The boolean value, false if the key does not exist
      */
     fun readBoolean(key: String): Boolean {
-            return sharedPreferences.getBoolean(key, false)
+        return sharedPreferences.getBoolean(key, false)
     }
 
     /**
@@ -58,7 +67,7 @@ class PersistentStorage(context: Context) {
      * @return The int value, -1 if the key does not exist
      */
     fun readInt(key: String): Int {
-            return sharedPreferences.getInt(key, -1)
+        return sharedPreferences.getInt(key, -1)
     }
 
     fun delete(key: String?) {

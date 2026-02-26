@@ -45,11 +45,12 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
             // Response start - look up request ID by URL
             message.startsWith("<--") && !message.startsWith("<-- END") -> {
                 flushHeaders()
-                val requestId = extractUrl(message)?.let { url ->
-                    synchronized(urlToRequestIdMap) {
-                        urlToRequestIdMap[url]
-                    }
-                } ?: currentRequestId.get()
+                val requestId =
+                    extractUrl(message)?.let { url ->
+                        synchronized(urlToRequestIdMap) {
+                            urlToRequestIdMap[url]
+                        }
+                    } ?: currentRequestId.get()
 
                 currentRequestId.set(requestId)
                 Timber.tag("OkHttp").i("[$requestId] $message")
@@ -122,15 +123,17 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
 
     private fun flushHeaders() {
         // Make a defensive copy to avoid concurrent modification issues
-        val headers = synchronized(headerBuffer) {
-            if (headerBuffer.isEmpty()) return
-            headerBuffer.toList().also { headerBuffer.clear() }
-        }
+        val headers =
+            synchronized(headerBuffer) {
+                if (headerBuffer.isEmpty()) return
+                headerBuffer.toList().also { headerBuffer.clear() }
+            }
 
         // Group headers together, 3 per line for readability
-        val grouped = headers.chunked(3).joinToString("\n") { group ->
-            "  ${group.joinToString(" | ")}"
-        }
+        val grouped =
+            headers.chunked(3).joinToString("\n") { group ->
+                "  ${group.joinToString(" | ")}"
+            }
         val requestId = currentRequestId.get()
         Timber.tag("OkHttp").i("[$requestId] Headers:\n$grouped")
     }
@@ -144,9 +147,10 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
                 val params = parseQueryParams(queryString)
 
                 if (params.isNotEmpty()) {
-                    val formattedParams = params.entries.joinToString("\n") { (key, value) ->
-                        "  $key = $value"
-                    }
+                    val formattedParams =
+                        params.entries.joinToString("\n") { (key, value) ->
+                            "  $key = $value"
+                        }
                     val requestId = currentRequestId.get()
                     Timber.tag("OkHttp").i("[$requestId] URL Parameters:\n$formattedParams")
                 }
@@ -175,15 +179,16 @@ internal class AttentiveHttpLogger : HttpLoggingInterceptor.Logger {
 
     private fun logFormattedJson(json: String) {
         try {
-            val formatted = when {
-                json.trimStart().startsWith("{") -> {
-                    JSONObject(json).toString(2)
+            val formatted =
+                when {
+                    json.trimStart().startsWith("{") -> {
+                        JSONObject(json).toString(2)
+                    }
+                    json.trimStart().startsWith("[") -> {
+                        JSONArray(json).toString(2)
+                    }
+                    else -> json
                 }
-                json.trimStart().startsWith("[") -> {
-                    JSONArray(json).toString(2)
-                }
-                else -> json
-            }
             val requestId = currentRequestId.get()
             Timber.tag("OkHttp").i("[$requestId] Payload:\n$formatted")
         } catch (e: JSONException) {

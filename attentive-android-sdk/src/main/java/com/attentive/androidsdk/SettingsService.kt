@@ -4,12 +4,10 @@ import androidx.annotation.RestrictTo
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 class SettingsService(private val persistentStorage: PersistentStorage) {
-
     var isSkipFatigueEnabled: Boolean
         get() = persistentStorage.readBoolean(SKIP_FATIGUE)
         set(value) {
             persistentStorage.save(SKIP_FATIGUE, value)
-
         }
 
     var logLevel: AttentiveLogLevel?

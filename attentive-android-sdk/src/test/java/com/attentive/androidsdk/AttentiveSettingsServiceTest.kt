@@ -3,7 +3,6 @@ package com.attentive.androidsdk
 import android.os.Bundle
 import com.attentive.androidsdk.AttentiveSettingsService.Companion.handleResetSettingsExtra
 import com.attentive.androidsdk.AttentiveSettingsService.Companion.handleSkipFatigueExtra
-import com.attentive.androidsdk.SettingsService
 import org.junit.Test
 import org.mockito.Mockito
 

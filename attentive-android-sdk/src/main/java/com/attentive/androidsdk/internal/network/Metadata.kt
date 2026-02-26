@@ -24,4 +24,6 @@ open class Metadata {
             this.phone = userIdentifiers.phone
         }
     }
-}    var currency: String? = null
+}
+
+var currency: String? = null

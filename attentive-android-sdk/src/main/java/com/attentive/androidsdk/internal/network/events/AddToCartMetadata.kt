@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class AddToCartMetadata(
     val eventType: String = "AddToCart",
     val product: Product? = null,
-    val currency: String? = null
+    val currency: String? = null,
 ) : EventMetadata()

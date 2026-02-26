@@ -6,9 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CustomEvent(
     val type: String,
-    val properties: Map<String, String>
+    val properties: Map<String, String>,
 ) : Event() {
-
     init {
         ParameterValidation.verifyNotEmpty(type, "type")
         ParameterValidation.verifyNotNull(properties, "properties")
@@ -18,8 +17,8 @@ data class CustomEvent(
             throw IllegalArgumentException(
                 String.format(
                     "The 'type' parameter contains an invalid character: '%s'.",
-                    invalidChar
-                )
+                    invalidChar,
+                ),
             )
         }
 
@@ -30,8 +29,8 @@ data class CustomEvent(
                     String.format(
                         "The properties key '%s' contains an invalid character: '%s'.",
                         key,
-                        invalidKeyChar
-                    )
+                        invalidKeyChar,
+                    ),
                 )
             }
         }
@@ -40,9 +39,8 @@ data class CustomEvent(
     @Serializable
     class Builder(
         private var type: String? = null,
-        private var properties: Map<String, String> = emptyMap()
+        private var properties: Map<String, String> = emptyMap(),
     ) {
-
         /**
          * @param type The type (aka name) of the CustomEvent e.g. "User Logged In".
          * The type is case-sensitive - "User Logged In" and "User logged in" are different events.
@@ -76,7 +74,10 @@ data class CustomEvent(
             return findInvalidCharacter(key, specialCharacters)
         }
 
-        fun findInvalidCharacter(subject: String, chars: Array<String>): String? {
+        fun findInvalidCharacter(
+            subject: String,
+            chars: Array<String>,
+        ): String? {
             for (character in chars) {
                 if (subject.contains(character)) {
                     return character

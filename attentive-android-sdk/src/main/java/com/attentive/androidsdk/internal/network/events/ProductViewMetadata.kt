@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class ProductViewMetadata(
     val eventType: String = "ProductView",
     val product: Product? = null,
-    val currency: String? = null
+    val currency: String? = null,
 ) : EventMetadata()

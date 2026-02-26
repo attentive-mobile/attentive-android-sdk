@@ -1,10 +1,12 @@
 package com.attentive.bonni.database
 
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+@OptIn(DelicateCoroutinesApi::class)
 object CartRepository {
     private val database: AppDatabase by lazy { AppDatabase.getInstance() }
     private val _cartItemCount = MutableStateFlow(0)

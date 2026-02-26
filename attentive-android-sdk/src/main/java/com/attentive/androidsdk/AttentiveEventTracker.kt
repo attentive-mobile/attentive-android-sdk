@@ -13,7 +13,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
 
-
 /**
  * To use the AttentiveEventTracker you must first initialize it with an AttentiveConfig.
  */
@@ -23,17 +22,18 @@ class AttentiveEventTracker private constructor() {
 
     @Deprecated(
         message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
-        replaceWith = ReplaceWith(
-            "AttentiveSdk.initialize(config)",
-            "com.attentive.androidsdk.AttentiveSdk"
-        ),
-        level = DeprecationLevel.WARNING
+        replaceWith =
+            ReplaceWith(
+                "AttentiveSdk.initialize(config)",
+                "com.attentive.androidsdk.AttentiveSdk",
+            ),
+        level = DeprecationLevel.WARNING,
     )
     fun initialize(config: AttentiveConfig) {
         Timber.d(
             "Initializing Attentive SDK with attn domain %s and mode %s",
             config.domain,
-            config.mode
+            config.mode,
         )
 
         synchronized(AttentiveEventTracker::class.java) {
@@ -41,8 +41,6 @@ class AttentiveEventTracker private constructor() {
                 Timber.e("Attempted to re-initialize AttentiveEventTracker - please initialize once per runtime")
             }
             this.config = config
-
-
 
             if (!::launchTracker.isInitialized) {
                 Timber.d("Initializing AppLaunchTracker")
@@ -64,7 +62,7 @@ class AttentiveEventTracker private constructor() {
 
     @Deprecated(
         "This function will be removed in a future release.",
-        ReplaceWith("AttentiveSdk.recordEvent(event)")
+        ReplaceWith("AttentiveSdk.recordEvent(event)"),
     )
     fun recordEvent(event: Event) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -113,7 +111,7 @@ class AttentiveEventTracker private constructor() {
                                 continuation.resume(Unit) // Resume anyway, don't throw
                             }
                         }
-                    }
+                    },
                 )
             }
         } else {
@@ -140,10 +138,11 @@ class AttentiveEventTracker private constructor() {
             config.let {
                 it.attentiveApi.registerPushToken(
                     token = token,
-                    permissionGranted = AttentivePush.getInstance()
-                        .checkPushPermission(context),
+                    permissionGranted =
+                        AttentivePush.getInstance()
+                            .checkPushPermission(context),
                     it.userIdentifiers,
-                    it.domain
+                    it.domain,
                 )
             }
         } else {
@@ -156,7 +155,7 @@ class AttentiveEventTracker private constructor() {
      */
     internal suspend fun sendAppLaunchEvent(
         launchType: AttentiveApi.LaunchType,
-        callbackMap: Map<String, String> = emptyMap()
+        callbackMap: Map<String, String> = emptyMap(),
     ) {
         verifyInitialized()
         config?.let { config ->
@@ -174,7 +173,7 @@ class AttentiveEventTracker private constructor() {
                         callbackMap,
                         permissionGranted,
                         config.userIdentifiers,
-                        config.domain
+                        config.domain,
                     )
                 } else {
                     Timber.e("Failed to fetch push token: ${it.exceptionOrNull()?.message}")
@@ -183,7 +182,10 @@ class AttentiveEventTracker private constructor() {
         }
     }
 
-    internal suspend fun optIn(email: String = "", phoneNumber: String = "") {
+    internal suspend fun optIn(
+        email: String = "",
+        phoneNumber: String = "",
+    ) {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt in.")
@@ -194,13 +196,16 @@ class AttentiveEventTracker private constructor() {
                 config.attentiveApi.sendOptInSubscriptionStatus(
                     phoneNumber,
                     email,
-                    it.getOrNull()?.token
+                    it.getOrNull()?.token,
                 )
             }
         }
     }
 
-    internal suspend fun optOut(email: String = "", phoneNumber: String = "") {
+    internal suspend fun optOut(
+        email: String = "",
+        phoneNumber: String = "",
+    ) {
         verifyInitialized()
         if (phoneNumber.isEmpty() && email.isEmpty()) {
             Timber.e("At least one of phone number or email must be provided to opt out.")
@@ -212,12 +217,11 @@ class AttentiveEventTracker private constructor() {
                     email,
                     phoneNumber,
                     config.domain,
-                    it.getOrNull()?.token
+                    it.getOrNull()?.token,
                 )
             }
         }
     }
-
 
     private fun verifyInitialized() {
         synchronized(AttentiveEventTracker::class.java) {
@@ -242,4 +246,3 @@ class AttentiveEventTracker private constructor() {
             }
     }
 }
-

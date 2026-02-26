@@ -35,11 +35,12 @@ class VisitorService(private val persistentStorage: PersistentStorage) {
                 d /= 16
                 builder.append(
                     java.lang.Long.toHexString(
-                        if (element == 'x')
+                        if (element == 'x') {
                             r
-                        else
+                        } else {
                             (r and 0x3L) or 0x8L
-                    )
+                        },
+                    ),
                 )
             }
             return builder.toString()

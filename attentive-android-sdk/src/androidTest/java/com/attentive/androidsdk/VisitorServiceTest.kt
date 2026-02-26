@@ -22,8 +22,7 @@ class VisitorServiceTest {
     }
 
     @Test
-    fun visitorId_firstTime_getsNewVisitorId()
-    {
+    fun visitorId_firstTime_getsNewVisitorId() {
         // Arrange
         // Act
         val visitorId = visitorService!!.visitorId
@@ -32,18 +31,17 @@ class VisitorServiceTest {
         verifyVisitorId(visitorId)
     }
 
-
     @Test
-    fun visitorId_multipleTimes_getsSameVisitorId(){
-            // Arrange
-            // Act
-            val visitorIdFromFirstCall = visitorService!!.visitorId
-            val visitorIdFromSecondCall = visitorService!!.visitorId
+    fun visitorId_multipleTimes_getsSameVisitorId() {
+        // Arrange
+        // Act
+        val visitorIdFromFirstCall = visitorService!!.visitorId
+        val visitorIdFromSecondCall = visitorService!!.visitorId
 
-            // Assert
-            Assert.assertEquals(visitorIdFromFirstCall, visitorIdFromSecondCall)
-            verifyVisitorId(visitorIdFromFirstCall)
-        }
+        // Assert
+        Assert.assertEquals(visitorIdFromFirstCall, visitorIdFromSecondCall)
+        verifyVisitorId(visitorIdFromFirstCall)
+    }
 
     @Test
     fun createNewVisitorId_afterVisitorIdAlreadyCreated_createsAnotherVisitorId() {

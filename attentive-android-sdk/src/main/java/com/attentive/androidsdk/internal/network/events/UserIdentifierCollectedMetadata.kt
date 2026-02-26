@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UserIdentifierCollectedMetadata(
-    val eventType: String = "UserIdentifierCollected"
+    val eventType: String = "UserIdentifierCollected",
 ) : EventMetadata()

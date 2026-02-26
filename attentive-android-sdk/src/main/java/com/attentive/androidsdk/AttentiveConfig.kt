@@ -11,7 +11,7 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
- class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
+class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
     override val applicationContext = builder._context
@@ -35,9 +35,11 @@ import timber.log.Timber
         apiVersion = builder.apiVersion
         configureLogging(logLevel, settingsService, builder._context)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(logLevel,
-            ClassFactory.buildUserAgentInterceptor(builder._context)
-        )
+        val okHttpClient =
+            builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+                logLevel,
+                ClassFactory.buildUserAgentInterceptor(builder._context),
+            )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
     }
@@ -58,7 +60,6 @@ import timber.log.Timber
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
-
 
     override fun clearUser() {
         Timber.i("clearUser called")
@@ -90,7 +91,8 @@ import timber.log.Timber
                 override fun onSuccess() {
                     Timber.i("Successfully sent the user identifiers")
                 }
-            })
+            },
+        )
     }
 
     private fun sendInfoEvent() {
@@ -101,7 +103,7 @@ import timber.log.Timber
         private fun configureLogging(
             logLevel: AttentiveLogLevel?,
             settingsService: SettingsService,
-            context: Context
+            context: Context,
         ) {
             val settingsLogLevel = settingsService.logLevel
             if (settingsLogLevel != null) {
@@ -125,11 +127,12 @@ import timber.log.Timber
         }
     }
 
-    class  Builder {
+    class Builder {
         internal lateinit var _context: Application
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var _notificationIconId: Int = 0
+
         @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
@@ -137,58 +140,67 @@ import timber.log.Timber
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
-        fun applicationContext(context: Application) = apply {
-            ParameterValidation.verifyNotNull(context, "context")
-            _context = context
-        }
+        fun applicationContext(context: Application) =
+            apply {
+                ParameterValidation.verifyNotNull(context, "context")
+                _context = context
+            }
 
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
-        fun context(context: Application) = apply {
-            ParameterValidation.verifyNotNull(context, "context")
-            _context = context
-        }
+        fun context(context: Application) =
+            apply {
+                ParameterValidation.verifyNotNull(context, "context")
+                _context = context
+            }
 
-        fun mode(mode: Mode) = apply {
-            ParameterValidation.verifyNotNull(mode, "mode")
-            _mode = mode
-        }
+        fun mode(mode: Mode) =
+            apply {
+                ParameterValidation.verifyNotNull(mode, "mode")
+                _mode = mode
+            }
 
-        fun domain(domain: String) = apply {
-            ParameterValidation.verifyNotEmpty(domain, "domain")
-            _domain = domain
-        }
+        fun domain(domain: String) =
+            apply {
+                ParameterValidation.verifyNotEmpty(domain, "domain")
+                _domain = domain
+            }
 
-        fun notificationIconId(notificationIconId: Int) = apply {
-            _notificationIconId = notificationIconId
-        }
+        fun notificationIconId(notificationIconId: Int) =
+            apply {
+                _notificationIconId = notificationIconId
+            }
 
-        fun notificationIconBackgroundColor(@ColorRes colorResourceId: Int) = apply {
+        fun notificationIconBackgroundColor(
+            @ColorRes colorResourceId: Int,
+        ) = apply {
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
         private val allowApiVersionOverride = false
-        fun apiVersion(apiVersion: ApiVersion) = apply {
-            if(allowApiVersionOverride){
-            this.apiVersion = apiVersion
-                }
-        }
 
+        fun apiVersion(apiVersion: ApiVersion) =
+            apply {
+                if (allowApiVersionOverride) {
+                    this.apiVersion = apiVersion
+                }
+            }
 
         @Suppress("unused")
-        fun okHttpClient(okHttpClient: OkHttpClient) = apply {
-            ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
-            this.okHttpClient = okHttpClient
-        }
+        fun okHttpClient(okHttpClient: OkHttpClient) =
+            apply {
+                ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
+                this.okHttpClient = okHttpClient
+            }
 
-        fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) = apply {
-            this.skipFatigueOnCreatives = skipFatigueOnCreatives
-        }
+        fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
+            apply {
+                this.skipFatigueOnCreatives = skipFatigueOnCreatives
+            }
 
-        fun logLevel(logLevel: AttentiveLogLevel) = apply {
-            this.logLevel = logLevel
-        }
-
-
+        fun logLevel(logLevel: AttentiveLogLevel) =
+            apply {
+                this.logLevel = logLevel
+            }
 
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {
@@ -205,12 +217,12 @@ import timber.log.Timber
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                    "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
+                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
         }
     }
 
-
     enum class Mode {
-        DEBUG, PRODUCTION
+        DEBUG,
+        PRODUCTION,
     }
 }

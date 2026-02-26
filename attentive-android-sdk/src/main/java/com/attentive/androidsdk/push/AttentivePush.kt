@@ -36,11 +36,9 @@ import java.net.URL
 import kotlin.coroutines.resume
 
 internal class AttentivePush {
-
-
     internal suspend fun fetchPushToken(
         context: Context,
-        requestPermissionIfNotGranted: Boolean
+        requestPermissionIfNotGranted: Boolean,
     ): Result<TokenFetchResult> {
         return if (requestPermissionIfNotGranted && !checkPushPermission(context)) {
             requestPushPermission(context)
@@ -53,7 +51,7 @@ internal class AttentivePush {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
-                Manifest.permission.POST_NOTIFICATIONS
+                Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             true // Permission is not required for APIs below 33
@@ -68,7 +66,7 @@ internal class AttentivePush {
                 if (isGranted) {
                     CoroutineScope(Dispatchers.Default).launch {
                         continuation.resume(
-                            TokenProvider.getInstance().getTokenFromFirebase(context)
+                            TokenProvider.getInstance().getTokenFromFirebase(context),
                         )
                     }
                 } else {
@@ -79,13 +77,16 @@ internal class AttentivePush {
     }
 
     internal fun sendNotification(remoteMessage: RemoteMessage) {
-        Timber.i("sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
+        Timber.i(
+            "sendNotification with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}",
+        )
         // Here you would implement the logic to display the notification
         // For example, using NotificationManager to show a notification
 
-        val title = remoteMessage.data.getOrElse(Constants.Companion.KEY_NOTIFICATION_TITLE) {
-            null
-        }
+        val title =
+            remoteMessage.data.getOrElse(Constants.Companion.KEY_NOTIFICATION_TITLE) {
+                null
+            }
         val body = remoteMessage.data.getOrElse(Constants.Companion.KEY_NOTIFICATION_BODY) { null }
 
         val imageUrl = remoteMessage.getImageUrl()
@@ -100,15 +101,13 @@ internal class AttentivePush {
         }
     }
 
-
-
-    //TODO make private
+    // TODO make private
     internal fun sendNotification(
         messageTitle: String,
         messageBody: String,
         dataMap: Map<String, String>,
         imageUrl: String?,
-        context: Context
+        context: Context,
     ) {
         val channelId = "fcm_default_channel"
         val notificationId = System.currentTimeMillis().toInt()
@@ -125,21 +124,23 @@ internal class AttentivePush {
             }
         }
 
-        val contentPendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            launchIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val contentPendingIntent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                launchIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
         // Build the notification
-        val notificationBuilder = NotificationCompat.Builder(context, channelId)
-            .setContentTitle(messageTitle)
-            .setContentText(messageBody)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
-            .setAutoCancel(true)
-            .setSound(defaultSoundUri)
-            .setContentIntent(contentPendingIntent)
+        val notificationBuilder =
+            NotificationCompat.Builder(context, channelId)
+                .setContentTitle(messageTitle)
+                .setContentText(messageBody)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
+                .setAutoCancel(true)
+                .setSound(defaultSoundUri)
+                .setContentIntent(contentPendingIntent)
 
         val notificationIconId = AttentiveEventTracker.instance.config.notificationIconId ?: 0
         if (notificationIconId == 0) {
@@ -162,7 +163,7 @@ internal class AttentivePush {
                 val bitmap = imageUrl.getBitmapFromUrl()
                 if (bitmap != null) {
                     notificationBuilder.setStyle(
-                        NotificationCompat.BigPictureStyle().bigPicture(bitmap)
+                        NotificationCompat.BigPictureStyle().bigPicture(bitmap),
                     )
                 }
                 withContext(Dispatchers.Main) {
@@ -178,31 +179,36 @@ internal class AttentivePush {
         context: Context,
         channelId: String,
         notificationId: Int,
-        notificationBuilder: NotificationCompat.Builder
+        notificationBuilder: NotificationCompat.Builder,
     ) {
         val notificationManager =
             context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Marketing",
-                NotificationManager.IMPORTANCE_HIGH
-            )
+            val channel =
+                NotificationChannel(
+                    channelId,
+                    "Marketing",
+                    NotificationManager.IMPORTANCE_HIGH,
+                )
             notificationManager.createNotificationChannel(channel)
         }
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
     @VisibleForTesting
-    fun buildLaunchIntent(context: Context, dataMap: Map<String, String>): Intent? {
+    fun buildLaunchIntent(
+        context: Context,
+        dataMap: Map<String, String>,
+    ): Intent? {
         val deepLink = dataMap.getOrElse(ATTENTIVE_DEEP_LINK_KEY) { null }
         var launchIntent: Intent? = null
         if (deepLink?.isNotBlank() == true) {
             Timber.d("Building launch intent from deep link: $deepLink")
-            launchIntent = Intent(Intent.ACTION_VIEW, deepLink.toUri()).apply {
-                //Only search for matching intent filters in the consuming app
-                `package` = context.packageName
-            }
+            launchIntent =
+                Intent(Intent.ACTION_VIEW, deepLink.toUri()).apply {
+                    // Only search for matching intent filters in the consuming app
+                    `package` = context.packageName
+                }
         } else {
             Timber.d("Using launcher activity for package: ${context.packageName}")
             launchIntent =
@@ -213,7 +219,6 @@ internal class AttentivePush {
         }
         return launchIntent
     }
-
 
     companion object {
         const val ATTENTIVE_DEEP_LINK_KEY = "attentive_open_action_url"
@@ -228,7 +233,6 @@ internal class AttentivePush {
     }
 
     class PermissionRequestActivity : AppCompatActivity() {
-
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -244,18 +248,22 @@ internal class AttentivePush {
         companion object {
             private var callback: ((Boolean) -> Unit)? = null
 
-            internal fun request(context: Context, callback: (Boolean) -> Unit) {
+            internal fun request(
+                context: Context,
+                callback: (Boolean) -> Unit,
+            ) {
                 this.callback = callback
-                val intent = Intent(context, PermissionRequestActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                val intent =
+                    Intent(context, PermissionRequestActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
                 context.startActivity(intent)
             }
         }
     }
 }
 
-private fun RemoteMessage.getImageUrl() : String? {
+private fun RemoteMessage.getImageUrl(): String? {
     data.getOrElse("attentiveData") { null }?.let {
         val decoded = it.decodeBase64()?.utf8()
         decoded?.let {
@@ -266,9 +274,6 @@ private fun RemoteMessage.getImageUrl() : String? {
 
     return null
 }
-
-
-
 
 private suspend fun String.getBitmapFromUrl(): android.graphics.Bitmap? {
     return try {
@@ -285,4 +290,3 @@ private suspend fun String.getBitmapFromUrl(): android.graphics.Bitmap? {
         null
     }
 }
-

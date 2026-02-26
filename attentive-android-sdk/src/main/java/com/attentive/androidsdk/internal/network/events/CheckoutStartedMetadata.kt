@@ -9,5 +9,5 @@ data class CheckoutStartedMetadata(
     val currency: String? = null,
     val orderTotal: String? = null,
     val cart: Cart? = null,
-    val products: List<Product>? = null
+    val products: List<Product>? = null,
 ) : EventMetadata()

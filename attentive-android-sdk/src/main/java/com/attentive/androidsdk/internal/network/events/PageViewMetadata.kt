@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PageViewMetadata(
-    val eventType: String = "PageView"
+    val eventType: String = "PageView",
 ) : EventMetadata()

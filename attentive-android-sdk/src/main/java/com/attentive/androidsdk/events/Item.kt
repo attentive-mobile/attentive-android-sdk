@@ -11,7 +11,7 @@ data class Item(
     val productImage: String? = null,
     val name: String? = null,
     val quantity: Int = 1,
-    val category: String? = null
+    val category: String? = null,
 ) {
     init {
         ParameterValidation.verifyNotEmpty(productId, "productId")
@@ -23,7 +23,7 @@ data class Item(
     class Builder(
         private val productId: String,
         private val productVariantId: String,
-        private val price: Price
+        private val price: Price,
     ) {
         private var productImage: String? = null
         private var name: String? = null
@@ -64,7 +64,7 @@ data class Item(
                 productImage = productImage,
                 name = name,
                 quantity = quantity,
-                category = category
+                category = category,
             )
         }
     }

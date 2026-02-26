@@ -1,7 +1,6 @@
 package com.attentive.androidsdk
 
 import android.app.Application
-import android.content.Context
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.util.AppInfo
@@ -30,9 +29,10 @@ class AttentiveConfigTest {
         Mockito.doReturn(VISITOR_ID).`when`(factoryMocks.visitorService).visitorId
         Mockito.doReturn(NEW_VISITOR_ID).`when`(factoryMocks.visitorService)
             .createNewVisitorId()
-        mockedAppInfo = Mockito.mockStatic(
-            AppInfo::class.java
-        )
+        mockedAppInfo =
+            Mockito.mockStatic(
+                AppInfo::class.java,
+            )
         Mockito.`when`(isDebuggable(any())).thenReturn(false)
     }
 
@@ -48,11 +48,12 @@ class AttentiveConfigTest {
 
         // Act
 
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-            .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
 
         // Assert
         Assert.assertEquals(DOMAIN, config.domain)
@@ -63,12 +64,12 @@ class AttentiveConfigTest {
         Assert.assertFalse(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
-            argThat{ arg: Event? -> arg is InfoEvent },
+            argThat { arg: Event? -> arg is InfoEvent },
             eq(config.userIdentifiers),
             eq(
-                DOMAIN
+                DOMAIN,
             ),
-            anyOrNull()
+            anyOrNull(),
         )
     }
 
@@ -78,12 +79,13 @@ class AttentiveConfigTest {
 
         // Act
 
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-            .skipFatigueOnCreatives(true)
-            .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .skipFatigueOnCreatives(true)
+                .build()
 
         // Assert
         Assert.assertEquals(DOMAIN, config.domain)
@@ -94,21 +96,22 @@ class AttentiveConfigTest {
         Assert.assertTrue(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
-            argThat{ arg: Event? -> arg is InfoEvent },
+            argThat { arg: Event? -> arg is InfoEvent },
             eq(config.userIdentifiers),
             eq(DOMAIN),
-            anyOrNull()
+            anyOrNull(),
         )
     }
 
     @Test
     fun clearUser_identifyWasPreviouslyCalledWithIdentifiers_identifiersAreCleared() {
         // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -127,11 +130,12 @@ class AttentiveConfigTest {
     @Test
     fun clearUser_verifyNewVisitorIdCreated() {
         // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-            .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         Assert.assertEquals(VISITOR_ID, config.userIdentifiers.visitorId)
 
         // Act
@@ -145,22 +149,24 @@ class AttentiveConfigTest {
     @Test
     fun identify_identifyWasPreviouslyCalledWithIdentifiers_identifiersAreUpdated() {
         // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         config.identify(buildUserIdentifiers())
 
         // Act
-        val newUserIdentifiers = UserIdentifiers.Builder()
-            .withClientUserId("newClientId")
-            .withPhone("+14158889999")
-            .withEmail("newEmail@gmail.com")
-            .withShopifyId("67890")
-            .withKlaviyoId("09876")
-            .withCustomIdentifiers(mapOf("key1" to "newValue1", "extraKey" to "extraValue"))
-            .build()
+        val newUserIdentifiers =
+            UserIdentifiers.Builder()
+                .withClientUserId("newClientId")
+                .withPhone("+14158889999")
+                .withEmail("newEmail@gmail.com")
+                .withShopifyId("67890")
+                .withKlaviyoId("09876")
+                .withCustomIdentifiers(mapOf("key1" to "newValue1", "extraKey" to "extraValue"))
+                .build()
         config.identify(newUserIdentifiers)
 
         // Assert
@@ -171,38 +177,40 @@ class AttentiveConfigTest {
         Assert.assertEquals("09876", config.userIdentifiers.klaviyoId)
         Assert.assertEquals(
             mapOf("key1" to "newValue1", "key2" to "value2", "extraKey" to "extraValue"),
-            config.userIdentifiers.customIdentifiers
+            config.userIdentifiers.customIdentifiers,
         )
     }
 
     @Test
     fun identify_withIdentifiers_sendsUserIdentifierCollectedEvent() {
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
         Mockito.verify(
             factoryMocks.attentiveApi,
-            VerificationModeFactory.times(1)
+            VerificationModeFactory.times(1),
         ).sendUserIdentifiersCollectedEvent(
             eq(DOMAIN),
             eq(config.userIdentifiers),
-            any()
+            any(),
         )
     }
 
     @Test
     fun changeDomain() {
         // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 
@@ -216,11 +224,12 @@ class AttentiveConfigTest {
     @Test
     fun changeDomain_emptyDomain() {
         // Arrange
-        val config = AttentiveConfig.Builder()
-            .domain(DOMAIN)
-            .mode(MODE)
-            .applicationContext(Mockito.mock(Application::class.java))
-                       .build()
+        val config =
+            AttentiveConfig.Builder()
+                .domain(DOMAIN)
+                .mode(MODE)
+                .applicationContext(Mockito.mock(Application::class.java))
+                .build()
         val userIdentifiers = buildUserIdentifiers()
         config.identify(userIdentifiers)
 

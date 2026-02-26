@@ -167,9 +167,10 @@ class BaseEventRequestMapperTest {
         // Arrange
         val item1 = buildItemWithAllFields("PROD1", "VAR1")
         val item2 = buildItemWithAllFields("PROD2", "VAR2")
-        val productViewEvent = ProductViewEvent.Builder()
-            .items(listOf(item1, item2))
-            .build()
+        val productViewEvent =
+            ProductViewEvent.Builder()
+                .items(listOf(item1, item2))
+                .build()
         val userIdentifiers = buildAllUserIdentifiers()
 
         // Act
@@ -188,10 +189,11 @@ class BaseEventRequestMapperTest {
     @Test
     fun mapProductViewEvent_withDeeplink_includesDeeplinkInRequest() {
         // Arrange
-        val productViewEvent = ProductViewEvent.Builder()
-            .items(listOf(buildItemWithAllFields()))
-            .deeplink("app://product/123")
-            .build()
+        val productViewEvent =
+            ProductViewEvent.Builder()
+                .items(listOf(buildItemWithAllFields()))
+                .deeplink("app://product/123")
+                .build()
         val userIdentifiers = buildAllUserIdentifiers()
 
         // Act
@@ -239,9 +241,10 @@ class BaseEventRequestMapperTest {
         // Arrange
         val item1 = buildItemWithAllFields("PROD1", "VAR1")
         val item2 = buildItemWithAllFields("PROD2", "VAR2")
-        val addToCartEvent = AddToCartEvent.Builder()
-            .items(listOf(item1, item2))
-            .build()
+        val addToCartEvent =
+            AddToCartEvent.Builder()
+                .items(listOf(item1, item2))
+                .build()
         val userIdentifiers = buildAllUserIdentifiers()
 
         // Act
@@ -260,10 +263,11 @@ class BaseEventRequestMapperTest {
     @Test
     fun mapAddToCartEvent_withDeeplink_includesDeeplinkInRequest() {
         // Arrange
-        val addToCartEvent = AddToCartEvent.Builder()
-            .items(listOf(buildItemWithAllFields()))
-            .deeplink("app://cart")
-            .build()
+        val addToCartEvent =
+            AddToCartEvent.Builder()
+                .items(listOf(buildItemWithAllFields()))
+                .deeplink("app://cart")
+                .build()
         val userIdentifiers = buildAllUserIdentifiers()
 
         // Act
@@ -351,10 +355,11 @@ class BaseEventRequestMapperTest {
     @Test
     fun buildIdentifiers_withCustomIdentifiers_mapsCustomIds() {
         // Arrange
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("visitor123")
-            .withCustomIdentifiers(mapOf("myCustomKey" to "myCustomValue"))
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("visitor123")
+                .withCustomIdentifiers(mapOf("myCustomKey" to "myCustomValue"))
+                .build()
 
         // Act
         val result = invokeBuildIdentifiers(userIdentifiers)
@@ -370,9 +375,10 @@ class BaseEventRequestMapperTest {
     @Test
     fun buildIdentifiers_withNoOptionalIdentifiers_returnsMinimalIdentifiers() {
         // Arrange
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("visitor123")
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("visitor123")
+                .build()
 
         // Act
         val result = invokeBuildIdentifiers(userIdentifiers)
@@ -397,11 +403,12 @@ class BaseEventRequestMapperTest {
             }
 
             // Arrange
-            val userIdentifiers = UserIdentifiers.Builder()
-                .withVisitorId("visitor123")
-                .withEmail("test@example.com")
-                .withPhone("+15551234567")
-                .build()
+            val userIdentifiers =
+                UserIdentifiers.Builder()
+                    .withVisitorId("visitor123")
+                    .withEmail("test@example.com")
+                    .withPhone("+15551234567")
+                    .build()
 
             // Act
             val result = invokeBuildIdentifiers(userIdentifiers)
@@ -441,11 +448,12 @@ class BaseEventRequestMapperTest {
     @Test
     fun itemToProduct_withNullOptionalFields_handlesNullsCorrectly() {
         // Arrange
-        val item = Item.Builder(
-            "PROD123",
-            "VARIANT456",
-            Price.Builder().price(BigDecimal("10.00")).currency(Currency.getInstance("USD")).build()
-        ).build()
+        val item =
+            Item.Builder(
+                "PROD123",
+                "VARIANT456",
+                Price.Builder().price(BigDecimal("10.00")).currency(Currency.getInstance("USD")).build(),
+            ).build()
 
         // Act
         val result = invokeItemToProduct(item)
@@ -462,10 +470,11 @@ class BaseEventRequestMapperTest {
     @Test
     fun cartToCartModel_withAllFields_mapsCorrectly() {
         // Arrange
-        val cart = Cart.Builder()
-            .cartId("CART123")
-            .cartCoupon("SUMMER20")
-            .build()
+        val cart =
+            Cart.Builder()
+                .cartId("CART123")
+                .cartCoupon("SUMMER20")
+                .build()
 
         // Act
         val result = invokeCartToCartModel(cart)
@@ -481,11 +490,12 @@ class BaseEventRequestMapperTest {
     @Test
     fun calculateCartTotal_withMultipleItems_calculatesCorrectSum() {
         // Arrange
-        val items = listOf(
-            buildItemWithPrice(BigDecimal("15.99")),
-            buildItemWithPrice(BigDecimal("25.00")),
-            buildItemWithPrice(BigDecimal("9.50"))
-        )
+        val items =
+            listOf(
+                buildItemWithPrice(BigDecimal("15.99")),
+                buildItemWithPrice(BigDecimal("25.00")),
+                buildItemWithPrice(BigDecimal("9.50")),
+            )
 
         // Act
         val result = invokeCalculateCartTotal(items)
@@ -509,10 +519,11 @@ class BaseEventRequestMapperTest {
     @Test
     fun calculateCartTotal_roundsToTwoDecimals() {
         // Arrange
-        val items = listOf(
-            buildItemWithPrice(BigDecimal("10.999")),
-            buildItemWithPrice(BigDecimal("5.999"))
-        )
+        val items =
+            listOf(
+                buildItemWithPrice(BigDecimal("10.999")),
+                buildItemWithPrice(BigDecimal("5.999")),
+            )
 
         // Act
         val result = invokeCalculateCartTotal(items)
@@ -526,7 +537,7 @@ class BaseEventRequestMapperTest {
     private fun invokeGetBaseEventRequestsFromEvent(
         event: Event,
         userIdentifiers: UserIdentifiers,
-        domain: String
+        domain: String,
     ): List<BaseEventRequest> {
         return attentiveApi.getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
     }
@@ -551,19 +562,19 @@ class BaseEventRequestMapperTest {
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(buildItemWithAllFields()),
-            Order.Builder().orderId("ORDER123").build()
+            Order.Builder().orderId("ORDER123").build(),
         ).build()
     }
 
     private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(buildItemWithAllFields()),
-            Order.Builder().orderId("ORDER123").build()
+            Order.Builder().orderId("ORDER123").build(),
         ).cart(
             Cart.Builder()
                 .cartId("CART123")
                 .cartCoupon("SUMMER20")
-                .build()
+                .build(),
         ).build()
     }
 
@@ -571,9 +582,9 @@ class BaseEventRequestMapperTest {
         return PurchaseEvent.Builder(
             listOf(
                 buildItemWithPrice(BigDecimal("15.99")),
-                buildItemWithPrice(BigDecimal("25.00"))
+                buildItemWithPrice(BigDecimal("25.00")),
             ),
-            Order.Builder().orderId("ORDER123").build()
+            Order.Builder().orderId("ORDER123").build(),
         ).build()
     }
 
@@ -592,13 +603,13 @@ class BaseEventRequestMapperTest {
     private fun buildCustomEventWithAllFields(): CustomEvent {
         return CustomEvent.Builder(
             "TestEvent",
-            mapOf("foo" to "bar", "hello" to "world")
+            mapOf("foo" to "bar", "hello" to "world"),
         ).build()
     }
 
     private fun buildItemWithAllFields(
         productId: String = "PROD123",
-        variantId: String = "VARIANT456"
+        variantId: String = "VARIANT456",
     ): Item {
         return Item.Builder(
             productId,
@@ -606,7 +617,7 @@ class BaseEventRequestMapperTest {
             Price.Builder()
                 .price(BigDecimal("15.99"))
                 .currency(Currency.getInstance("USD"))
-                .build()
+                .build(),
         )
             .name("Test Product")
             .productImage("https://example.com/image.jpg")
@@ -622,7 +633,7 @@ class BaseEventRequestMapperTest {
             Price.Builder()
                 .price(price)
                 .currency(Currency.getInstance("USD"))
-                .build()
+                .build(),
         ).build()
     }
 

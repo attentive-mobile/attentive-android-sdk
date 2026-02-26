@@ -4,13 +4,9 @@ import android.content.Context
 import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
 import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
-import com.attentive.androidsdk.internal.util.AppInfo
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import timber.log.Timber
-import kotlin.math.log
-
 
 object ClassFactory {
     @JvmStatic
@@ -24,11 +20,14 @@ object ClassFactory {
     }
 
     @JvmStatic
-    fun buildOkHttpClient(logLevel: AttentiveLogLevel?, interceptor: Interceptor): OkHttpClient {
+    fun buildOkHttpClient(
+        logLevel: AttentiveLogLevel?,
+        interceptor: Interceptor,
+    ): OkHttpClient {
         val logging = HttpLoggingInterceptor(AttentiveHttpLogger())
-        if(logLevel == AttentiveLogLevel.VERBOSE){
+        if (logLevel == AttentiveLogLevel.VERBOSE) {
             logging.setLevel(HttpLoggingInterceptor.Level.BODY)
-        } else if(logLevel == AttentiveLogLevel.STANDARD){
+        } else if (logLevel == AttentiveLogLevel.STANDARD) {
             logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
         }
         return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
@@ -39,7 +38,10 @@ object ClassFactory {
     }
 
     @JvmStatic
-    internal fun buildAttentiveApi(okHttpClient: OkHttpClient, domain: String): AttentiveApi {
+    internal fun buildAttentiveApi(
+        okHttpClient: OkHttpClient,
+        domain: String,
+    ): AttentiveApi {
         val client = okHttpClient.newBuilder().addInterceptor(GeoAdjustedDomainInterceptor(okHttpClient, domain)).build()
         return AttentiveApi(client, domain)
     }

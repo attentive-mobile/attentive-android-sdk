@@ -1,18 +1,9 @@
 package com.attentive.androidsdk
 
 import android.app.Application
-import android.os.Looper
 import androidx.lifecycle.Lifecycle
-import com.attentive.androidsdk.AttentiveApi
-import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.AttentiveEventTracker
-import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.tracking.AppLaunchTracker
-import junit.framework.TestCase
-import org.junit.Assert
 import org.junit.Before
-import org.junit.Test
-import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
@@ -24,7 +15,6 @@ class AttentiveEventTrackerTest {
     private var launchTracker: AppLaunchTracker? = null
     val mockLifecycle = Mockito.mock(Lifecycle::class.java)
     val instance = Mockito.spy(AttentiveEventTracker::class.java)
-
 
     @Before
     @Throws(NoSuchFieldException::class, IllegalAccessException::class)

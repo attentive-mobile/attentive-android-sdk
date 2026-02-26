@@ -1,16 +1,13 @@
 package com.attentive.androidsdk
 
-import com.attentive.androidsdk.ParameterValidation
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
 
 class ParameterValidationTest {
-
     @Test
     fun verifyNotNull_null_throwsException() {
         Assert.assertThrows(
-            IllegalArgumentException::class.java
+            IllegalArgumentException::class.java,
         ) { ParameterValidation.verifyNotNull(null, "paramName") }
     }
 
@@ -22,7 +19,7 @@ class ParameterValidationTest {
     @Test
     fun verifyNotEmpty_emptyString_throwsException() {
         Assert.assertThrows(
-            IllegalArgumentException::class.java
+            IllegalArgumentException::class.java,
         ) { ParameterValidation.verifyNotEmpty("", "paramName") }
     }
 
@@ -34,11 +31,11 @@ class ParameterValidationTest {
     @Test
     fun verifyNotEmpty_emptyCollection_throwsException() {
         Assert.assertThrows(
-            IllegalArgumentException::class.java
+            IllegalArgumentException::class.java,
         ) {
             ParameterValidation.verifyNotEmpty(
                 emptyList<Any>(),
-                "paramName"
+                "paramName",
             )
         }
     }

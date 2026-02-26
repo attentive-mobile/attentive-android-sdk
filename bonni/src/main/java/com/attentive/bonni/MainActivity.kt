@@ -11,7 +11,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.attentive.androidsdk.push.AttentiveFirebaseMessagingService
 import com.attentive.bonni.ui.theme.AttentiveAndroidSDKTheme
 import com.attentive.bonni.welcome.Greeting
 import com.attentive.bonni.welcome.WelcomeScreen
@@ -30,9 +29,10 @@ class MainActivity : ComponentActivity() {
                 // Log backstack changes
                 LaunchedEffect(navController) {
                     navController.currentBackStack.collect { backStack ->
-                        val entries = backStack.map { entry ->
-                            "${entry.destination.route}"
-                        }
+                        val entries =
+                            backStack.map { entry ->
+                                "${entry.destination.route}"
+                            }
                         Timber.d("📚 BackStack changed: ${entries.joinToString(" -> ")}")
                         Timber.d("📚 BackStack size: ${entries.size}")
                     }

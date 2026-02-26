@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 class ShippingScreenViewModel : ViewModel() {
-
     fun placeOrder() {
         viewModelScope.launch(Dispatchers.IO) {
             val items = AppDatabase.getInstance().cartItemDao().getAll().firstOrNull()
@@ -31,6 +30,5 @@ class ShippingScreenViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-
     }
 }

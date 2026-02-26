@@ -7,5 +7,5 @@ data class CollectionViewMetadata(
     val eventType: String = "CollectionView",
     val collectionId: String? = null,
     val collectionTitle: String? = null,
-    val products: List<Product>? = null
+    val products: List<Product>? = null,
 ) : EventMetadata()

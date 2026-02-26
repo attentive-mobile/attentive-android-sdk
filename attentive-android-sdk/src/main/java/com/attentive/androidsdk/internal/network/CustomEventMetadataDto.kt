@@ -17,11 +17,14 @@ object PropertiesMapSerializer : KSerializer<Map<String, String>?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("PropertiesMap", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: Map<String, String>?) {
+    override fun serialize(
+        encoder: Encoder,
+        value: Map<String, String>?,
+    ) {
         if (value == null) {
             encoder.encodeNull()
         } else {
-            val json = Json{ignoreUnknownKeys = true}
+            val json = Json { ignoreUnknownKeys = true }
             val jsonString = json.encodeToString(JsonElement.serializer(), Json.encodeToJsonElement(value))
             encoder.encodeString(jsonString)
         }

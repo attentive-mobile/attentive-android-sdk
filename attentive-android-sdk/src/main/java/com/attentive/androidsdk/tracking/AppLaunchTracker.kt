@@ -14,15 +14,12 @@ import com.attentive.androidsdk.internal.util.toJsonEncodedString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
-import org.json.JSONObject
 import timber.log.Timber
 
 internal class AppLaunchTracker(
     internal val application: Application,
-    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle
+    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
 ) : DefaultLifecycleObserver {
-
     init {
         registerAppLaunchTracker()
         registerActivityCallback()
@@ -49,65 +46,73 @@ internal class AppLaunchTracker(
     }
 
     private fun registerActivityCallback() {
-        application.registerActivityLifecycleCallbacks(object :
-            Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                var wasLaunchedFromNotification = activity.intent?.extras?.run {
-                    getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
-                } == true
+        application.registerActivityLifecycleCallbacks(
+            object :
+                Application.ActivityLifecycleCallbacks {
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) {
+                    var wasLaunchedFromNotification =
+                        activity.intent?.extras?.run {
+                            getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
+                        } == true
 
-                if (wasLaunchedFromNotification) {
-                    Timber.i("Launched from notification")
-                    launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
-                } else {
-                    Timber.i("Launched from launcher")
+                    if (wasLaunchedFromNotification) {
+                        Timber.i("Launched from notification")
+                        launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
+                    } else {
+                        Timber.i("Launched from launcher")
+                    }
                 }
 
-
-            }
-
-            override fun onActivityStarted(activity: Activity) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
-                        activity.intent.extras.run {
-                            if (this != null) {
-                                for (key in keySet()) {
-                                    //All the metadata for the notification is packaged in the launch intent
-                                    //The attentive backend needs these to be sent back to it when a notification is tapped
-                                    //The LAUNCHED_FROM_NOTIFICATION flag is a flag used for internal use only and shouldn't be sent to the backend
-                                    if (key != LAUNCHED_FROM_NOTIFICATION) {
-                                        dataMap[key] = getString(key).toString()
+                override fun onActivityStarted(activity: Activity) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
+                            activity.intent.extras.run {
+                                if (this != null) {
+                                    for (key in keySet()) {
+                                        // All the metadata for the notification is packaged in the launch intent
+                                        // The attentive backend needs these to be sent back to it when a notification is tapped
+                                        // The LAUNCHED_FROM_NOTIFICATION flag is a flag used for internal use only and shouldn't be sent to the backend
+                                        if (key != LAUNCHED_FROM_NOTIFICATION) {
+                                            dataMap[key] = getString(key).toString()
+                                        }
                                     }
                                 }
                             }
+
+                            jsonEncodeTitleAndBody()
+
+                            AttentiveEventTracker.instance.sendAppLaunchEvent(
+                                AttentiveApi.LaunchType.DIRECT_OPEN,
+                                dataMap,
+                            )
+                        } else {
+                            AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
                         }
-
-                        jsonEncodeTitleAndBody()
-
-                        AttentiveEventTracker.instance.sendAppLaunchEvent(
-                            AttentiveApi.LaunchType.DIRECT_OPEN,
-                            dataMap
-                        )
-                    } else {
-                        AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
-
                     }
                 }
-            }
 
+                override fun onActivityStopped(activity: Activity) {
+                    launchEvents.clear()
+                }
 
-            override fun onActivityStopped(activity: Activity) {
-                launchEvents.clear()
-            }
+                override fun onActivityResumed(activity: Activity) {}
 
-            override fun onActivityResumed(activity: Activity) {}
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {}
-        })
+                override fun onActivityPaused(activity: Activity) {}
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) {}
+
+                override fun onActivityDestroyed(activity: Activity) {}
+            },
+        )
     }
 
-    fun jsonEncodeTitleAndBody(){
+    fun jsonEncodeTitleAndBody() {
         dataMap[Constants.Companion.KEY_NOTIFICATION_BODY]?.let {
             dataMap[Constants.Companion.KEY_NOTIFICATION_BODY] = it.toJsonEncodedString()
         }

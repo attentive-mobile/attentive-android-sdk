@@ -1,8 +1,6 @@
 package com.attentive.androidsdk
 
 import android.app.Application
-import androidx.annotation.ColorRes
-
 
 interface AttentiveConfigInterface {
     val mode: AttentiveConfig.Mode
@@ -14,8 +12,12 @@ interface AttentiveConfigInterface {
     var logLevel: AttentiveLogLevel?
 
     fun skipFatigueOnCreatives(): Boolean
+
     fun identify(clientUserId: String)
+
     fun identify(userIdentifiers: UserIdentifiers)
+
     fun clearUser()
+
     fun changeDomain(domain: String)
 }

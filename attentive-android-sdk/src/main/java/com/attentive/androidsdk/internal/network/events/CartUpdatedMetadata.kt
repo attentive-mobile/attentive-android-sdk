@@ -7,5 +7,5 @@ data class CartUpdatedMetadata(
     val eventType: String = "CartUpdated",
     val cart: Cart? = null,
     val products: List<Product>? = null,
-    val currency: String? = null
+    val currency: String? = null,
 ) : EventMetadata()

@@ -1,6 +1,5 @@
 package com.attentive.androidsdk
 
-import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -15,7 +14,10 @@ object VendorSerializer : KSerializer<ExternalVendorId.Vendor> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("Vendor", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: ExternalVendorId.Vendor) {
+    override fun serialize(
+        encoder: Encoder,
+        value: ExternalVendorId.Vendor,
+    ) {
         encoder.encodeString(value.vendorId)
     }
 
@@ -38,6 +40,6 @@ open class ExternalVendorId {
         SHOPIFY("0"),
         KLAVIYO("1"),
         CLIENT_USER("2"),
-        CUSTOM_USER("6")
+        CUSTOM_USER("6"),
     }
 }

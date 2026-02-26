@@ -53,7 +53,6 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -111,7 +110,7 @@ fun AttentiveInbox(
     titleFontFamily: FontFamily? = null,
     bodyFontFamily: FontFamily? = null,
     timestampFontFamily: FontFamily? = null,
-    onMessageClick: ((Message) -> Unit)? = null
+    onMessageClick: ((Message) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
@@ -119,8 +118,8 @@ fun AttentiveInbox(
 
     // Scroll detection for infinite scrolling
     LaunchedEffect(listState) {
-        var lastTriggeredAt = 0L  // Track when we last triggered to prevent rapid re-triggers
-        var lastTriggeredIndex = -1  // Track last index that triggered to prevent auto-cascading
+        var lastTriggeredAt = 0L // Track when we last triggered to prevent rapid re-triggers
+        var lastTriggeredIndex = -1 // Track last index that triggered to prevent auto-cascading
 
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
@@ -129,28 +128,28 @@ fun AttentiveInbox(
 
             lastVisibleItem?.index to totalItems
         }
-        .collect { (lastVisibleIndex, totalItems) ->
-            val now = System.currentTimeMillis()
+            .collect { (lastVisibleIndex, totalItems) ->
+                val now = System.currentTimeMillis()
 
-            // Only trigger if:
-            // 1. Near end of list
-            // 2. User has scrolled forward (prevents auto-cascading on large viewports)
-            // 3. Not currently loading
-            // 4. Has more messages
-            // 5. At least 500ms since last trigger (debounce)
-            if (lastVisibleIndex != null &&
-                lastVisibleIndex >= totalItems - 5 &&
-                lastVisibleIndex > lastTriggeredIndex &&
-                !inboxState.isLoadingMore &&
-                inboxState.hasMoreMessages &&
-                (now - lastTriggeredAt) > 500
-            ) {
-                lastTriggeredIndex = lastVisibleIndex
-                lastTriggeredAt = now
-                Timber.d("Pagination trigger: index=$lastVisibleIndex, total=$totalItems")
-                AttentiveSdk.loadMoreInboxMessages()
+                // Only trigger if:
+                // 1. Near end of list
+                // 2. User has scrolled forward (prevents auto-cascading on large viewports)
+                // 3. Not currently loading
+                // 4. Has more messages
+                // 5. At least 500ms since last trigger (debounce)
+                if (lastVisibleIndex != null &&
+                    lastVisibleIndex >= totalItems - 5 &&
+                    lastVisibleIndex > lastTriggeredIndex &&
+                    !inboxState.isLoadingMore &&
+                    inboxState.hasMoreMessages &&
+                    (now - lastTriggeredAt) > 500
+                ) {
+                    lastTriggeredIndex = lastVisibleIndex
+                    lastTriggeredAt = now
+                    Timber.d("Pagination trigger: index=$lastVisibleIndex, total=$totalItems")
+                    AttentiveSdk.loadMoreInboxMessages()
+                }
             }
-        }
     }
 
     if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
@@ -159,7 +158,7 @@ fun AttentiveInbox(
             bodyTextColor = bodyTextColor,
             titleFontFamily = titleFontFamily,
             bodyFontFamily = bodyFontFamily,
-            modifier = modifier
+            modifier = modifier,
         )
     } else {
         MessageList(
@@ -175,19 +174,20 @@ fun AttentiveInbox(
             titleFontFamily = titleFontFamily,
             bodyFontFamily = bodyFontFamily,
             timestampFontFamily = timestampFontFamily,
-            onMessageClick = onMessageClick ?: { message: Message ->
-                if (!message.isRead) {
-                    AttentiveSdk.markRead(message.id)
-                }
+            onMessageClick =
+                onMessageClick ?: { message: Message ->
+                    if (!message.isRead) {
+                        AttentiveSdk.markRead(message.id)
+                    }
 
-                // Handle deep link if actionUrl is present
-                message.actionUrl?.let { url ->
+                    // Handle deep link if actionUrl is present
+                    message.actionUrl?.let { url ->
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
-                }
-                Unit
-            },
-            modifier = modifier
+                    }
+                    Unit
+                },
+            modifier = modifier,
         )
     }
 }
@@ -198,28 +198,29 @@ private fun EmptyInboxView(
     bodyTextColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "No Messages",
             fontSize = 24.sp,
             fontFamily = titleFontFamily ?: FontFamily.Default,
             fontWeight = FontWeight.Medium,
-            color = titleTextColor
+            color = titleTextColor,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "You don't have any messages yet",
             fontSize = 16.sp,
             fontFamily = bodyFontFamily ?: FontFamily.Default,
-            color = bodyTextColor
+            color = bodyTextColor,
         )
     }
 }
@@ -239,21 +240,22 @@ private fun MessageList(
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onMessageClick: (Message) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         state = listState,
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.White),
     ) {
         items(
             items = messages,
             key = { it.id },
-            contentType = { it.style }  // Optimize recycling based on message style
+            contentType = { it.style }, // Optimize recycling based on message style
         ) { message ->
             Column(
-                modifier = Modifier.animateItem()  // Smooth animation when items move
+                modifier = Modifier.animateItem(), // Smooth animation when items move
             ) {
                 MessageItem(
                     message = message,
@@ -267,7 +269,7 @@ private fun MessageList(
                     timestampFontFamily = timestampFontFamily,
                     onClick = { onMessageClick(message) },
                     onSwipeMarkUnread = { AttentiveSdk.markUnread(message.id) },
-                    onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) }
+                    onSwipeDelete = { AttentiveSdk.deleteMessage(message.id) },
                 )
                 HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
             }
@@ -277,14 +279,15 @@ private fun MessageList(
         if (isLoadingMore) {
             item(key = "loading_indicator") {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),
-                        strokeWidth = 3.dp
+                        strokeWidth = 3.dp,
                     )
                 }
             }
@@ -297,8 +300,8 @@ private fun MessageList(
  */
 private enum class SwipeDirection {
     None,
-    StartToEnd,  // Swipe right
-    EndToStart   // Swipe left
+    StartToEnd, // Swipe right
+    EndToStart, // Swipe left
 }
 
 /**
@@ -316,7 +319,7 @@ private data class SwipeActionConfig(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val iconDescription: String,
     val onAction: () -> Unit,
-    val animateOffScreen: Boolean = false
+    val animateOffScreen: Boolean = false,
 )
 
 /**
@@ -363,7 +366,7 @@ private fun SwipeToAction(
     swipeLeftAction: SwipeActionConfig?,
     swipeRightAction: SwipeActionConfig?,
     actionThresholdFraction: Float = 0.10f,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -375,121 +378,126 @@ private fun SwipeToAction(
     val itemWidth = remember { mutableFloatStateOf(0f) }
 
     // Derive swipe direction from current offset for UI updates
-    val swipeDirection = when {
-        offsetX.value > 0 -> SwipeDirection.StartToEnd
-        offsetX.value < 0 -> SwipeDirection.EndToStart
-        else -> SwipeDirection.None
-    }
+    val swipeDirection =
+        when {
+            offsetX.value > 0 -> SwipeDirection.StartToEnd
+            offsetX.value < 0 -> SwipeDirection.EndToStart
+            else -> SwipeDirection.None
+        }
 
     // How far user must swipe to trigger the action
     val actionThreshold = itemWidth.floatValue * actionThresholdFraction
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
-            .pointerInput(Unit) {
-                // How much movement before we decide horizontal vs vertical (15dp)
-                val directionDecisionThreshold = 15.dp.toPx()
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .onSizeChanged { itemWidth.floatValue = it.width.toFloat() }
+                .pointerInput(Unit) {
+                    // How much movement before we decide horizontal vs vertical (15dp)
+                    val directionDecisionThreshold = 15.dp.toPx()
 
-                awaitEachGesture {
-                    awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                    awaitEachGesture {
+                        awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
 
-                    var totalDragX = 0f
-                    var totalDragY = 0f
-                    var directionDecided = false
-                    var isHorizontalGesture = false
+                        var totalDragX = 0f
+                        var totalDragY = 0f
+                        var directionDecided = false
+                        var isHorizontalGesture = false
 
-                    while (true) {
-                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull() ?: break
+                        while (true) {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull() ?: break
 
-                        if (!change.pressed) {
-                            // Gesture ended
-                            if (isHorizontalGesture) {
-                                change.consume()
-                                scope.launch {
-                                    val currentOffset = offsetX.value
-                                    when {
-                                        // Swiped right past threshold
-                                        currentOffset > actionThreshold && swipeRightAction != null -> {
-                                            if (swipeRightAction.animateOffScreen) {
-                                                offsetX.animateTo(itemWidth.floatValue, tween(150))
+                            if (!change.pressed) {
+                                // Gesture ended
+                                if (isHorizontalGesture) {
+                                    change.consume()
+                                    scope.launch {
+                                        val currentOffset = offsetX.value
+                                        when {
+                                            // Swiped right past threshold
+                                            currentOffset > actionThreshold && swipeRightAction != null -> {
+                                                if (swipeRightAction.animateOffScreen) {
+                                                    offsetX.animateTo(itemWidth.floatValue, tween(150))
+                                                }
+                                                swipeRightAction.onAction()
+                                                if (!swipeRightAction.animateOffScreen) {
+                                                    offsetX.animateTo(0f, tween(200))
+                                                }
                                             }
-                                            swipeRightAction.onAction()
-                                            if (!swipeRightAction.animateOffScreen) {
+                                            // Swiped left past threshold
+                                            currentOffset < -actionThreshold && swipeLeftAction != null -> {
+                                                if (swipeLeftAction.animateOffScreen) {
+                                                    offsetX.animateTo(-itemWidth.floatValue, tween(150))
+                                                }
+                                                swipeLeftAction.onAction()
+                                                if (!swipeLeftAction.animateOffScreen) {
+                                                    offsetX.animateTo(0f, tween(200))
+                                                }
+                                            }
+                                            // Didn't swipe far enough
+                                            else -> {
                                                 offsetX.animateTo(0f, tween(200))
                                             }
-                                        }
-                                        // Swiped left past threshold
-                                        currentOffset < -actionThreshold && swipeLeftAction != null -> {
-                                            if (swipeLeftAction.animateOffScreen) {
-                                                offsetX.animateTo(-itemWidth.floatValue, tween(150))
-                                            }
-                                            swipeLeftAction.onAction()
-                                            if (!swipeLeftAction.animateOffScreen) {
-                                                offsetX.animateTo(0f, tween(200))
-                                            }
-                                        }
-                                        // Didn't swipe far enough
-                                        else -> {
-                                            offsetX.animateTo(0f, tween(200))
                                         }
                                     }
                                 }
+                                break
                             }
-                            break
-                        }
 
-                        val dragAmount = change.positionChange()
-                        totalDragX += dragAmount.x
-                        totalDragY += dragAmount.y
+                            val dragAmount = change.positionChange()
+                            totalDragX += dragAmount.x
+                            totalDragY += dragAmount.y
 
-                        if (!directionDecided) {
-                            val totalMovement = abs(totalDragX) + abs(totalDragY)
-                            if (totalMovement > directionDecisionThreshold) {
-                                directionDecided = true
-                                isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
+                            if (!directionDecided) {
+                                val totalMovement = abs(totalDragX) + abs(totalDragY)
+                                if (totalMovement > directionDecisionThreshold) {
+                                    directionDecided = true
+                                    isHorizontalGesture = abs(totalDragX) > abs(totalDragY)
+                                }
                             }
-                        }
 
-                        if (isHorizontalGesture) {
-                            change.consume()
-                            scope.launch {
-                                offsetX.snapTo(offsetX.value + dragAmount.x)
+                            if (isHorizontalGesture) {
+                                change.consume()
+                                scope.launch {
+                                    offsetX.snapTo(offsetX.value + dragAmount.x)
+                                }
                             }
                         }
                     }
-                }
-            }
+                },
     ) {
         // Background layer - revealed during swipe
         if (offsetX.value != 0f) {
-            val config = when (swipeDirection) {
-                SwipeDirection.StartToEnd -> swipeRightAction
-                SwipeDirection.EndToStart -> swipeLeftAction
-                SwipeDirection.None -> null
-            }
-
-            config?.let {
-                val alignment = when (swipeDirection) {
-                    SwipeDirection.StartToEnd -> Arrangement.Start
-                    else -> Arrangement.End
+            val config =
+                when (swipeDirection) {
+                    SwipeDirection.StartToEnd -> swipeRightAction
+                    SwipeDirection.EndToStart -> swipeLeftAction
+                    SwipeDirection.None -> null
                 }
 
+            config?.let {
+                val alignment =
+                    when (swipeDirection) {
+                        SwipeDirection.StartToEnd -> Arrangement.Start
+                        else -> Arrangement.End
+                    }
+
                 Row(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(it.backgroundColor)
-                        .padding(horizontal = 20.dp),
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(it.backgroundColor)
+                            .padding(horizontal = 20.dp),
                     horizontalArrangement = alignment,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = it.icon,
                         contentDescription = it.iconDescription,
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
@@ -497,7 +505,7 @@ private fun SwipeToAction(
 
         // Foreground layer - slides during swipe
         Box(
-            modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
+            modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) },
         ) {
             content()
         }
@@ -517,47 +525,51 @@ private fun MessageItem(
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
     onSwipeMarkUnread: () -> Unit,
-    onSwipeDelete: () -> Unit
+    onSwipeDelete: () -> Unit,
 ) {
     SwipeToAction(
-        swipeLeftAction = SwipeActionConfig(
-            backgroundColor = swipeBackgroundColor,
-            icon = Icons.Filled.MailOutline,
-            iconDescription = "Mark as unread",
-            onAction = onSwipeMarkUnread,
-            animateOffScreen = false
-        ),
-        swipeRightAction = SwipeActionConfig(
-            backgroundColor = Color.Red,
-            icon = Icons.Filled.Delete,
-            iconDescription = "Delete",
-            onAction = onSwipeDelete,
-            animateOffScreen = true
-        )
+        swipeLeftAction =
+            SwipeActionConfig(
+                backgroundColor = swipeBackgroundColor,
+                icon = Icons.Filled.MailOutline,
+                iconDescription = "Mark as unread",
+                onAction = onSwipeMarkUnread,
+                animateOffScreen = false,
+            ),
+        swipeRightAction =
+            SwipeActionConfig(
+                backgroundColor = Color.Red,
+                icon = Icons.Filled.Delete,
+                iconDescription = "Delete",
+                onAction = onSwipeDelete,
+                animateOffScreen = true,
+            ),
     ) {
         when (message.style) {
-            Style.Small -> SmallMessageContent(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = onClick
-            )
-            Style.Large -> LargeMessageContent(
-                message = message,
-                unreadIndicatorColor = unreadIndicatorColor,
-                titleTextColor = titleTextColor,
-                bodyTextColor = bodyTextColor,
-                timestampTextColor = timestampTextColor,
-                titleFontFamily = titleFontFamily,
-                bodyFontFamily = bodyFontFamily,
-                timestampFontFamily = timestampFontFamily,
-                onClick = onClick
-            )
+            Style.Small ->
+                SmallMessageContent(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = onClick,
+                )
+            Style.Large ->
+                LargeMessageContent(
+                    message = message,
+                    unreadIndicatorColor = unreadIndicatorColor,
+                    titleTextColor = titleTextColor,
+                    bodyTextColor = bodyTextColor,
+                    timestampTextColor = timestampTextColor,
+                    titleFontFamily = titleFontFamily,
+                    bodyFontFamily = bodyFontFamily,
+                    timestampFontFamily = timestampFontFamily,
+                    onClick = onClick,
+                )
         }
     }
 }
@@ -572,25 +584,27 @@ private fun SmallMessageContent(
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.Top
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(backgroundColor)
+                .clickable(onClick = onClick)
+                .padding(16.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         // Unread indicator
         if (!message.isRead) {
             Spacer(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(unreadIndicatorColor, shape = CircleShape)
-                    .align(Alignment.Top)
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .background(unreadIndicatorColor, shape = CircleShape)
+                        .align(Alignment.Top),
             )
             Spacer(modifier = Modifier.width(12.dp))
         } else {
@@ -605,7 +619,7 @@ private fun SmallMessageContent(
                 fontWeight = if (message.isRead) FontWeight.Normal else FontWeight.Bold,
                 color = titleTextColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -615,26 +629,28 @@ private fun SmallMessageContent(
                 fontWeight = FontWeight.Normal,
                 color = bodyTextColor,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
         // Display image if available
         message.imageUrl?.let { imageUrl ->
             Spacer(modifier = Modifier.width(12.dp))
-            val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
-                .data(imageUrl)
-                .crossfade(200)
-                .build()
+            val imageRequest =
+                ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)
+                    .build()
 
             AsyncImage(
                 model = imageRequest,
                 contentDescription = "Message image",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.LightGray)
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
             )
         }
 
@@ -643,7 +659,7 @@ private fun SmallMessageContent(
             text = formatTimestamp(message.timestamp),
             fontSize = 12.sp,
             fontFamily = timestampFontFamily ?: FontFamily.Default,
-            color = timestampTextColor
+            color = timestampTextColor,
         )
     }
 }
@@ -658,54 +674,59 @@ private fun LargeMessageContent(
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(0.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Unread indicator at top of card
             if (!message.isRead) {
                 Spacer(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .size(8.dp)
-                        .background(unreadIndicatorColor, shape = CircleShape)
+                    modifier =
+                        Modifier
+                            .padding(12.dp)
+                            .size(8.dp)
+                            .background(unreadIndicatorColor, shape = CircleShape),
                 )
             }
 
             // Image takes up 80% of card height
             message.imageUrl?.let { imageUrl ->
-                val imageRequest = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
-                    .crossfade(200)
-                    .build()
+                val imageRequest =
+                    ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(imageUrl)
+                        .crossfade(200)
+                        .build()
 
                 AsyncImage(
                     model = imageRequest,
                     contentDescription = "Message image",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray),
                 )
             }
 
             // Title and body below image
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
             ) {
                 Text(
                     text = message.title,
@@ -714,7 +735,7 @@ private fun LargeMessageContent(
                     fontWeight = if (message.isRead) FontWeight.Medium else FontWeight.Bold,
                     color = titleTextColor,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -724,14 +745,14 @@ private fun LargeMessageContent(
                     fontWeight = FontWeight.Normal,
                     color = bodyTextColor,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatTimestamp(message.timestamp),
                     fontSize = 12.sp,
                     fontFamily = timestampFontFamily ?: FontFamily.Default,
-                    color = timestampTextColor
+                    color = timestampTextColor,
                 )
             }
         }

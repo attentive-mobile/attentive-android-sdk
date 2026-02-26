@@ -1,24 +1,20 @@
 package com.attentive.androidsdk
 
-import com.attentive.androidsdk.AttentiveApi
 import com.attentive.androidsdk.ClassFactory.buildAttentiveApi
 import com.attentive.androidsdk.ClassFactory.buildOkHttpClient
 import com.attentive.androidsdk.ClassFactory.buildPersistentStorage
 import com.attentive.androidsdk.ClassFactory.buildVisitorService
-import com.attentive.androidsdk.PersistentStorage
-import com.attentive.androidsdk.VisitorService
 import okhttp3.OkHttpClient
-import org.mockito.ArgumentMatchers
 import org.mockito.MockedStatic
-import org.mockito.MockedStatic.Verification
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 
 class FactoryMocks private constructor(
     private val classFactoryMockedStatic: MockedStatic<ClassFactory>,
     val persistentStorage: PersistentStorage,
-    val visitorService: VisitorService, val okHttpClient: OkHttpClient,
-    val attentiveApi: AttentiveApi
+    val visitorService: VisitorService,
+    val okHttpClient: OkHttpClient,
+    val attentiveApi: AttentiveApi,
 ) : AutoCloseable {
     override fun close() {
         classFactoryMockedStatic.close()
@@ -26,23 +22,25 @@ class FactoryMocks private constructor(
 
     companion object {
         fun mockFactoryObjects(): FactoryMocks {
-            val classFactoryMockedStatic = Mockito.mockStatic(
-                ClassFactory::class.java
-            )
+            val classFactoryMockedStatic =
+                Mockito.mockStatic(
+                    ClassFactory::class.java,
+                )
 
-            val persistentStorage = Mockito.mock(
-                PersistentStorage::class.java
-            )
+            val persistentStorage =
+                Mockito.mock(
+                    PersistentStorage::class.java,
+                )
             classFactoryMockedStatic.`when`<Any> {
                 buildPersistentStorage(
-                    any()
+                    any(),
                 )
             }.thenReturn(persistentStorage)
 
             val visitorService = Mockito.mock(VisitorService::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildVisitorService(
-                    any()
+                    any(),
                 )
             }.thenReturn(visitorService)
 
@@ -50,14 +48,15 @@ class FactoryMocks private constructor(
             classFactoryMockedStatic.`when`<Any> {
                 buildOkHttpClient(
                     any(),
-                    any()
+                    any(),
                 )
             }.thenReturn(okHttpClient)
 
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
-                    any(), any()
+                    any(),
+                    any(),
                 )
             }.thenReturn(attentiveApi)
 
@@ -66,7 +65,7 @@ class FactoryMocks private constructor(
                 persistentStorage,
                 visitorService,
                 okHttpClient,
-                attentiveApi
+                attentiveApi,
             )
         }
     }

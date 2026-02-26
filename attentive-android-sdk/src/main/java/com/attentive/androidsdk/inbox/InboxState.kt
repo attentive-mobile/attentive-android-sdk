@@ -11,5 +11,5 @@ data class InboxState(
     val unreadCount: Int = messages.count { !it.isRead },
     val isLoadingMore: Boolean = false,
     val hasMoreMessages: Boolean = true,
-    val currentOffset: Int = 0
+    val currentOffset: Int = 0,
 )

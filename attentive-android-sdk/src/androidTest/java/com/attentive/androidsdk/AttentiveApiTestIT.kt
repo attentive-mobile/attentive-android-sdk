@@ -19,7 +19,6 @@ import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -32,7 +31,6 @@ import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import java.math.BigDecimal
-import java.util.Arrays
 import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -42,60 +40,63 @@ class AttentiveApiTestIT {
     lateinit var okHttpClient: OkHttpClient
     lateinit var attentiveApi: AttentiveApi
     lateinit var attentiveApiCallback: AttentiveApiCallback
-    val metadataModule = SerializersModule {
-        polymorphic(Metadata::class) {
-            subclass(ProductMetadata::class)
-            subclass(OrderConfirmedMetadataDto::class)
-            subclass(CustomEventMetadataDto::class)
+    val metadataModule =
+        SerializersModule {
+            polymorphic(Metadata::class) {
+                subclass(ProductMetadata::class)
+                subclass(OrderConfirmedMetadataDto::class)
+                subclass(CustomEventMetadataDto::class)
+            }
+            polymorphic(ProductMetadata::class) { // Register ProductMetadata subclasses too
+                subclass(AddToCartMetadataDto::class)
+                subclass(ProductViewMetadataDto::class)
+                subclass(PurchaseMetadataDto::class)
+            }
         }
-        polymorphic(ProductMetadata::class) { // Register ProductMetadata subclasses too
-            subclass(AddToCartMetadataDto::class)
-            subclass(ProductViewMetadataDto::class)
-            subclass(PurchaseMetadataDto::class)
-        }
-    }
     lateinit var json: Json
 
-    private val requestArgumentCaptor: ArgumentCaptor<Request> = ArgumentCaptor.forClass(
-        Request::class.java
-    )
-
+    private val requestArgumentCaptor: ArgumentCaptor<Request> =
+        ArgumentCaptor.forClass(
+            Request::class.java,
+        )
 
     @Before
     fun setup() {
         countDownLatch = CountDownLatch(1)
         okHttpClient = Mockito.spy(OkHttpClient())
         attentiveApi = AttentiveApi(okHttpClient, "games")
-        json = Json {
-            serializersModule = metadataModule
-            classDiscriminator = "className" // Helps identify the subclass
-            ignoreUnknownKeys = true
-        }
-        attentiveApiCallback = object : AttentiveApiCallback {
-            override fun onFailure(message: String?) {}
-
-            override fun onSuccess() {
-                countDownLatch!!.countDown()
+        json =
+            Json {
+                serializersModule = metadataModule
+                classDiscriminator = "className" // Helps identify the subclass
+                ignoreUnknownKeys = true
             }
-        }
+        attentiveApiCallback =
+            object : AttentiveApiCallback {
+                override fun onFailure(message: String?) {}
+
+                override fun onSuccess() {
+                    countDownLatch!!.countDown()
+                }
+            }
     }
-
-
 
     @Test
     @Throws(InterruptedException::class, SerializationException::class)
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedWithAllParams_sendsCorrectUserIdentifierCollectedEvent() {
         // Act
         attentiveApi.sendUserIdentifiersCollectedEvent(
-            DOMAIN, ALL_USER_IDENTIFIERS,
-            attentiveApiCallback
+            DOMAIN,
+            ALL_USER_IDENTIFIERS,
+            attentiveApiCallback,
         )
         countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
-        val uicRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=idn") }.findFirst()
+        val uicRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=idn") }.findFirst()
         Assert.assertTrue(uicRequest.isPresent)
         val url = uicRequest.get().url
 
@@ -105,7 +106,7 @@ class AttentiveApiTestIT {
 
         Assert.assertEquals(
             "[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"},{\"vendor\":\"6\",\"id\":\"value1\",\"name\":\"key1\"},{\"vendor\":\"6\",\"id\":\"value2\",\"name\":\"key2\"}]",
-            url.queryParameter("evs")
+            url.queryParameter("evs"),
         )
     }
 
@@ -122,10 +123,10 @@ class AttentiveApiTestIT {
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(3)).newCall(capture(requestArgumentCaptor))
 
-
         // Verify Purchase event
-        val purchaseRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
+        val purchaseRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
         Assert.assertTrue(purchaseRequest.isPresent)
         val purchaseUrl = purchaseRequest.get().url
 
@@ -146,10 +147,10 @@ class AttentiveApiTestIT {
         Assert.assertEquals(purchaseEvent.cart!!.cartCoupon, m.cartCoupon)
         Assert.assertEquals(purchaseEvent.order.orderId, m.orderId)
 
-
         // Verify Order Confirmed event
-        val orderConfirmedRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=oc") }.findFirst()
+        val orderConfirmedRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=oc") }.findFirst()
         Assert.assertTrue(orderConfirmedRequest.isPresent)
         val orderConfirmedUrl = orderConfirmedRequest.get().url
 
@@ -163,7 +164,7 @@ class AttentiveApiTestIT {
         Assert.assertEquals(expectedItem.price.price.toString(), ocMetadata["cartTotal"])
         Assert.assertEquals(
             expectedItem.price.currency.currencyCode,
-            ocMetadata["currency"]
+            ocMetadata["currency"],
         )
 
         val products: List<ProductDto> = json.decodeFromString(ocMetadata["products"]!!)
@@ -188,14 +189,16 @@ class AttentiveApiTestIT {
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
 
-        val addToCartRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=d") }.findFirst()
+        val addToCartRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=d") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         val url = addToCartRequest.get().url
 
-        val m = json.decodeFromString<ProductViewMetadataDto>(
-            url.queryParameter("m")!!
-        )
+        val m =
+            json.decodeFromString<ProductViewMetadataDto>(
+                url.queryParameter("m")!!,
+            )
         verifyCommonEventFields(url, "d", m)
 
         Assert.assertEquals("USD", m.currency)
@@ -211,7 +214,6 @@ class AttentiveApiTestIT {
     @Test
     @Throws(SerializationException::class, InterruptedException::class)
     fun sendEvent_addToCartEventWithAllParams_sendsCorrectAddToCartEvent() {
-
         // Arrange
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
@@ -221,14 +223,16 @@ class AttentiveApiTestIT {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
-        val addToCartRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
+        val addToCartRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         val url = addToCartRequest.get().url
 
-        val m = json.decodeFromString<AddToCartMetadataDto>(
-            url.queryParameter("m")!!
-        )
+        val m =
+            json.decodeFromString<AddToCartMetadataDto>(
+                url.queryParameter("m")!!,
+            )
         verifyCommonEventFields(url, "c", m)
 
         Assert.assertEquals("USD", m.currency)
@@ -254,24 +258,28 @@ class AttentiveApiTestIT {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
-        val customEventRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
+        val customEventRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
         Assert.assertTrue(customEventRequest.isPresent)
         val customEventUrl = customEventRequest.get().url
 
-        val metadata = json.decodeFromString<Metadata>(
-            customEventUrl.queryParameter("m")!!
-        )
+        val metadata =
+            json.decodeFromString<Metadata>(
+                customEventUrl.queryParameter("m")!!,
+            )
         verifyCommonEventFields(customEventUrl, "ce", metadata)
 
-        val customEventMetadata = json.decodeFromString<Map<String, String>>(
-            customEventUrl.queryParameter("m")!!
-        )
+        val customEventMetadata =
+            json.decodeFromString<Map<String, String>>(
+                customEventUrl.queryParameter("m")!!,
+            )
 
         Assert.assertEquals(customEvent.type, customEventMetadata["type"])
-        val properties = json.decodeFromString<Map<String, String>>(
-            customEventMetadata["properties"] as String
-        )
+        val properties =
+            json.decodeFromString<Map<String, String>>(
+                customEventMetadata["properties"] as String,
+            )
         Assert.assertEquals(customEvent.properties, properties)
     }
 
@@ -283,7 +291,11 @@ class AttentiveApiTestIT {
         private const val EVENT_SEND_TIMEOUT_MS = 5000
         private val ALL_USER_IDENTIFIERS = buildAllUserIdentifiers()
 
-        private fun verifyCommonEventFields(url: HttpUrl, eventType: String, m: Metadata) {
+        private fun verifyCommonEventFields(
+            url: HttpUrl,
+            eventType: String,
+            m: Metadata,
+        ) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
             Assert.assertEquals(AppInfo.attentiveSDKVersion, url.queryParameter("v"))
             Assert.assertEquals("0", url.queryParameter("lt"))
@@ -310,7 +322,7 @@ class AttentiveApiTestIT {
         private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
             return PurchaseEvent.Builder(
                 listOf(buildItemWithAllFields()),
-                Order.Builder().orderId("5555").build()
+                Order.Builder().orderId("5555").build(),
             )
                 .cart(Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build())
                 .build()
@@ -328,7 +340,7 @@ class AttentiveApiTestIT {
             return Item.Builder(
                 "11",
                 "22",
-                Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
+                Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build(),
             )
                 .category("categoryValue")
                 .name("nameValue")
@@ -339,7 +351,7 @@ class AttentiveApiTestIT {
         private fun buildCustomEventWithAllFields(): CustomEvent {
             return CustomEvent.Builder(
                 "typeValue",
-                mapOf("propertyKey1" to "propertyValue1")
+                mapOf("propertyKey1" to "propertyValue1"),
             ).build()
         }
     }

@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Order(
-    val orderId: String
+    val orderId: String,
 ) : Event() {
     init {
         ParameterValidation.verifyNotEmpty(orderId, "orderId")
@@ -14,6 +14,7 @@ data class Order(
     @Serializable
     class Builder {
         private lateinit var orderId: String
+
         fun orderId(orderId: String): Builder {
             this.orderId = orderId
             return this

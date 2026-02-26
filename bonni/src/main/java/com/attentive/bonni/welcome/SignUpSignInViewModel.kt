@@ -15,26 +15,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class SignUpSignInViewModel(application: Application): AndroidViewModel(BonniApp.getInstance()) {
-
-
+class SignUpSignInViewModel(application: Application) : AndroidViewModel(BonniApp.getInstance()) {
     private val _signedIn = MutableStateFlow(false)
     val signedIn: StateFlow<Boolean> = _signedIn.asStateFlow()
 
-    fun onSignUp(email: String, password: String){
+    fun onSignUp(
+        email: String,
+        password: String,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             AppDatabase.getInstance().accountDao().insert(Account(email, password, signedIn = true))
-           identifyUser(email)
+            identifyUser(email)
             _signedIn.value = true
         }
     }
 
-    fun onSignIn(email: String, password: String){
+    fun onSignIn(
+        email: String,
+        password: String,
+    ) {
         var accountFound = false
-        viewModelScope.launch(Dispatchers.IO){
-            AppDatabase.getInstance().accountDao().getAll().collect{
+        viewModelScope.launch(Dispatchers.IO) {
+            AppDatabase.getInstance().accountDao().getAll().collect {
                 it.forEach { account ->
-                    if(account.email == email && account.password == password){
+                    if (account.email == email && account.password == password) {
                         accountFound = true
                         identifyUser(email)
                         _signedIn.value = true
@@ -43,12 +47,12 @@ class SignUpSignInViewModel(application: Application): AndroidViewModel(BonniApp
             }
         }
 
-        if(!accountFound){
-            Toast.makeText(getApplication(), "Account not found", Toast.LENGTH_SHORT).show()   // Show error message
+        if (!accountFound) {
+            Toast.makeText(getApplication(), "Account not found", Toast.LENGTH_SHORT).show() // Show error message
         }
     }
 
-    private fun identifyUser(email: String){
+    private fun identifyUser(email: String) {
         val identifiers = UserIdentifiers.Builder().withEmail(email).build()
         AttentiveEventTracker.instance.config?.identify(identifiers)
     }
@@ -66,12 +70,13 @@ class SignUpSignInViewModel(application: Application): AndroidViewModel(BonniApp
             AttentiveEventTracker.instance.config.identify(builder.build())
             _signedIn.value = true
 
-            val message = when {
-                email != null && phone != null -> "Restored user with email: $email and phone: $phone"
-                email != null -> "Restored user with email: $email"
-                phone != null -> "Restored user with phone: $phone"
-                else -> ""
-            }
+            val message =
+                when {
+                    email != null && phone != null -> "Restored user with email: $email and phone: $phone"
+                    email != null -> "Restored user with email: $email"
+                    phone != null -> "Restored user with phone: $phone"
+                    else -> ""
+                }
             Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(getApplication(), "No previous user found", Toast.LENGTH_SHORT).show()

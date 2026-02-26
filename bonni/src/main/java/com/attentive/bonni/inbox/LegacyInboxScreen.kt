@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.inbox.AttentiveInboxView
@@ -20,13 +19,11 @@ import com.attentive.bonni.ui.theme.BonniPink
  * This shows how the legacy View implementation works in a Compose context.
  */
 @Composable
-fun LegacyInboxScreen(
-    navHostController: NavHostController
-) {
+fun LegacyInboxScreen(navHostController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {
         SimpleToolbar(
             title = "Inbox (Legacy View)",
-            navController = navHostController
+            navController = navHostController,
         )
 
         // Use AndroidView to bridge from Compose to the legacy View system
@@ -47,7 +44,7 @@ fun LegacyInboxScreen(
                     setTimestampFontFamily(R.font.degulardisplay_regular)
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

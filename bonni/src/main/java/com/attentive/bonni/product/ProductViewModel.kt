@@ -2,7 +2,6 @@ package com.attentive.bonni.product
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Item
@@ -34,7 +33,7 @@ class ProductViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                database.productItemDao().getAll().collect{
+                database.productItemDao().getAll().collect {
                     _productItemsFlow.value = it
                 }
             }
@@ -76,7 +75,7 @@ class ProductViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         val event = ProductViewEvent.Builder().items(viewedItems).build()
-       // AttentiveEventTracker.instance.recordEvent(event)
+        // AttentiveEventTracker.instance.recordEvent(event)
 
         CoroutineScope(Dispatchers.IO).launch {
             AttentiveSdk.recordEvent(event)
@@ -86,7 +85,5 @@ class ProductViewModel : ViewModel() {
                 AttentiveSdk.recordEvent(cartEvent)
             }
         }
-
-
     }
 }

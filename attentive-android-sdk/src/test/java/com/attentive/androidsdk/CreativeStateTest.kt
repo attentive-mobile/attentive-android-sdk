@@ -31,11 +31,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(MockitoJUnitRunner.Silent::class)
 class CreativeStateTest {
-
     private lateinit var parentView: View
     private lateinit var webView: WebView
     private lateinit var creative: Creative
@@ -53,15 +51,15 @@ class CreativeStateTest {
         MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher) // Set the test dispatcher
 
-        val webSettings = mock<WebSettings>{}
+        val webSettings = mock<WebSettings> {}
 
-        webView = mock<WebView> {
-            on { settings } doReturn webSettings
-        }
+        webView =
+            mock<WebView> {
+                on { settings } doReturn webSettings
+            }
 
-        parentView = mock<ViewGroup>{}
+        parentView = mock<ViewGroup> {}
         whenever(parentView.viewTreeObserver).thenReturn(mock())
-
 
         whenever(handler.post(any())).thenAnswer { invocation ->
             val msg = invocation.getArgument<Runnable>(0)
@@ -72,16 +70,19 @@ class CreativeStateTest {
         val realCreative = createRealCreative(parentView, webView)
         creative = spy(realCreative)
 
-
         doReturn(webView).whenever(creative).createWebView(any())
     }
 
-    fun createRealCreative(parentView: View, webViewParent: ViewParent): Creative{
-        val realCreative = Creative(mock<AttentiveConfig>{}, parentView, mock<Activity>{}, webView, handler)
+    fun createRealCreative(
+        parentView: View,
+        webViewParent: ViewParent,
+    ): Creative {
+        val realCreative = Creative(mock<AttentiveConfig> {}, parentView, mock<Activity> {}, webView, handler)
         realCreative.webView = webView
-        realCreative.creativeUrlFormatter = mock<CreativeUrlFormatter>{
-            doReturn("https://example.com").whenever(it).buildCompanyCreativeUrl(any(), anyOrNull())
-        }
+        realCreative.creativeUrlFormatter =
+            mock<CreativeUrlFormatter> {
+                doReturn("https://example.com").whenever(it).buildCompanyCreativeUrl(any(), anyOrNull())
+            }
         return realCreative
     }
 
@@ -137,10 +138,10 @@ class CreativeStateTest {
     }
 
     @Test
-    fun testNewCreativeCanBeOpenedAfterPreviousCreativeDestroyed(){
+    fun testNewCreativeCanBeOpenedAfterPreviousCreativeDestroyed() {
         creative.openCreative(height = 100, width = 200)
         creative.destroy()
-        creative = spy(createRealCreative(parentView, webView ))
+        creative = spy(createRealCreative(parentView, webView))
         creative.openCreative(height = 100, width = 200)
         testDispatcher.scheduler.runCurrent() // Advance the dispatcher to execute pending coroutines
         assertTrue(creative.isCreativeOpen.get())

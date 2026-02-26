@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class PageLeaveMetadata(
     val eventType: String = "PageLeave",
     val timeOnPage: Float? = null,
-    val scrollDepth: Int? = null
+    val scrollDepth: Int? = null,
 ) : EventMetadata()
