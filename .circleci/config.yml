@@ -15,6 +15,9 @@ jobs:
       - run:
           name: Run Android Lint
           command: ./gradlew lintDebug
+      - run:
+          name: Run ktlint
+          command: ./gradlew ktlintCheck
       - save_cache:
           paths:
             - ~/.gradle
