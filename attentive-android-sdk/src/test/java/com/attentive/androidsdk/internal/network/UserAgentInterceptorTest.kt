@@ -24,11 +24,12 @@ class UserAgentInterceptorTest {
 
     @Before
     fun setup() {
-        userAgentInterceptor = spy(
-            UserAgentInterceptor(
-                mock<Context>()
+        userAgentInterceptor =
+            spy(
+                UserAgentInterceptor(
+                    mock<Context>(),
+                ),
             )
-        )
     }
 
     @Test
@@ -64,7 +65,7 @@ class UserAgentInterceptorTest {
             val userAgent = userAgentInterceptor!!.userAgent
             Assert.assertEquals(
                 "appName-Value/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + ATTENTIVE_SDK_NAME + "/" + ATTENTIVE_SDK_VERSION,
-                userAgent
+                userAgent,
             )
         }
     }
@@ -85,7 +86,7 @@ class UserAgentInterceptorTest {
             // é (U+00E9) in UTF-8 is 0xC3 0xA9, so "Béis-App" becomes "B%C3%A9is-App"
             Assert.assertEquals(
                 "B%C3%A9is-App/" + APP_VERSION + " (" + APP_PACKAGE_NAME + "; Android " + ANDROID_VERSION + "; Android API Level " + ANDROID_LEVEL + ") " + ATTENTIVE_SDK_NAME + "/" + ATTENTIVE_SDK_VERSION,
-                userAgent
+                userAgent,
             )
         }
     }

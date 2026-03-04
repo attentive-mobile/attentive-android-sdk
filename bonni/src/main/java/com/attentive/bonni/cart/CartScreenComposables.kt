@@ -66,16 +66,18 @@ fun CartScreen(navController: NavController) {
 @Composable
 fun CartScreenContent(
     navController: NavController,
-    viewModel: CartScreenViewModel = ViewModelProvider(
-        LocalActivity.current as ComponentActivity
-    )[CartScreenViewModel::class.java]
+    viewModel: CartScreenViewModel =
+        ViewModelProvider(
+            LocalActivity.current as ComponentActivity,
+        )[CartScreenViewModel::class.java],
 ) {
     val cartItems by viewModel.exampleCartItems.collectAsState()
     Box(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
         Column(
-            modifier = Modifier
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             SimpleToolbar(title = "Cart", {}, navController)
             LazyColumn {
@@ -99,21 +101,22 @@ fun CartScreenContent(
 fun CheckoutButton(navController: NavController) {
     Button(
         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-        onClick ={
+        onClick = {
             navController.navigate(Routes.ShippingScreen.name)
         },
         shape = RectangleShape,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)
-            .padding(start = 16.dp, end = 16.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .padding(start = 16.dp, end = 16.dp),
     ) {
         Text(
             "CHECKOUT",
             color = White,
             fontSize = 16.sp,
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
         )
     }
 }
@@ -123,38 +126,51 @@ fun Total(viewModel: CartScreenViewModel) {
     var total = 0.0f
     viewModel.exampleCartItems.collectAsState().value.let {
         if (it.isNotEmpty()) {
-            total = it.sumOf { item -> item.product.item.price.price.toDouble() * item.quantity }
-                .toFloat()
+            total =
+                it.sumOf { item -> item.product.item.price.price.toDouble() * item.quantity }
+                    .toFloat()
         }
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
     ) {
-        Text("Total", modifier = Modifier.weight(1f), fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.degulardisplay_regular)))
+        Text(
+            "Total",
+            modifier = Modifier.weight(1f),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        )
         Text("$$total", fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily(Font(R.font.degulardisplay_regular)))
     }
 }
 
-
 @Composable
-fun ItemInCart(item: ExampleCartItem, removeCartItem: () -> Unit) {
+fun ItemInCart(
+    item: ExampleCartItem,
+    removeCartItem: () -> Unit,
+) {
     Column {
         Row(
-            modifier = Modifier
-                .height(140.dp)
-                .padding(16.dp)
-                .background(White), verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .height(140.dp)
+                    .padding(16.dp)
+                    .background(White),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
                 ImageBitmap.imageResource(item.product.imageId),
                 contentDescription = "T shirt",
-                modifier = Modifier
-                    .height(110.dp)
-                    .width(110.dp),
-                contentScale = ContentScale.Crop
+                modifier =
+                    Modifier
+                        .height(110.dp)
+                        .width(110.dp),
+                contentScale = ContentScale.Crop,
             )
             Column(verticalArrangement = Arrangement.Top, modifier = Modifier.fillMaxHeight()) {
                 ProductTitle(item.product.item.name!!)
@@ -163,40 +179,42 @@ fun ItemInCart(item: ExampleCartItem, removeCartItem: () -> Unit) {
                     fontSize = 12.sp,
                     fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                     textAlign = TextAlign.Start,
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth(),
                 )
                 Spacer(Modifier.weight(1.0f))
                 Row(Modifier.padding(start = 16.dp, end = 16.dp)) {
                     Text(
                         text = "${item.quantity}",
                         fontSize = 16.sp,
-                        fontFamily = FontFamily(Font(R.font.degulardisplay_regular))
+                        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                     )
                     Box(
-                        modifier = Modifier
-                            .weight(1.0f)
-                            .padding(4.dp)
-                            .clickable { removeCartItem() }
+                        modifier =
+                            Modifier
+                                .weight(1.0f)
+                                .padding(4.dp)
+                                .clickable { removeCartItem() },
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Delete",
-                            modifier = Modifier
-                                .size(12.dp)
-                                .align(Alignment.CenterStart)
+                            modifier =
+                                Modifier
+                                    .size(12.dp)
+                                    .align(Alignment.CenterStart),
                         )
                     }
                     Text(
                         text = "$12",
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         fontSize = 17.sp,
-                        fontFamily = FontFamily(Font(R.font.degulardisplay_regular))
+                        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
                     )
                 }
             }
-
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     }
@@ -205,17 +223,18 @@ fun ItemInCart(item: ExampleCartItem, removeCartItem: () -> Unit) {
 @Preview
 @Composable
 fun CartItemPreview() {
-    val item = ExampleCartItem(
-        "1",
-        ExampleProduct(
+    val item =
+        ExampleCartItem(
             "1",
-            Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
-                .name("Test Product")
-                .build(),
-            R.drawable.stick1
-        ),
-        2
-    )
+            ExampleProduct(
+                "1",
+                Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
+                    .name("Test Product")
+                    .build(),
+                R.drawable.stick1,
+            ),
+            2,
+        )
     ItemInCart(item) {}
 }
 
@@ -223,41 +242,42 @@ fun CartItemPreview() {
 @Composable
 fun CartScreenContentPreview() {
     // Fake NavController for preview
-    val navController =  NavController(LocalContext.current)
+    val navController = NavController(LocalContext.current)
 
     // Provide a fake ViewModel with sample data
-    val fakeViewModel = object : CartScreenViewModel() {
-        override val exampleCartItems = kotlinx.coroutines.flow.MutableStateFlow(
-            listOf(
-                ExampleCartItem(
-                    "1",
-                    ExampleProduct(
-                        "1",
-                        Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
-                            .name("Test Product")
-                            .build(),
-                        R.drawable.stick1
+    val fakeViewModel =
+        object : CartScreenViewModel() {
+            override val exampleCartItems =
+                kotlinx.coroutines.flow.MutableStateFlow(
+                    listOf(
+                        ExampleCartItem(
+                            "1",
+                            ExampleProduct(
+                                "1",
+                                Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
+                                    .name("Test Product")
+                                    .build(),
+                                R.drawable.stick1,
+                            ),
+                            2,
+                        ),
+                        ExampleCartItem(
+                            "2",
+                            ExampleProduct(
+                                "2",
+                                Item.Builder("productId2", "variantId2", Price(BigDecimal(15.0), Currency.getInstance(Locale.getDefault())))
+                                    .name("Another Product")
+                                    .build(),
+                                R.drawable.stick1,
+                            ),
+                            1,
+                        ),
                     ),
-                    2
-                ),
-                ExampleCartItem(
-                    "2",
-                    ExampleProduct(
-                        "2",
-                        Item.Builder("productId2", "variantId2", Price(BigDecimal(15.0), Currency.getInstance(Locale.getDefault())))
-                            .name("Another Product")
-                            .build(),
-                        R.drawable.stick1
-                    ),
-                    1
                 )
-            )
-        )
-    }
+        }
 
     CartScreenContent(
         navController = navController,
-        viewModel = fakeViewModel
+        viewModel = fakeViewModel,
     )
 }
-

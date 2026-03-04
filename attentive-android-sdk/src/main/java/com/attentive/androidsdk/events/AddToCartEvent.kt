@@ -1,13 +1,12 @@
 package com.attentive.androidsdk.events
 
 import com.attentive.androidsdk.ParameterValidation
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AddToCartEvent(
     val items: List<Item>,
-    val deeplink: String? = null
+    val deeplink: String? = null,
 ) : Event() {
     init {
         ParameterValidation.verifyNotEmpty(items, "items")
@@ -16,7 +15,7 @@ data class AddToCartEvent(
     companion object {
         @Deprecated(
             "As of release 1.0.0-beta01, replaced by standard builder methods",
-            ReplaceWith("AddToCartEvent.Builder().items(items).build()")
+            ReplaceWith("AddToCartEvent.Builder().items(items).build()"),
         )
         fun create(items: List<Item>): AddToCartEvent {
             ParameterValidation.verifyNotEmpty(items, "items")

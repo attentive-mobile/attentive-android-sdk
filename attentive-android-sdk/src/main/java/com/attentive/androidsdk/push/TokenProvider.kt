@@ -1,17 +1,10 @@
 package com.attentive.androidsdk.push
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.ContextCompat
-import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.AttentiveEventTracker
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class TokenProvider {
     internal var token: String? = null
@@ -31,13 +24,14 @@ class TokenProvider {
                         Result.success(
                             TokenFetchResult(
                                 resultToken,
-                                permissionGranted = AttentivePush.getInstance()
-                                    .checkPushPermission(context)
-                            )
-                        )
+                                permissionGranted =
+                                    AttentivePush.getInstance()
+                                        .checkPushPermission(context),
+                            ),
+                        ),
                     )
                 } else {
-                    continuation.resume (Result.failure(Exception("Token fetch failed: ${task.exception?.message}")))
+                    continuation.resume(Result.failure(Exception("Token fetch failed: ${task.exception?.message}")))
                 }
             }
         }

@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class Style(val value: String) {
     Small("small"),
-    Large("large")
+    Large("large"),
 }
 
 /**
@@ -23,5 +23,5 @@ data class Message(
     val isRead: Boolean = false,
     val imageUrl: String? = null,
     val actionUrl: String? = null,
-    val style: Style = Style.Small
+    val style: Style = Style.Small,
 )

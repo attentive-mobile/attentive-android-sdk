@@ -33,7 +33,8 @@ import com.attentive.androidsdk.creatives.Creative
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniYellow
 
-val fakeJson = "{\n" +
+val fakeJson =
+    "{\n" +
         "    \"targets\": {\n" +
         "        \"overlay\": {\n" +
         "            \"immediately\": {\n" +
@@ -84,6 +85,7 @@ val fakeJson = "{\n" +
         "        }\n" +
         "    }\n" +
         "}"
+
 @Composable
 fun DebugScreenComposables(navHostController: NavHostController) {
     DebugScreenContent(navHostController)
@@ -91,83 +93,92 @@ fun DebugScreenComposables(navHostController: NavHostController) {
 
 @Composable
 fun DebugScreenContent(navHostController: NavHostController) {
-    val activity = requireNotNull(LocalActivity.current) {
-        "Activity required for Creative initialization"
-    }
+    val activity =
+        requireNotNull(LocalActivity.current) {
+            "Activity required for Creative initialization"
+        }
     val context = LocalContext.current.applicationContext as Application
 
     // Create the FrameLayout once
-    val frameLayout = remember {
-        FrameLayout(activity.baseContext).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+    val frameLayout =
+        remember {
+            FrameLayout(activity.baseContext).apply {
+                layoutParams =
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+            }
         }
-    }
-
 
     // Configure AttentiveConfig once
-    val config = remember {
-        AttentiveConfig.Builder()
-            .domain("YOUR_ATTENTIVE_DOMAIN")
-            .mode(AttentiveConfig.Mode.DEBUG)
-            .applicationContext(context)
-            .build()
-    }
+    val config =
+        remember {
+            AttentiveConfig.Builder()
+                .domain("YOUR_ATTENTIVE_DOMAIN")
+                .mode(AttentiveConfig.Mode.DEBUG)
+                .applicationContext(context)
+                .build()
+        }
     AttentiveEventTracker.instance.config = config
 
     // Create the Creative instance once
-    val creative = remember(frameLayout, activity) {
-        Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
-    }
+    val creative =
+        remember(frameLayout, activity) {
+            Creative(AttentiveEventTracker.instance.config!!, frameLayout, activity)
+        }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-
         val context = LocalContext.current
         SimpleToolbar("Debug Screen", actions = {
             IconButton(
                 onClick = {
                     shareDebugOutput(context)
-                }
+                },
             ) {
                 Icon(imageVector = Icons.Filled.Share, contentDescription = "Share")
             }
         }, navHostController)
-        Column (modifier = Modifier.fillMaxSize().align(Alignment.CenterHorizontally)){
+        Column(modifier = Modifier.fillMaxSize().align(Alignment.CenterHorizontally)) {
             var isTextVisible by remember { mutableStateOf(false) }
-            Button(modifier = Modifier.align(Alignment.CenterHorizontally), colors = ButtonDefaults.buttonColors(containerColor = BonniYellow), onClick = {
-                isTextVisible = true
-               // creative.trigger() // Call the trigger method
-            }) {
+            Button(
+                modifier =
+                    Modifier.align(
+                        Alignment.CenterHorizontally,
+                    ),
+                colors = ButtonDefaults.buttonColors(containerColor = BonniYellow),
+                onClick = {
+                    isTextVisible = true
+                    // creative.trigger() // Call the trigger method
+                },
+            ) {
                 Text("Get creative json", color = Color.Black)
             }
 
-            if(isTextVisible) {
+            if (isTextVisible) {
                 Text(
-                    fakeJson
+                    fakeJson,
                 )
             }
             AdvertisementView(frameLayout)
-
         }
     }
 }
 
-fun shareDebugOutput(context: Context){
+fun shareDebugOutput(context: Context) {
     // Create a share intent
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, "$fakeJson")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
-    }
+    val shareIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "$fakeJson")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Add this flag
+        }
 
     // Start the share intent
     context.startActivity(Intent.createChooser(shareIntent, "Share Push Token"))
-
 }
 
 @Composable

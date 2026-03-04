@@ -1,8 +1,6 @@
 package com.attentive.androidsdk.internal.util
 
-
 object AttentiveUtils {
-
     var phoneValidator: PhoneValidator = DefaultPhoneValidator()
 }
 
@@ -17,4 +15,3 @@ class DefaultPhoneValidator : PhoneValidator {
 }
 
 fun String.isPhoneNumber(): Boolean = AttentiveUtils.phoneValidator.isPhoneNumber(this)
-

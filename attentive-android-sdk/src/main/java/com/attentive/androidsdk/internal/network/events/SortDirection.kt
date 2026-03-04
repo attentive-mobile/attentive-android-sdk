@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 enum class SortDirection {
     @SerialName("asc")
     ASC,
+
     @SerialName("desc")
-    DESC
+    DESC,
 }

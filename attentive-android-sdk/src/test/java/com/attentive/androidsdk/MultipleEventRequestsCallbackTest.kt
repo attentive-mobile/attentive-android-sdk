@@ -22,7 +22,6 @@ import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.util.Currency
@@ -57,23 +56,25 @@ class MultipleEventRequestsCallbackTest {
         val failureCount = AtomicInteger(0)
         val latch = CountDownLatch(1)
 
-        val callback = object : AttentiveApiCallback {
-            override fun onSuccess() {
-                successCount.incrementAndGet()
-                latch.countDown()
-            }
+        val callback =
+            object : AttentiveApiCallback {
+                override fun onSuccess() {
+                    successCount.incrementAndGet()
+                    latch.countDown()
+                }
 
-            override fun onFailure(message: String?) {
-                failureCount.incrementAndGet()
-                latch.countDown()
+                override fun onFailure(message: String?) {
+                    failureCount.incrementAndGet()
+                    latch.countDown()
+                }
             }
-        }
 
         // Create an event that generates multiple requests
         val event = createAddToCartEventWithMultipleItems()
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("test-visitor-id")
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("test-visitor-id")
+                .build()
 
         // Act
         attentiveApi.sendEvent(event, userIdentifiers, "test-domain", callback)
@@ -99,22 +100,24 @@ class MultipleEventRequestsCallbackTest {
         val failureCount = AtomicInteger(0)
         val latch = CountDownLatch(1)
 
-        val callback = object : AttentiveApiCallback {
-            override fun onSuccess() {
-                successCount.incrementAndGet()
-                latch.countDown()
-            }
+        val callback =
+            object : AttentiveApiCallback {
+                override fun onSuccess() {
+                    successCount.incrementAndGet()
+                    latch.countDown()
+                }
 
-            override fun onFailure(message: String?) {
-                failureCount.incrementAndGet()
-                latch.countDown()
+                override fun onFailure(message: String?) {
+                    failureCount.incrementAndGet()
+                    latch.countDown()
+                }
             }
-        }
 
         val event = createAddToCartEventWithMultipleItems()
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("test-visitor-id")
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("test-visitor-id")
+                .build()
 
         // Act
         attentiveApi.sendEvent(event, userIdentifiers, "test-domain", callback)
@@ -140,22 +143,24 @@ class MultipleEventRequestsCallbackTest {
         val failureCount = AtomicInteger(0)
         val latch = CountDownLatch(1)
 
-        val callback = object : AttentiveApiCallback {
-            override fun onSuccess() {
-                successCount.incrementAndGet()
-                latch.countDown()
-            }
+        val callback =
+            object : AttentiveApiCallback {
+                override fun onSuccess() {
+                    successCount.incrementAndGet()
+                    latch.countDown()
+                }
 
-            override fun onFailure(message: String?) {
-                failureCount.incrementAndGet()
-                latch.countDown()
+                override fun onFailure(message: String?) {
+                    failureCount.incrementAndGet()
+                    latch.countDown()
+                }
             }
-        }
 
         val event = createAddToCartEventWithMultipleItems()
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("test-visitor-id")
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("test-visitor-id")
+                .build()
 
         // Act
         attentiveApi.sendEvent(event, userIdentifiers, "test-domain", callback)
@@ -175,9 +180,10 @@ class MultipleEventRequestsCallbackTest {
         setupOkHttpSuccessForAllRequests()
 
         val event = createAddToCartEventWithMultipleItems()
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("test-visitor-id")
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("test-visitor-id")
+                .build()
 
         // Act - Should not crash with null callback
         attentiveApi.sendEvent(event, userIdentifiers, "test-domain", null)
@@ -193,15 +199,16 @@ class MultipleEventRequestsCallbackTest {
 
     private fun setupGeoAdjustedDomainSuccess() {
         doAnswer { invocation: InvocationOnMock ->
-            val callback = invocation.getArgument(
-                1,
-                AttentiveApi.GetGeoAdjustedDomainCallback::class.java
-            )
+            val callback =
+                invocation.getArgument(
+                    1,
+                    AttentiveApi.GetGeoAdjustedDomainCallback::class.java,
+                )
             callback.onSuccess("test-domain-geo")
             null
         }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
             eq("test-domain"),
-            any()
+            any(),
         )
     }
 
@@ -262,26 +269,29 @@ class MultipleEventRequestsCallbackTest {
     private fun createAddToCartEventWithMultipleItems(): AddToCartEvent {
         // Create an AddToCart event with multiple items, which will generate
         // multiple EventRequest objects
-        val items = listOf(
-            Item(
-                productId = "item1",
-                productVariantId = "variant1",
-                price = Price(
-                    BigDecimal("10.00"),
-                    Currency.getInstance("USD")
+        val items =
+            listOf(
+                Item(
+                    productId = "item1",
+                    productVariantId = "variant1",
+                    price =
+                        Price(
+                            BigDecimal("10.00"),
+                            Currency.getInstance("USD"),
+                        ),
+                    name = "Test Item 1",
                 ),
-                name = "Test Item 1"
-            ),
-            Item(
-                productId = "item2",
-                productVariantId = "variant2",
-                price = Price(
-                    BigDecimal("20.00"),
-                    Currency.getInstance("USD")
+                Item(
+                    productId = "item2",
+                    productVariantId = "variant2",
+                    price =
+                        Price(
+                            BigDecimal("20.00"),
+                            Currency.getInstance("USD"),
+                        ),
+                    name = "Test Item 2",
                 ),
-                name = "Test Item 2"
             )
-        )
 
         return AddToCartEvent(items, deeplink = null)
     }

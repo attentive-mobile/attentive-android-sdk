@@ -9,11 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
 class InboxViewModel : ViewModel() {
-    val inboxState: StateFlow<InboxState> = AttentiveSdk.inboxState.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Lazily,
-        initialValue = InboxState()
-    )
+    val inboxState: StateFlow<InboxState> =
+        AttentiveSdk.inboxState.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = InboxState(),
+        )
 
     fun markMessageAsRead(messageId: String) {
         AttentiveSdk.markRead(messageId)

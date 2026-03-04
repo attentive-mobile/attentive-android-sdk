@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Cart(
-    val cartId: String ,
-    val cartCoupon: String? = null
+    val cartId: String,
+    val cartCoupon: String? = null,
 ) {
     init {
         ParameterValidation.verifyNotEmpty(cartId, "cartId")
@@ -30,7 +30,7 @@ data class Cart(
         fun build(): Cart {
             return Cart(
                 cartId = cartId,
-                cartCoupon = cartCoupon
+                cartCoupon = cartCoupon,
             )
         }
     }

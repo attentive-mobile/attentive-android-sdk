@@ -10,7 +10,11 @@ import timber.log.Timber
 import timber.log.Timber.DebugTree
 
 class AttentiveSettingsService : Service() {
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent,
+        flags: Int,
+        startId: Int,
+    ): Int {
         if (!AppInfo.isDebuggable(this)) {
             Timber.e("onCreate: not in debug mode")
             return START_STICKY
@@ -21,11 +25,12 @@ class AttentiveSettingsService : Service() {
             return START_STICKY
         }
 
-        val settingsService = ClassFactory.buildSettingsService(
-            ClassFactory.buildPersistentStorage(
-                applicationContext
+        val settingsService =
+            ClassFactory.buildSettingsService(
+                ClassFactory.buildPersistentStorage(
+                    applicationContext,
+                ),
             )
-        )
         handleSkipFatigueExtra(extras, settingsService)
         handleResetSettingsExtra(extras, settingsService)
         handleSetLogLevelExtra(extras, settingsService)
@@ -45,7 +50,10 @@ class AttentiveSettingsService : Service() {
 
         @JvmStatic
         @VisibleForTesting
-        fun handleSkipFatigueExtra(extras: Bundle, settingsService: SettingsService) {
+        fun handleSkipFatigueExtra(
+            extras: Bundle,
+            settingsService: SettingsService,
+        ) {
             if (extras.containsKey(EXTRA_SET_SKIP_FATIGUE)) {
                 Timber.d("Setting skip fatigue...")
                 val skipFatigue = extras.getBoolean(EXTRA_SET_SKIP_FATIGUE, false)
@@ -56,10 +64,14 @@ class AttentiveSettingsService : Service() {
 
         @JvmStatic
         @VisibleForTesting
-        fun handleResetSettingsExtra(extras: Bundle, settingsService: SettingsService) {
-            if (extras.containsKey(EXTRA_RESET_SETTINGS) && extras.getBoolean(
+        fun handleResetSettingsExtra(
+            extras: Bundle,
+            settingsService: SettingsService,
+        ) {
+            if (extras.containsKey(EXTRA_RESET_SETTINGS) &&
+                extras.getBoolean(
                     EXTRA_RESET_SETTINGS,
-                    false
+                    false,
                 )
             ) {
                 Timber.d("Resetting settings...")
@@ -69,7 +81,10 @@ class AttentiveSettingsService : Service() {
         }
 
         @VisibleForTesting
-        fun handleSetLogLevelExtra(extras: Bundle, settingsService: SettingsService) {
+        fun handleSetLogLevelExtra(
+            extras: Bundle,
+            settingsService: SettingsService,
+        ) {
             if (extras.containsKey(EXTRA_SET_LOG_LEVEL)) {
                 Timber.d("Setting log level...")
                 val logLevel = extras.getInt(EXTRA_SET_LOG_LEVEL, -1)
@@ -78,7 +93,7 @@ class AttentiveSettingsService : Service() {
                 if (attentiveLogLevel == null) {
                     Timber.w(
                         "Log level should be one of: %s",
-                        *AttentiveLogLevel.entries.toTypedArray() as Array<Any?>
+                        *AttentiveLogLevel.entries.toTypedArray() as Array<Any?>,
                     )
                     Timber.i("Log level not set")
                     return

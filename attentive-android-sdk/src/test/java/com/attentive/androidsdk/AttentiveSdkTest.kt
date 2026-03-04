@@ -5,7 +5,6 @@ import android.content.Context
 import com.attentive.androidsdk.internal.util.Constants
 import com.google.firebase.messaging.RemoteMessage
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -13,7 +12,6 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.whenever
 
 class AttentiveSdkTest {
-
     private lateinit var remoteMessage: RemoteMessage
     private lateinit var application: Application
     private lateinit var context: Context
@@ -50,5 +48,4 @@ class AttentiveSdkTest {
         AttentiveSdk.getPushTokenWithCallback(application, true, callback)
         // No assertion, just ensure method is callable
     }
-
 }

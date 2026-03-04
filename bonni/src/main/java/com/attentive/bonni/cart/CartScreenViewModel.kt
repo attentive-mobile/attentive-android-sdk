@@ -11,14 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-open class CartScreenViewModel: ViewModel() {
-
+open class CartScreenViewModel : ViewModel() {
     private val database: AppDatabase by lazy { AppDatabase.getInstance() }
     private val _exampleCartItems = MutableStateFlow<List<ExampleCartItem>>(emptyList())
     open val exampleCartItems: StateFlow<List<ExampleCartItem>> = _exampleCartItems
     val cartRepo = CartRepository
-
-
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -31,8 +28,8 @@ open class CartScreenViewModel: ViewModel() {
         }
     }
 
-    fun removeFromCart(item: ExampleCartItem){
-        viewModelScope.launch(Dispatchers.IO){
+    fun removeFromCart(item: ExampleCartItem) {
+        viewModelScope.launch(Dispatchers.IO) {
             cartRepo.removeFromCart(item)
         }
     }

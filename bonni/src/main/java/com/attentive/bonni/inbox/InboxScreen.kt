@@ -15,13 +15,11 @@ import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
 
 @Composable
-fun InboxScreen(
-    navHostController: NavHostController
-) {
+fun InboxScreen(navHostController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {
         SimpleToolbar(
             title = "Inbox",
-            navController = navHostController
+            navController = navHostController,
         )
 
         AttentiveInbox(
@@ -33,7 +31,7 @@ fun InboxScreen(
             swipeBackgroundColor = BonniPink,
             titleFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             bodyFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            timestampFontFamily = FontFamily(Font(R.font.degulardisplay_regular))
+            timestampFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         )
     }
 }

@@ -14,7 +14,10 @@ internal class CreativeActivityCallbacks(creative: Creative) : ActivityLifecycle
         this.creative = creative
     }
 
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+    override fun onActivityCreated(
+        activity: Activity,
+        savedInstanceState: Bundle?,
+    ) {
         // No-op
     }
 
@@ -34,7 +37,10 @@ internal class CreativeActivityCallbacks(creative: Creative) : ActivityLifecycle
         // No-op
     }
 
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+    override fun onActivitySaveInstanceState(
+        activity: Activity,
+        outState: Bundle,
+    ) {
         // No-op
     }
 
