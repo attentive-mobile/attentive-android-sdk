@@ -55,6 +55,9 @@ mockito = "5.2.0"
 mockitoKotlin = "5.4.0"
 mockitoAndroid = "5.5.0"
 
+# Lint
+lintApi = "31.8.0"
+
 # Build tools
 agp = "8.8.0"
 nexusPublish = "1.3.0"
@@ -127,6 +130,12 @@ engage-core = { group = "com.google.android.engage", name = "engage-core", versi
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# Lint
+lint-api = { group = "com.android.tools.lint", name = "lint-api", version.ref = "lintApi" }
+lint-checks = { group = "com.android.tools.lint", name = "lint-checks", version.ref = "lintApi" }
+lint = { group = "com.android.tools.lint", name = "lint", version.ref = "lintApi" }
+lint-tests = { group = "com.android.tools.lint", name = "lint-tests", version.ref = "lintApi" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
