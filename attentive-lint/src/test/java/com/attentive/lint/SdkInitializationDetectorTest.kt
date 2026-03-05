@@ -17,7 +17,19 @@ class SdkInitializationDetectorTest : LintDetectorTest() {
         package com.attentive.androidsdk
 
         object AttentiveSdk {
+            @JvmStatic
             fun initialize(config: Any) {}
+        }
+        """,
+        ).indented()
+
+    private val attentiveSdkJavaStub: TestFile =
+        java(
+            """
+        package com.attentive.androidsdk;
+
+        public class AttentiveSdk {
+            public static void initialize(Object config) {}
         }
         """,
         ).indented()
@@ -223,5 +235,125 @@ class SdkInitializationDetectorTest : LintDetectorTest() {
                 0 errors, 1 warnings
                 """.trimIndent(),
             )
+    }
+
+    @Test
+    fun `test warning when initialize called via static import in Java Activity`() {
+        lint()
+            .files(
+                attentiveSdkJavaStub,
+                java(
+                    """
+                    package com.example.app;
+
+                    import android.app.Activity;
+                    import android.os.Bundle;
+                    import static com.attentive.androidsdk.AttentiveSdk.initialize;
+
+                    public class MainActivity extends Activity {
+                        @Override
+                        protected void onCreate(Bundle savedInstanceState) {
+                            super.onCreate(savedInstanceState);
+                            initialize(new Object());
+                        }
+                    }
+                    """,
+                ).indented(),
+            )
+            .run()
+            .expect(
+                """
+                src/com/example/app/MainActivity.java:11: Warning: AttentiveSdk.initialize() should be called in the onCreate() method of your Application subclass to ensure proper SDK initialization. [AttentiveSdkInitialization]
+                        initialize(new Object());
+                        ~~~~~~~~~~~~~~~~~~~~~~~~
+                0 errors, 1 warnings
+                """.trimIndent(),
+            )
+    }
+
+    @Test
+    fun `test warning when initialize called via imported function in Kotlin Activity`() {
+        lint()
+            .files(
+                attentiveSdkStub,
+                attentiveConfigStub,
+                kotlin(
+                    """
+                    package com.example.app
+
+                    import android.app.Activity
+                    import android.os.Bundle
+                    import com.attentive.androidsdk.AttentiveSdk.initialize
+
+                    class MainActivity : Activity() {
+                        override fun onCreate(savedInstanceState: Bundle?) {
+                            super.onCreate(savedInstanceState)
+                            initialize(Object())
+                        }
+                    }
+                    """,
+                ).indented(),
+            )
+            .run()
+            .expect(
+                """
+                src/com/example/app/MainActivity.kt:10: Warning: AttentiveSdk.initialize() should be called in the onCreate() method of your Application subclass to ensure proper SDK initialization. [AttentiveSdkInitialization]
+                        initialize(Object())
+                        ~~~~~~~~~~~~~~~~~~~~
+                0 errors, 1 warnings
+                """.trimIndent(),
+            )
+    }
+
+    @Test
+    fun `test clean when initialize called via static import in Java Application`() {
+        lint()
+            .files(
+                attentiveSdkJavaStub,
+                java(
+                    """
+                    package com.example.app;
+
+                    import android.app.Application;
+                    import static com.attentive.androidsdk.AttentiveSdk.initialize;
+
+                    public class MyApplication extends Application {
+                        @Override
+                        public void onCreate() {
+                            super.onCreate();
+                            initialize(new Object());
+                        }
+                    }
+                    """,
+                ).indented(),
+            )
+            .run()
+            .expectClean()
+    }
+
+    @Test
+    fun `test clean when initialize called via imported function in Kotlin Application`() {
+        lint()
+            .files(
+                attentiveSdkStub,
+                attentiveConfigStub,
+                kotlin(
+                    """
+                    package com.example.app
+
+                    import android.app.Application
+                    import com.attentive.androidsdk.AttentiveSdk.initialize
+
+                    class MyApplication : Application() {
+                        override fun onCreate() {
+                            super.onCreate()
+                            initialize(Object())
+                        }
+                    }
+                    """,
+                ).indented(),
+            )
+            .run()
+            .expectClean()
     }
 }

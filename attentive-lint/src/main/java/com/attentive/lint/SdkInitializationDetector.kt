@@ -26,15 +26,7 @@ class SdkInitializationDetector : Detector(), SourceCodeScanner {
 
                 if (methodName != "initialize") return
 
-                val receiverType = node.receiverType?.canonicalText
-                val receiver = node.receiver?.asSourceString()
-
-                val isAttentiveSdkCall =
-                    receiverType == "com.attentive.androidsdk.AttentiveSdk" ||
-                        receiver == "AttentiveSdk" ||
-                        receiver == "com.attentive.androidsdk.AttentiveSdk"
-
-                if (!isAttentiveSdkCall) return
+                if (!isAttentiveSdkInitializeCall(node)) return
 
                 if (!isInsideApplicationClass(node)) {
                     context.report(
@@ -47,6 +39,27 @@ class SdkInitializationDetector : Detector(), SourceCodeScanner {
                 }
             }
         }
+    }
+
+    private fun isAttentiveSdkInitializeCall(node: UCallExpression): Boolean {
+        // Check via receiver (normal call style: AttentiveSdk.initialize())
+        val receiverType = node.receiverType?.canonicalText
+        val receiver = node.receiver?.asSourceString()
+
+        if (receiverType == ATTENTIVE_SDK_CLASS ||
+            receiver == "AttentiveSdk" ||
+            receiver == ATTENTIVE_SDK_CLASS
+        ) {
+            return true
+        }
+
+        // Check via method resolution (handles static imports and imported functions)
+        // e.g., `import static com.attentive.androidsdk.AttentiveSdk.initialize` in Java
+        // or `import com.attentive.androidsdk.AttentiveSdk.initialize` in Kotlin
+        val resolvedMethod = node.resolve() ?: return false
+        val containingClass = resolvedMethod.containingClass ?: return false
+
+        return containingClass.qualifiedName == ATTENTIVE_SDK_CLASS
     }
 
     private fun isInsideApplicationClass(node: UCallExpression): Boolean {
@@ -70,6 +83,8 @@ class SdkInitializationDetector : Detector(), SourceCodeScanner {
     }
 
     companion object {
+        private const val ATTENTIVE_SDK_CLASS = "com.attentive.androidsdk.AttentiveSdk"
+
         @JvmField
         val ISSUE: Issue =
             Issue.create(
