@@ -88,6 +88,9 @@ android {
 }
 
 dependencies {
+    // Lint checks bundled with the SDK
+    lintPublish(project(":attentive-lint"))
+
     // AndroidX
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
