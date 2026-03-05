@@ -2,16 +2,33 @@
 # See: https://circleci.com/docs/reference/configuration-reference
 version: 2.1
 
-jobs:
-  lint:
+orbs:
+  android: circleci/android@2.5.0
+
+# Reusable environment variables
+environment: &default_environment
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx4g"
+  JAVA_OPTS: "-Xmx4g"
+  JVM_OPTS: "-Xmx4g"
+
+# Reusable executor
+executors:
+  android-executor:
     docker:
       - image: cimg/android:2026.02.1
+    resource_class: large
+    environment:
+      <<: *default_environment
+
+jobs:
+  lint:
+    executor: android-executor
     steps:
       - checkout
       - restore_cache:
           keys:
-            - gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
-            - gradle-
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
       - run:
           name: Run Android Lint
           command: ./gradlew lintDebug
@@ -20,50 +37,104 @@ jobs:
           command: ./gradlew ktlintCheck
       - save_cache:
           paths:
-            - ~/.gradle
-          key: gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
       - store_artifacts:
           path: attentive-android-sdk/build/reports/lint-results-debug.html
           destination: lint-report.html
 
-  test:
-    docker:
-      - image: cimg/android:2026.02.1
+  unit-test:
+    executor: android-executor
     steps:
       - checkout
       - restore_cache:
           keys:
-            - gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
-            - gradle-
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
       - run:
-          name: Run Unit Tests
-          command: ./gradlew testDebugUnitTest
+          name: Run Unit Tests with Coverage
+          command: ./gradlew testDebugUnitTest jacocoTestReport
       - save_cache:
           paths:
-            - ~/.gradle
-          key: gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      # Store JUnit test results for CircleCI test insights
       - store_test_results:
           path: attentive-android-sdk/build/test-results/testDebugUnitTest
+      # Store test report as artifact
       - store_artifacts:
           path: attentive-android-sdk/build/reports/tests/testDebugUnitTest
-          destination: test-report
+          destination: unit-test-report
+      # Store JaCoCo coverage report
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/jacoco/jacocoTestReport
+          destination: coverage-report
+      # Store coverage XML for potential CI integration (Codecov, etc.)
+      - persist_to_workspace:
+          root: attentive-android-sdk/build/reports
+          paths:
+            - jacoco/jacocoTestReport/jacocoTestReport.xml
 
-  build:
-    docker:
-      - image: cimg/android:2026.02.1
+  instrumented-test:
+    machine:
+      image: android:default
+    resource_class: large
+    environment:
+      <<: *default_environment
     steps:
       - checkout
       - restore_cache:
           keys:
-            - gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
-            - gradle-
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - android/create-avd:
+          avd-name: test-avd
+          system-image: system-images;android-30;google_apis;x86_64
+          install: true
+      - android/start-emulator:
+          avd-name: test-avd
+          no-window: true
+          restore-gradle-cache-prefix: gradle-v2
+          post-emulator-launch-assemble-command: ./gradlew :attentive-android-sdk:assembleDebugAndroidTest
+      - run:
+          name: Run Instrumented Tests
+          command: ./gradlew :attentive-android-sdk:connectedDebugAndroidTest
+          no_output_timeout: 20m
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      # Store instrumented test results
+      - store_test_results:
+          path: attentive-android-sdk/build/outputs/androidTest-results/connected
+      # Store instrumented test report
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/androidTests/connected
+          destination: instrumented-test-report
+      # Store instrumented test coverage
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/coverage/androidTest/debug
+          destination: instrumented-coverage-report
+
+  build:
+    executor: android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
       - run:
           name: Build SDK
           command: ./gradlew assembleRelease
       - save_cache:
           paths:
-            - ~/.gradle
-          key: gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "attentive-android-sdk/build.gradle.kts" }}
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
       - store_artifacts:
           path: attentive-android-sdk/build/outputs/aar
           destination: aar
@@ -72,8 +143,9 @@ workflows:
   build-and-test:
     jobs:
       - lint
-      - test
+      - unit-test
+      - instrumented-test
       - build:
           requires:
             - lint
-            - test
+            - unit-test
