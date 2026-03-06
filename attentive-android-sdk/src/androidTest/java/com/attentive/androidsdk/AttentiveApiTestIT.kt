@@ -16,7 +16,6 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductMetadata
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
-import com.attentive.androidsdk.internal.util.AppInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
@@ -297,7 +296,8 @@ class AttentiveApiTestIT {
             m: Metadata,
         ) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
-            Assert.assertEquals(AppInfo.attentiveSDKVersion, url.queryParameter("v"))
+            // Legacy event endpoints use "mobile-app" for the v parameter
+            Assert.assertEquals("mobile-app", url.queryParameter("v"))
             Assert.assertEquals("0", url.queryParameter("lt"))
             Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))
