@@ -129,7 +129,7 @@ jobs:
             - gradle-v2-
       - run:
           name: Build SDK
-          command: ./gradlew assembleRelease
+          command: ./gradlew :attentive-android-sdk:assembleRelease
       - save_cache:
           paths:
             - ~/.gradle/caches
