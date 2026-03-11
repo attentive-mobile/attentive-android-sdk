@@ -6,10 +6,17 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
-// Load keystore properties
+// Load keystore properties from environment variables or local file
 def keystorePropertiesFile = rootProject.file("bonni/keystore.properties")
 def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
+if (System.getenv("BONNI_STORE_PASSWORD") != null) {
+    // Use environment variables (CI)
+    keystoreProperties['storeFile'] = "bonni-release.keystore"
+    keystoreProperties['storePassword'] = System.getenv("BONNI_STORE_PASSWORD")
+    keystoreProperties['keyAlias'] = System.getenv("BONNI_KEY_ALIAS")
+    keystoreProperties['keyPassword'] = System.getenv("BONNI_KEY_PASSWORD")
+} else if (keystorePropertiesFile.exists()) {
+    // Fall back to local properties file
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
@@ -29,7 +36,7 @@ android {
 
     signingConfigs {
         release {
-            if (keystorePropertiesFile.exists()) {
+            if (keystoreProperties['storeFile'] != null) {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
