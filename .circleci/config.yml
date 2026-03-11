@@ -139,6 +139,47 @@ jobs:
           path: attentive-android-sdk/build/outputs/aar
           destination: aar
 
+  distribute-bonni:
+    executor: android-executor
+    steps:
+      - checkout
+      - run:
+          name: Check if versionCode changed
+          command: |
+            # Get current versionCode
+            CURRENT_VERSION=$(grep -E "versionCode\s*=" bonni/build.gradle | grep -oE "[0-9]+")
+
+            # Get previous versionCode from parent commit
+            PREVIOUS_VERSION=$(git show HEAD~1:bonni/build.gradle 2>/dev/null | grep -E "versionCode\s*=" | grep -oE "[0-9]+" || echo "")
+
+            echo "Current versionCode: $CURRENT_VERSION"
+            echo "Previous versionCode: $PREVIOUS_VERSION"
+
+            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+              echo "versionCode unchanged, skipping distribution"
+              circleci-agent step halt
+            else
+              echo "versionCode changed ($PREVIOUS_VERSION -> $CURRENT_VERSION), proceeding with distribution"
+            fi
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Build Bonni Release APK
+          command: ./gradlew :bonni:assembleRelease
+      - run:
+          name: Upload to Firebase App Distribution
+          command: |
+            curl -sL https://firebase.tools | bash
+            firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
+              --app "$FIREBASE_APP_ID" \
+              --groups "testers" \
+              --token "$FIREBASE_TOKEN"
+      - store_artifacts:
+          path: bonni/build/outputs/apk/release
+          destination: bonni-apk
+
 workflows:
   build-and-test:
     jobs:
@@ -149,3 +190,9 @@ workflows:
           requires:
             - lint
             - unit-test
+      - distribute-bonni:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
