@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bonni App Signing and Distribution</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #1a73e8;
+      border-bottom: 2px solid #1a73e8;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #202124;
+      margin-top: 30px;
+    }
+    h3 {
+      color: #5f6368;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 15px 0;
+    }
+    th, td {
+      border: 1px solid #dadce0;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f3f4;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    code {
+      background-color: #f1f3f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    pre {
+      background-color: #f1f3f4;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .note {
+      background-color: #fef7e0;
+      border-left: 4px solid #f9ab00;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .security {
+      background-color: #e8f5e9;
+      border-left: 4px solid #34a853;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .flow-diagram {
+      background-color: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .flow-box {
+      display: inline-block;
+      border: 2px solid #1a73e8;
+      border-radius: 8px;
+      padding: 10px 20px;
+      margin: 5px;
+      background-color: white;
+    }
+    .flow-diamond {
+      display: inline-block;
+      border: 2px solid #f9ab00;
+      border-radius: 8px;
+      padding: 10px 20px;
+      margin: 5px;
+      background-color: #fef7e0;
+    }
+    .flow-arrow {
+      font-size: 24px;
+      color: #5f6368;
+      margin: 0 10px;
+    }
+    ul {
+      margin: 10px 0;
+    }
+    li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Bonni App Signing and Distribution</h1>
+
+<p>This document explains how code signing works for the Bonni demo app and how it integrates with CircleCI for automated distribution.</p>
+
+<h2>Overview</h2>
+
+<p>The Bonni app uses Android's standard APK signing for release builds. The signing configuration supports two modes:</p>
+<ol>
+  <li><strong>Local development</strong> — Uses a local <code>keystore.properties</code> file</li>
+  <li><strong>CI/CD (CircleCI)</strong> — Uses environment variables</li>
+</ol>
+
+<h2>Environment Variables</h2>
+
+<h3>Code Signing Variables</h3>
+
+<table>
+  <tr>
+    <th>Variable</th>
+    <th>Purpose</th>
+    <th>How to Generate</th>
+  </tr>
+  <tr>
+    <td><code>BONNI_KEYSTORE_BASE64</code></td>
+    <td>The keystore file, base64 encoded</td>
+    <td><code>base64 -i bonni/bonni-release.keystore</code></td>
+  </tr>
+  <tr>
+    <td><code>BONNI_STORE_PASSWORD</code></td>
+    <td>Password to access the keystore file</td>
+    <td>From <code>keystore.properties</code></td>
+  </tr>
+  <tr>
+    <td><code>BONNI_KEY_ALIAS</code></td>
+    <td>Alias of the signing key within the keystore</td>
+    <td>From <code>keystore.properties</code></td>
+  </tr>
+  <tr>
+    <td><code>BONNI_KEY_PASSWORD</code></td>
+    <td>Password for the specific key</td>
+    <td>From <code>keystore.properties</code></td>
+  </tr>
+</table>
+
+<h3>Firebase Distribution Variables</h3>
+
+<table>
+  <tr>
+    <th>Variable</th>
+    <th>Purpose</th>
+    <th>How to Generate</th>
+  </tr>
+  <tr>
+    <td><code>FIREBASE_APP_ID</code></td>
+    <td>Identifies the app in Firebase<br>(e.g., <code>1:123456789:android:abc123</code>)</td>
+    <td>Firebase Console → Project Settings → Your Apps</td>
+  </tr>
+  <tr>
+    <td><code>FIREBASE_TOKEN</code></td>
+    <td>Authentication token for Firebase CLI</td>
+    <td>Run <code>firebase login:ci</code> locally</td>
+  </tr>
+</table>
+
+<h2>How Code Signing Works</h2>
+
+<h3>Decision Flow</h3>
+
+<div class="flow-diagram">
+  <div class="flow-box">Gradle Build Starts</div>
+  <br><br>
+  <span class="flow-arrow">↓</span>
+  <br><br>
+  <div class="flow-diamond">BONNI_STORE_PASSWORD env var exists?</div>
+  <br><br>
+  <table style="width: 100%; border: none;">
+    <tr style="background: none;">
+      <td style="border: none; text-align: center; width: 50%;">
+        <strong>YES</strong><br>
+        <span class="flow-arrow">↓</span><br>
+        <div class="flow-box">Use environment variables for signing</div>
+      </td>
+      <td style="border: none; text-align: center; width: 50%;">
+        <strong>NO</strong><br>
+        <span class="flow-arrow">↓</span><br>
+        <div class="flow-diamond">keystore.properties file exists?</div>
+        <br><br>
+        <table style="width: 100%; border: none;">
+          <tr style="background: none;">
+            <td style="border: none; text-align: center;">
+              <strong>YES</strong><br>
+              <span class="flow-arrow">↓</span><br>
+              <div class="flow-box">Use local properties file</div>
+            </td>
+            <td style="border: none; text-align: center;">
+              <strong>NO</strong><br>
+              <span class="flow-arrow">↓</span><br>
+              <div class="flow-box">Signing not configured<br>(debug builds only)</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h3>Local Development</h3>
+
+<p>For local development, create a <code>bonni/keystore.properties</code> file:</p>
+
+<pre>storeFile=bonni-release.keystore
+storePassword=&lt;password&gt;
+keyAlias=&lt;alias&gt;
+keyPassword=&lt;password&gt;</pre>
+
+<div class="note">
+  <strong>Note:</strong> This file is gitignored and should never be committed to the repository.
+</div>
+
+<h3>CI/CD (CircleCI)</h3>
+
+<p>In CircleCI, the signing process works as follows:</p>
+<ol>
+  <li><strong>Decode Keystore</strong> — The base64-encoded keystore is decoded and written to <code>bonni/bonni-release.keystore</code></li>
+  <li><strong>Environment Detection</strong> — Gradle detects <code>BONNI_STORE_PASSWORD</code> is set and uses environment variables</li>
+  <li><strong>Build</strong> — The release APK is built and signed</li>
+  <li><strong>Distribute</strong> — The signed APK is uploaded to Firebase App Distribution</li>
+</ol>
+
+<h2>CircleCI Workflow</h2>
+
+<h3>Jobs</h3>
+
+<table>
+  <tr>
+    <th>Job</th>
+    <th>Purpose</th>
+    <th>When it Runs</th>
+  </tr>
+  <tr>
+    <td><code>lint</code></td>
+    <td>Runs Android Lint and ktlint</td>
+    <td>Every push</td>
+  </tr>
+  <tr>
+    <td><code>unit-test</code></td>
+    <td>Runs unit tests with coverage</td>
+    <td>Every push</td>
+  </tr>
+  <tr>
+    <td><code>instrumented-test</code></td>
+    <td>Runs emulator-based tests</td>
+    <td>Every push</td>
+  </tr>
+  <tr>
+    <td><code>build</code></td>
+    <td>Builds the SDK AAR</td>
+    <td>After lint and unit-test pass</td>
+  </tr>
+  <tr>
+    <td><code>distribute-bonni</code></td>
+    <td>Builds and distributes Bonni app</td>
+    <td>Only on <code>main</code> branch, only when versionCode changes</td>
+  </tr>
+</table>
+
+<h3>Distribution Trigger</h3>
+
+<p>The <code>distribute-bonni</code> job includes a version check:</p>
+<ul>
+  <li>Compares the current <code>versionCode</code> in <code>bonni/build.gradle</code> with the previous commit</li>
+  <li>If unchanged, the job halts early (no build or distribution)</li>
+  <li>If changed, proceeds with build and Firebase upload</li>
+</ul>
+
+<p>This prevents unnecessary distributions when only SDK code changes.</p>
+
+<h2>File Locations</h2>
+
+<table>
+  <tr>
+    <th>File</th>
+    <th>Purpose</th>
+    <th>Committed to Git?</th>
+  </tr>
+  <tr>
+    <td><code>bonni/bonni-release.keystore</code></td>
+    <td>The actual keystore file</td>
+    <td>No (gitignored)</td>
+  </tr>
+  <tr>
+    <td><code>bonni/keystore.properties</code></td>
+    <td>Local signing credentials</td>
+    <td>No (gitignored)</td>
+  </tr>
+  <tr>
+    <td><code>bonni/build.gradle</code></td>
+    <td>Signing configuration logic</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td><code>.circleci/config.yml</code></td>
+    <td>CI/CD pipeline definition</td>
+    <td>Yes</td>
+  </tr>
+</table>
+
+<h2>Setting Up a New Environment</h2>
+
+<h3>For Local Development</h3>
+
+<ol>
+  <li>Obtain the keystore file (<code>bonni-release.keystore</code>) from a team member</li>
+  <li>Place it in the <code>bonni/</code> directory</li>
+  <li>Create <code>bonni/keystore.properties</code> with the credentials</li>
+  <li>Build normally with <code>./gradlew :bonni:assembleRelease</code></li>
+</ol>
+
+<h3>For CircleCI</h3>
+
+<ol>
+  <li>Go to CircleCI Project Settings → Environment Variables</li>
+  <li>Add all six environment variables listed above</li>
+  <li>For <code>BONNI_KEYSTORE_BASE64</code>, run locally:
+    <pre>base64 -i bonni/bonni-release.keystore | pbcopy</pre>
+    Then paste the value in CircleCI
+  </li>
+</ol>
+
+<h2>Security Considerations</h2>
+
+<div class="security">
+  <ul style="margin: 0;">
+    <li>The keystore file and credentials are <strong>never</strong> committed to the repository</li>
+    <li>CircleCI masks all secret values in build logs</li>
+    <li>Environment variables are stored encrypted in CircleCI</li>
+    <li>Only the <code>main</code> branch triggers distribution (not feature branches)</li>
+  </ul>
+</div>
+
+<h2>Troubleshooting</h2>
+
+<h3>"Keystore file not found" Error</h3>
+<ul>
+  <li><strong>In CI:</strong> Verify <code>BONNI_KEYSTORE_BASE64</code> is set correctly and the base64 encoding is valid</li>
+  <li><strong>Locally:</strong> Ensure <code>bonni/bonni-release.keystore</code> exists and <code>keystore.properties</code> points to it</li>
+</ul>
+
+<h3>Distribution Not Triggering</h3>
+<ul>
+  <li>Check that you're on the <code>main</code> branch</li>
+  <li>Verify the <code>versionCode</code> in <code>bonni/build.gradle</code> was incremented</li>
+  <li>Check CircleCI for the job output</li>
+</ul>
+
+<h3>Firebase Upload Fails</h3>
+<ul>
+  <li>Verify <code>FIREBASE_APP_ID</code> matches your app in Firebase Console</li>
+  <li>Regenerate <code>FIREBASE_TOKEN</code> with <code>firebase login:ci</code> if expired</li>
+  <li>Ensure the <code>--groups</code> parameter matches an existing tester group (currently set to "Dev")</li>
+</ul>
+
+</body>
+</html>
