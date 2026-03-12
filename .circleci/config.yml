@@ -182,7 +182,7 @@ jobs:
             curl -sL https://firebase.tools | bash
             firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
               --app "$FIREBASE_APP_ID" \
-              --groups "Dev" \
+              --groups "dev, product-+-eng" \
               --token "$FIREBASE_TOKEN"
       - store_artifacts:
           path: bonni/build/outputs/apk/release
@@ -205,4 +205,5 @@ workflows:
             branches:
               only:
                 - main
+                - develop
                 - feature/MSDK-234-circleci-bonni-distribution
