@@ -28,7 +28,7 @@ android {
         applicationId = 'com.attentive.bonni'
         minSdk = 30
         targetSdk = libs.versions.targetSdk.get().toInteger()
-        versionCode = 5
+        versionCode = 6
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
