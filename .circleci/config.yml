@@ -149,8 +149,11 @@ jobs:
             # Get current versionCode
             CURRENT_VERSION=$(grep -E "versionCode\s*=" bonni/build.gradle | grep -oE "[0-9]+")
 
-            # Get previous versionCode from parent commit
-            PREVIOUS_VERSION=$(git show HEAD~1:bonni/build.gradle 2>/dev/null | grep -E "versionCode\s*=" | grep -oE "[0-9]+" || echo "")
+            # Fetch the base branch to compare against
+            git fetch origin "$CIRCLE_BRANCH"
+
+            # Get versionCode from the previous commit on this branch (before the push)
+            PREVIOUS_VERSION=$(git show origin/$CIRCLE_BRANCH^:bonni/build.gradle 2>/dev/null | grep -E "versionCode\s*=" | grep -oE "[0-9]+" || echo "")
 
             echo "Current versionCode: $CURRENT_VERSION"
             echo "Previous versionCode: $PREVIOUS_VERSION"
