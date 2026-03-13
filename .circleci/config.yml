@@ -206,7 +206,7 @@ jobs:
           command: |
             firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
               --app "$FIREBASE_APP_ID" \
-              --groups "dev" \
+              --groups "dev, product-+-eng" \
               --token "$FIREBASE_TOKEN"
       - store_artifacts:
           path: bonni/build/outputs/apk/release
