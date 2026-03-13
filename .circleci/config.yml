@@ -167,12 +167,7 @@ jobs:
             - gradle-v2-
       - run:
           name: Decode Keystore
-          command: |
-            echo "BONNI_KEYSTORE_BASE64 length: ${#BONNI_KEYSTORE_BASE64}"
-            echo "BONNI_STORE_PASSWORD set: $([ -n "$BONNI_STORE_PASSWORD" ] && echo 'yes' || echo 'no')"
-            echo "$BONNI_KEYSTORE_BASE64" | base64 -d > bonni/bonni-release.keystore
-            echo "Keystore file created:"
-            ls -la bonni/bonni-release.keystore
+          command: echo "$BONNI_KEYSTORE_BASE64" | base64 -d > bonni/bonni-release.keystore
       - run:
           name: Build Bonni Release APK
           command: ./gradlew :bonni:assembleRelease
