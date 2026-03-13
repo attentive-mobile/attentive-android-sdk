@@ -206,4 +206,3 @@ workflows:
               only:
                 - main
                 - develop
-                - feature/MSDK-234-circleci-bonni-distribution
