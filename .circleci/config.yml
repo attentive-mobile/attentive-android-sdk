@@ -129,7 +129,7 @@ jobs:
             - gradle-v2-
       - run:
           name: Build SDK
-          command: ./gradlew assembleRelease
+          command: ./gradlew :attentive-android-sdk:assembleRelease
       - save_cache:
           paths:
             - ~/.gradle/caches
@@ -138,6 +138,79 @@ jobs:
       - store_artifacts:
           path: attentive-android-sdk/build/outputs/aar
           destination: aar
+
+  distribute-bonni:
+    executor: android-executor
+    steps:
+      - checkout
+      - run:
+          name: Check if versionCode changed
+          command: |
+            # Get current versionCode
+            CURRENT_VERSION=$(grep -E "versionCode\s*=" bonni/build.gradle | grep -oE "[0-9]+")
+
+            # Fetch the base branch to compare against
+            git fetch origin "$CIRCLE_BRANCH"
+
+            # Get versionCode from the previous commit on this branch (before the push)
+            PREVIOUS_VERSION=$(git show origin/$CIRCLE_BRANCH^:bonni/build.gradle 2>/dev/null | grep -E "versionCode\s*=" | grep -oE "[0-9]+" || echo "")
+
+            echo "Current versionCode: $CURRENT_VERSION"
+            echo "Previous versionCode: $PREVIOUS_VERSION"
+
+            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+              echo "versionCode unchanged, skipping distribution"
+              circleci-agent step halt
+            else
+              echo "versionCode changed ($PREVIOUS_VERSION -> $CURRENT_VERSION), proceeding with distribution"
+            fi
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Decode Keystore
+          command: echo "$BONNI_KEYSTORE_BASE64" | base64 -d > bonni/bonni-release.keystore
+      - run:
+          name: Build Bonni Release APK
+          command: ./gradlew :bonni:assembleRelease
+      - restore_cache:
+          keys:
+            - firebase-cli-v1
+      - run:
+          name: Install Firebase CLI
+          command: |
+            if ! command -v firebase &> /dev/null; then
+              npm install -g firebase-tools
+            fi
+      - save_cache:
+          paths:
+            - ~/.npm
+            - /usr/local/lib/node_modules/firebase-tools
+          key: firebase-cli-v1
+      - run:
+          name: Validate APK
+          command: |
+            APK_PATH="bonni/build/outputs/apk/release/bonni-release.apk"
+            if [ ! -f "$APK_PATH" ]; then
+              echo "Error: APK not found at $APK_PATH"
+              exit 1
+            fi
+            if [ ! -s "$APK_PATH" ]; then
+              echo "Error: APK file is empty"
+              exit 1
+            fi
+            echo "APK validated: $(ls -lh $APK_PATH)"
+      - run:
+          name: Upload to Firebase App Distribution
+          command: |
+            firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
+              --app "$FIREBASE_APP_ID" \
+              --groups "dev, product-+-eng" \
+              --token "$FIREBASE_TOKEN"
+      - store_artifacts:
+          path: bonni/build/outputs/apk/release
+          destination: bonni-apk
 
 workflows:
   build-and-test:
@@ -149,3 +222,12 @@ workflows:
           requires:
             - lint
             - unit-test
+      - distribute-bonni:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+                - feature/MSDK-234-circleci-bonni-distribution
