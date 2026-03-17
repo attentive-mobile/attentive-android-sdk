@@ -148,9 +148,8 @@ jobs:
             - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
             - gradle-v2-
       - run:
-          name: Record Snapshot Baselines
-          # TODO: Change back to verifyRoborazziDebug after committing CI-generated snapshots
-          command: ./gradlew :bonni:recordRoborazziDebug
+          name: Verify Snapshot Tests
+          command: ./gradlew :bonni:verifyRoborazziDebug
       - save_cache:
           paths:
             - ~/.gradle/caches
