@@ -246,6 +246,7 @@ workflows:
       - distribute-bonni:
           requires:
             - build
+            - snapshot-test
           filters:
             branches:
               only:
