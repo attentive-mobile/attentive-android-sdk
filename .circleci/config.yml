@@ -139,6 +139,26 @@ jobs:
           path: attentive-android-sdk/build/outputs/aar
           destination: aar
 
+  snapshot-test:
+    executor: android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Run Snapshot Tests
+          command: ./gradlew :bonni:verifyRoborazziDebug
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      - store_artifacts:
+          path: bonni/build/outputs/roborazzi
+          destination: snapshot-diffs
+
   distribute-bonni:
     executor: android-executor
     steps:
@@ -218,6 +238,7 @@ workflows:
       - lint
       - unit-test
       - instrumented-test
+      - snapshot-test
       - build:
           requires:
             - lint
