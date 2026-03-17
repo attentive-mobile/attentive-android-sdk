@@ -243,10 +243,10 @@ workflows:
           requires:
             - lint
             - unit-test
+            - snapshot-test
       - distribute-bonni:
           requires:
             - build
-            - snapshot-test
           filters:
             branches:
               only:
