@@ -76,6 +76,10 @@ android {
     }
 }
 
+roborazzi {
+    outputDir = file("src/test/resources")
+}
+
 dependencies {
     implementation project(path: ':attentive-android-sdk')
 
