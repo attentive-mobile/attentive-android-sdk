@@ -31,8 +31,15 @@ internal class AppLaunchTracker(
     val launchEvents = mutableListOf<AttentiveApi.LaunchType>()
     var dataMap = mutableMapOf<String, String>()
 
+
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
+        Timber.d("onCreate")
+    }
+
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
+        Timber.d("onStart")
         AttentiveEventTracker.instance.config?.applicationContext?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 AttentiveEventTracker.instance.registerPushToken(it)
@@ -40,10 +47,18 @@ internal class AppLaunchTracker(
         }
     }
 
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        Timber.d("onResume")
+    }
+
     fun registerAppLaunchTracker() {
+        Timber.d("Adding lifecycle observer")
         lifecycle.addObserver(this)
+        Timber.d("Current state: ${lifecycle.currentState}.")
 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            Timber.d("state is at least STARTED")
             onStart(ProcessLifecycleOwner.get())
         }
     }
@@ -52,23 +67,30 @@ internal class AppLaunchTracker(
         application.registerActivityLifecycleCallbacks(object :
             Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                var wasLaunchedFromNotification = activity.intent?.extras?.run {
+                Timber.d("onActivityCreated")
+            }
+
+            override fun onActivityStarted(activity: Activity) {
+                Timber.d("onActivityStarted")
+
+                // Check for notification launch flag here (not in onActivityCreated) to support
+                // singleTask launch mode used by React Native apps. With singleTask, onActivityCreated
+                // is not called when the app is brought from background via notification tap.
+                // Note: Apps using singleTask must call setIntent(intent) in onNewIntent() for this to work.
+                val wasLaunchedFromNotification = activity.intent?.extras?.run {
                     getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
                 } == true
 
                 if (wasLaunchedFromNotification) {
-                    Timber.i("Launched from notification")
+                    Timber.d("Launched from notification")
                     launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
-                } else {
-                    Timber.i("Launched from launcher")
+                    // Clear the flag so subsequent resumes from launcher don't trigger another DIRECT_OPEN
+                    activity.intent?.removeExtra(LAUNCHED_FROM_NOTIFICATION)
                 }
 
-
-            }
-
-            override fun onActivityStarted(activity: Activity) {
                 CoroutineScope(Dispatchers.IO).launch {
                     if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
+                        Timber.d("launch even contains DIRECT_OPEN")
                         activity.intent.extras.run {
                             if (this != null) {
                                 for (key in keySet()) {
@@ -84,11 +106,13 @@ internal class AppLaunchTracker(
 
                         jsonEncodeTitleAndBody()
 
+                        Timber.d("Sending DIRECT_OPEN")
                         AttentiveEventTracker.instance.sendAppLaunchEvent(
                             AttentiveApi.LaunchType.DIRECT_OPEN,
                             dataMap
                         )
                     } else {
+                        Timber.d("Sending APP_LAUNCHED")
                         AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
 
                     }
@@ -97,13 +121,22 @@ internal class AppLaunchTracker(
 
 
             override fun onActivityStopped(activity: Activity) {
+                Timber.d("onActivityStopped")
                 launchEvents.clear()
             }
 
-            override fun onActivityResumed(activity: Activity) {}
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {
+                Timber.d("onActivityResumed")
+            }
+            override fun onActivityPaused(activity: Activity) {
+                Timber.d("onActivityPaused")
+            }
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+                Timber.d("onActivitySaveInstanceState")
+            }
+            override fun onActivityDestroyed(activity: Activity) {
+                Timber.d("onActivityDestroyed")
+            }
         })
     }
 
