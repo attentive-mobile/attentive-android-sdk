@@ -58,7 +58,6 @@ internal class AppLaunchTracker(
         Timber.d("Current state: ${lifecycle.currentState}.")
 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            Timber.d("state is at least STARTED")
             onStart(ProcessLifecycleOwner.get())
         }
     }
@@ -67,7 +66,6 @@ internal class AppLaunchTracker(
         application.registerActivityLifecycleCallbacks(object :
             Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                Timber.d("onActivityCreated")
             }
 
             override fun onActivityStarted(activity: Activity) {
@@ -121,22 +119,13 @@ internal class AppLaunchTracker(
 
 
             override fun onActivityStopped(activity: Activity) {
-                Timber.d("onActivityStopped")
                 launchEvents.clear()
             }
 
-            override fun onActivityResumed(activity: Activity) {
-                Timber.d("onActivityResumed")
-            }
-            override fun onActivityPaused(activity: Activity) {
-                Timber.d("onActivityPaused")
-            }
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-                Timber.d("onActivitySaveInstanceState")
-            }
-            override fun onActivityDestroyed(activity: Activity) {
-                Timber.d("onActivityDestroyed")
-            }
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
         })
     }
 
