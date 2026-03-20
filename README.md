@@ -373,6 +373,20 @@ The SDK will package a `PendingIntent` with the notification that will trigger w
 
 You must set up your host app with an `intent-filter` for the deep link you provided to launch your desired activity.
 
+### Apps using singleTask launch mode (React Native)
+
+If your app uses `singleTask` launch mode (common in React Native apps), you must override `onNewIntent()` in your main activity and call `setIntent()` for the SDK to properly track notification opens when the app is backgrounded:
+
+```kotlin
+// In your MainActivity
+override fun onNewIntent(intent: Intent?) {
+    super.onNewIntent(intent)
+    intent?.let { setIntent(it) }
+}
+```
+
+Without this, the SDK cannot detect notification taps when the app is brought from background, because `singleTask` activities receive new intents via `onNewIntent()` rather than being recreated.
+
 ## Other functionality
 
 ### Change domain
