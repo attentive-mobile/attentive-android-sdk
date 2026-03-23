@@ -115,8 +115,10 @@ internal class AttentivePush {
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         var launchIntent = buildLaunchIntent(context, dataMap)
 
+        Timber.d("Building launch intent")
         launchIntent?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            Timber.d("Setting launched from notification flag")
             putExtra(AppLaunchTracker.LAUNCHED_FROM_NOTIFICATION, true)
 
             // Add dataMap as extras
