@@ -78,7 +78,6 @@ android {
 
 roborazzi {
     outputDir = file("src/test/resources")
-    referenceDir = file("src/test/resources")
 }
 
 dependencies {
