@@ -77,7 +77,6 @@ android {
 }
 
 roborazzi {
-    // Consolidate all Roborazzi path config here (not in roborazzi.properties)
     outputDir = file("src/test/resources")
     referenceDir = file("src/test/resources")
 }
