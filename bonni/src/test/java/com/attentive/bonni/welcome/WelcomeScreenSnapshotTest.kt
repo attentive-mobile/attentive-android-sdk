@@ -1,5 +1,6 @@
 package com.attentive.bonni.welcome
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.attentive.bonni.ui.theme.AttentiveAndroidSDKTheme
@@ -19,33 +20,21 @@ class WelcomeScreenSnapshotTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    @Test
-    fun greeting_snapshot() {
+    private fun snapshot(content: @Composable () -> Unit) {
         composeRule.setContent {
             AttentiveAndroidSDKTheme {
-                Greeting()
+                content()
             }
         }
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
-    fun continueAsGuestButton_snapshot() {
-        composeRule.setContent {
-            AttentiveAndroidSDKTheme {
-                ContinueAsGuestButton()
-            }
-        }
-        composeRule.onRoot().captureRoboImage()
-    }
+    fun greeting_snapshot() = snapshot { Greeting() }
 
     @Test
-    fun createAccountButton_snapshot() {
-        composeRule.setContent {
-            AttentiveAndroidSDKTheme {
-                CreateAccountButton()
-            }
-        }
-        composeRule.onRoot().captureRoboImage()
-    }
+    fun continueAsGuestButton_snapshot() = snapshot { ContinueAsGuestButton() }
+
+    @Test
+    fun createAccountButton_snapshot() = snapshot { CreateAccountButton() }
 }
