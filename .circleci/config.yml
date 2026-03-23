@@ -145,8 +145,8 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
-            - gradle-v2-
+            - gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
+            - gradle-snapshot-v1-
       - run:
           name: Verify Snapshot Tests
           command: ./gradlew :bonni:verifyRoborazziDebug
@@ -154,7 +154,7 @@ jobs:
           paths:
             - ~/.gradle/caches
             - ~/.gradle/wrapper
-          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+          key: gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
       - store_artifacts:
           path: bonni/build/outputs/roborazzi
           destination: snapshot-diffs
