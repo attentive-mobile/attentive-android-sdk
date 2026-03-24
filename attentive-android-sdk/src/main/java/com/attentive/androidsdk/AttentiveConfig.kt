@@ -16,16 +16,20 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     override var domain: String = builder._domain
     override val applicationContext = builder._context
     override var notificationIconId: Int = builder._notificationIconId
-    override var notificationIconBackgroundColorResource: Int = builder._notificationIconBackgroundColorResource
+    override var notificationIconBackgroundColorResource: Int =
+        builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
 
-    private val visitorService = ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
+    private val visitorService =
+        ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
 
-    override var userIdentifiers = UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+    override var userIdentifiers =
+        UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     internal val attentiveApi: AttentiveApi
     private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
-    private val settingsService: SettingsService = ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
+    private val settingsService: SettingsService =
+        ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
     var apiVersion = ApiVersion.OLD
 
@@ -55,7 +59,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     override fun identify(userIdentifiers: UserIdentifiers) {
-        ParameterValidation.verifyNotNull(userIdentifiers, "userIdentifiers")
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
@@ -68,7 +71,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
     override fun changeDomain(domain: String) {
-        if (domain.isNotEmpty() && domain != this.domain) {
+        domain.verifyValidAttentiveDomain()
+        if (domain != this.domain) {
             this.domain = domain
             sendInfoEvent()
         }
@@ -132,8 +136,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var _notificationIconId: Int = 0
-
-        @ColorRes internal var _notificationIconBackgroundColorResource: Int = 0
+        @ColorRes
+        internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
@@ -221,8 +225,18 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
+
     enum class Mode {
         DEBUG,
         PRODUCTION,
+    }
+}
+
+private fun String.verifyValidAttentiveDomain() {
+    if (this.isEmpty()) {
+        throw IllegalArgumentException("Domain cannot be empty")
+    }
+    if (this.contains("attn.tv") || this.contains(":") || this.contains("/")) {
+        throw IllegalArgumentException("The provided domain $this is not recognized. Please verify that the domain matches your Attentive settings.")
     }
 }

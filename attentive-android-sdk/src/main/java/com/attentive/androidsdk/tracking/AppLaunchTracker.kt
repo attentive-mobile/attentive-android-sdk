@@ -14,11 +14,13 @@ import com.attentive.androidsdk.internal.util.toJsonEncodedString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import org.json.JSONObject
 import timber.log.Timber
 
 internal class AppLaunchTracker(
     internal val application: Application,
-    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
+    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle
 ) : DefaultLifecycleObserver {
     init {
         registerAppLaunchTracker()
@@ -28,8 +30,15 @@ internal class AppLaunchTracker(
     val launchEvents = mutableListOf<AttentiveApi.LaunchType>()
     var dataMap = mutableMapOf<String, String>()
 
+
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
+        Timber.d("onCreate")
+    }
+
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
+        Timber.d("onStart")
         AttentiveEventTracker.instance.config?.applicationContext?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 AttentiveEventTracker.instance.registerPushToken(it)
@@ -37,8 +46,15 @@ internal class AppLaunchTracker(
         }
     }
 
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        Timber.d("onResume")
+    }
+
     fun registerAppLaunchTracker() {
+        Timber.d("Adding lifecycle observer")
         lifecycle.addObserver(this)
+        Timber.d("Current state: ${lifecycle.currentState}.")
 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             onStart(ProcessLifecycleOwner.get())
@@ -46,73 +62,73 @@ internal class AppLaunchTracker(
     }
 
     private fun registerActivityCallback() {
-        application.registerActivityLifecycleCallbacks(
-            object :
-                Application.ActivityLifecycleCallbacks {
-                override fun onActivityCreated(
-                    activity: Activity,
-                    savedInstanceState: Bundle?,
-                ) {
-                    var wasLaunchedFromNotification =
-                        activity.intent?.extras?.run {
-                            getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
-                        } == true
+        application.registerActivityLifecycleCallbacks(object :
+            Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+            }
 
-                    if (wasLaunchedFromNotification) {
-                        Timber.i("Launched from notification")
-                        launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
-                    } else {
-                        Timber.i("Launched from launcher")
-                    }
+            override fun onActivityStarted(activity: Activity) {
+                Timber.d("onActivityStarted")
+
+                // Check for notification launch flag here (not in onActivityCreated) to support
+                // singleTask launch mode used by React Native apps. With singleTask, onActivityCreated
+                // is not called when the app is brought from background via notification tap.
+                // Note: Apps using singleTask must call setIntent(intent) in onNewIntent() for this to work.
+                val wasLaunchedFromNotification = activity.intent?.extras?.run {
+                    getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
+                } == true
+
+                if (wasLaunchedFromNotification) {
+                    Timber.d("Launched from notification")
+                    launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
+                    // Clear the flag so subsequent resumes from launcher don't trigger another DIRECT_OPEN
+                    activity.intent?.removeExtra(LAUNCHED_FROM_NOTIFICATION)
                 }
 
-                override fun onActivityStarted(activity: Activity) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
-                            activity.intent.extras.run {
-                                if (this != null) {
-                                    for (key in keySet()) {
-                                        // All the metadata for the notification is packaged in the launch intent
-                                        // The attentive backend needs these to be sent back to it when a notification is tapped
-                                        // The LAUNCHED_FROM_NOTIFICATION flag is a flag used for internal use only and shouldn't be sent to the backend
-                                        if (key != LAUNCHED_FROM_NOTIFICATION) {
-                                            dataMap[key] = getString(key).toString()
-                                        }
+                CoroutineScope(Dispatchers.IO).launch {
+                    if (launchEvents.contains(AttentiveApi.LaunchType.DIRECT_OPEN)) {
+                        Timber.d("launch even contains DIRECT_OPEN")
+                        activity.intent.extras.run {
+                            if (this != null) {
+                                for (key in keySet()) {
+                                    //All the metadata for the notification is packaged in the launch intent
+                                    //The attentive backend needs these to be sent back to it when a notification is tapped
+                                    //The LAUNCHED_FROM_NOTIFICATION flag is a flag used for internal use only and shouldn't be sent to the backend
+                                    if (key != LAUNCHED_FROM_NOTIFICATION) {
+                                        dataMap[key] = getString(key).toString()
                                     }
                                 }
                             }
-
-                            jsonEncodeTitleAndBody()
-
-                            AttentiveEventTracker.instance.sendAppLaunchEvent(
-                                AttentiveApi.LaunchType.DIRECT_OPEN,
-                                dataMap,
-                            )
-                        } else {
-                            AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
                         }
+
+                        jsonEncodeTitleAndBody()
+
+                        Timber.d("Sending DIRECT_OPEN")
+                        AttentiveEventTracker.instance.sendAppLaunchEvent(
+                            AttentiveApi.LaunchType.DIRECT_OPEN,
+                            dataMap
+                        )
+                    } else {
+                        Timber.d("Sending APP_LAUNCHED")
+                        AttentiveEventTracker.instance.sendAppLaunchEvent(AttentiveApi.LaunchType.APP_LAUNCHED)
+
                     }
                 }
+            }
 
-                override fun onActivityStopped(activity: Activity) {
-                    launchEvents.clear()
-                }
 
-                override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {
+                launchEvents.clear()
+            }
 
-                override fun onActivityPaused(activity: Activity) {}
-
-                override fun onActivitySaveInstanceState(
-                    activity: Activity,
-                    outState: Bundle,
-                ) {}
-
-                override fun onActivityDestroyed(activity: Activity) {}
-            },
-        )
+            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
     }
 
-    fun jsonEncodeTitleAndBody() {
+    fun jsonEncodeTitleAndBody(){
         dataMap[Constants.Companion.KEY_NOTIFICATION_BODY]?.let {
             dataMap[Constants.Companion.KEY_NOTIFICATION_BODY] = it.toJsonEncodedString()
         }
