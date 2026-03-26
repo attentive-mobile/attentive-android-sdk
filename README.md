@@ -172,6 +172,69 @@ Next, call Attentive's event functions when each important event happens in your
 
 The SDK currently supports `PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`, and `CustomEvent`.
 
+### Event Metadata Fields
+
+#### Item
+
+| Field              | Type       | Required | Description                          |
+| ------------------ | ---------- | -------- | ------------------------------------ |
+| `productId`        | `String`   | Yes      | The product's unique identifier      |
+| `productVariantId` | `String`   | Yes      | The product variant's identifier     |
+| `price`            | `Price`    | Yes      | The item's price                     |
+| `productImage`     | `String`   | No       | URL of the product image             |
+| `name`             | `String`   | No       | The product name                     |
+| `quantity`         | `Int`      | No       | The quantity (default: 1)            |
+| `category`         | `String`   | No       | The product category                 |
+
+#### Price
+
+| Field      | Type         | Required | Description                                      |
+| ---------- | ------------ | -------- | ------------------------------------------------ |
+| `price`    | `BigDecimal` | Yes      | The price value (rounded to 2 decimal places)     |
+| `currency` | `Currency`   | Yes      | The currency (e.g. `Currency.getInstance("USD")`) |
+
+#### Order
+
+| Field     | Type     | Required | Description                   |
+| --------- | -------- | -------- | ----------------------------- |
+| `orderId` | `String` | Yes      | The order's unique identifier |
+
+#### Cart
+
+| Field        | Type     | Required | Description                   |
+| ------------ | -------- | -------- | ----------------------------- |
+| `cartId`     | `String` | Yes      | The cart's unique identifier  |
+| `cartCoupon` | `String` | No       | A coupon code applied to cart |
+
+#### PurchaseEvent
+
+| Field   | Type         | Required | Description                              |
+| ------- | ------------ | -------- | ---------------------------------------- |
+| `items` | `List<Item>` | Yes      | The item(s) purchased                    |
+| `order` | `Order`      | Yes      | The order associated with the purchase   |
+| `cart`  | `Cart`       | No       | The cart the purchase was made from      |
+
+#### AddToCartEvent
+
+| Field      | Type         | Required | Description                            |
+| ---------- | ------------ | -------- | -------------------------------------- |
+| `items`    | `List<Item>` | Yes      | The item(s) added to cart              |
+| `deeplink` | `String`     | No       | A deeplink URL to the product          |
+
+#### ProductViewEvent
+
+| Field      | Type         | Required | Description                            |
+| ---------- | ------------ | -------- | -------------------------------------- |
+| `items`    | `List<Item>` | Yes      | The item(s) viewed                     |
+| `deeplink` | `String`     | No       | A deeplink URL to the product          |
+
+#### CustomEvent
+
+| Field        | Type                  | Required | Description                                                  |
+| ------------ | --------------------- | -------- | ------------------------------------------------------------ |
+| `type`       | `String`              | Yes      | The event name (case-sensitive, no special characters)        |
+| `properties` | `Map<String, String>` | Yes      | Key-value pairs of metadata (keys and values case-sensitive)  |
+
 ```kotlin
 // Construct one or more "Item"s, which represents the product(s) purchased
  val price: Price = Price.Builder().price(BigDecimal("19.99")).currency(Currency.getInstance("USD")).build()
