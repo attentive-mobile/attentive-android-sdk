@@ -5,6 +5,17 @@ version: 2.1
 orbs:
   android: circleci/android@2.5.0
 
+parameters:
+  run_release:
+    type: boolean
+    default: false
+  release_version:
+    type: string
+    default: ""
+  next_version:
+    type: string
+    default: ""
+
 # Reusable environment variables
 environment: &default_environment
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx4g"
@@ -232,8 +243,83 @@ jobs:
           path: bonni/build/outputs/apk/release
           destination: bonni-apk
 
+  release:
+    executor: android-executor
+    steps:
+      - checkout
+      - run:
+          name: Determine release version
+          command: |
+            if [ -n "<< pipeline.parameters.release_version >>" ]; then
+              VERSION="<< pipeline.parameters.release_version >>"
+            else
+              VERSION=$(grep '^VERSION_NAME=' attentive-android-sdk/gradle.properties | cut -d'=' -f2)
+            fi
+            echo "export RELEASE_VERSION=$VERSION" >> "$BASH_ENV"
+
+            if [ -n "<< pipeline.parameters.next_version >>" ]; then
+              NEXT="<< pipeline.parameters.next_version >>"
+            else
+              MAJOR=$(echo "$VERSION" | cut -d. -f1)
+              MINOR=$(echo "$VERSION" | cut -d. -f2)
+              PATCH=$(echo "$VERSION" | cut -d. -f3)
+              NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+            fi
+            echo "export NEXT_VERSION=$NEXT" >> "$BASH_ENV"
+
+            echo "Releasing: $VERSION"
+            echo "Next dev version: $NEXT"
+      - run:
+          name: Set release version
+          command: |
+            if [ -n "<< pipeline.parameters.release_version >>" ]; then
+              echo "VERSION_NAME=$RELEASE_VERSION" > attentive-android-sdk/gradle.properties
+            fi
+      - run:
+          name: Clean
+          command: ./gradlew clean
+      - run:
+          name: Publish to Maven Central
+          command: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+      - run:
+          name: Create GitHub Release
+          command: |
+            curl -s -X POST \
+              "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"tag_name\": \"v$RELEASE_VERSION\",
+                \"name\": \"v$RELEASE_VERSION\",
+                \"generate_release_notes\": true
+              }"
+      - run:
+          name: Create version bump PR
+          command: |
+            git config user.name "circleci[bot]"
+            git config user.email "circleci[bot]@users.noreply.github.com"
+
+            BRANCH="chore/bump-version-to-$NEXT_VERSION"
+            git checkout -b "$BRANCH"
+            echo "VERSION_NAME=$NEXT_VERSION" > attentive-android-sdk/gradle.properties
+            git add attentive-android-sdk/gradle.properties
+            git commit -m "Bump version to $NEXT_VERSION"
+            git push origin "$BRANCH"
+
+            curl -s -X POST \
+              "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"title\": \"Bump version to $NEXT_VERSION\",
+                \"body\": \"Automated version bump after releasing v$RELEASE_VERSION to Maven Central.\",
+                \"head\": \"$BRANCH\",
+                \"base\": \"main\"
+              }"
+
 workflows:
   build-and-test:
+    unless: << pipeline.parameters.run_release >>
     jobs:
       - lint
       - unit-test
@@ -253,3 +339,8 @@ workflows:
                 - main
                 - develop
                 - feature/MSDK-234-circleci-bonni-distribution
+
+  release:
+    when: << pipeline.parameters.run_release >>
+    jobs:
+      - release
