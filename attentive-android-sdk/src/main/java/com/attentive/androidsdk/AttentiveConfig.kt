@@ -151,23 +151,18 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
-        fun context(context: Application) =
-            apply {
-                ParameterValidation.verifyNotNull(context, "context")
-                _context = context
-            }
+        fun context(context: Application) = apply {
+            _context = context
+        }
 
-        fun mode(mode: Mode) =
-            apply {
-                ParameterValidation.verifyNotNull(mode, "mode")
-                _mode = mode
-            }
+        fun mode(mode: Mode) = apply {
+            _mode = mode
+        }
 
-        fun domain(domain: String) =
-            apply {
-                ParameterValidation.verifyNotEmpty(domain, "domain")
-                _domain = domain
-            }
+        fun domain(domain: String) = apply {
+            domain.verifyValidAttentiveDomain()
+            _domain = domain
+        }
 
         fun notificationIconId(notificationIconId: Int) =
             apply {
@@ -189,12 +184,10 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 }
             }
 
-        @Suppress("unused")
-        fun okHttpClient(okHttpClient: OkHttpClient) =
-            apply {
-                ParameterValidation.verifyNotNull(okHttpClient, "okHttpClient")
-                this.okHttpClient = okHttpClient
-            }
+
+        fun okHttpClient(okHttpClient: OkHttpClient) = apply {
+            this.okHttpClient = okHttpClient
+        }
 
         fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
             apply {
