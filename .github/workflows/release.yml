@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 2.1.3). Leave empty to use the version in gradle.properties.'
+        required: false
+        type: string
+      next_version:
+        description: 'Next development version (e.g. 2.1.4). Leave empty to auto-increment patch.'
+        required: false
+        type: string
+
+jobs:
+  release:
+    name: Publish to Maven Central
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Determine release version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(grep '^VERSION_NAME=' attentive-android-sdk/gradle.properties | cut -d'=' -f2)
+          fi
+          echo "release_version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ -n "${{ inputs.next_version }}" ]; then
+            NEXT="${{ inputs.next_version }}"
+          else
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            PATCH=$(echo "$VERSION" | cut -d. -f3)
+            NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+          fi
+          echo "next_version=$NEXT" >> "$GITHUB_OUTPUT"
+
+          echo "Releasing: $VERSION"
+          echo "Next dev version: $NEXT"
+
+      - name: Set release version
+        if: ${{ inputs.version != '' }}
+        run: |
+          echo "VERSION_NAME=${{ steps.version.outputs.release_version }}" > attentive-android-sdk/gradle.properties
+
+      - name: Clean
+        run: ./gradlew clean
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Publish to Maven Central
+        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+        env:
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.release_version }}
+          name: v${{ steps.version.outputs.release_version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create version bump PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEXT_VERSION="${{ steps.version.outputs.next_version }}"
+          RELEASE_VERSION="${{ steps.version.outputs.release_version }}"
+          BRANCH="chore/bump-version-to-$NEXT_VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          echo "VERSION_NAME=$NEXT_VERSION" > attentive-android-sdk/gradle.properties
+          git add attentive-android-sdk/gradle.properties
+          git commit -m "Bump version to $NEXT_VERSION"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Bump version to $NEXT_VERSION" \
+            --body "Automated version bump after releasing v$RELEASE_VERSION to Maven Central."
