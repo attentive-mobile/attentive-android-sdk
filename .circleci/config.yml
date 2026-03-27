@@ -257,18 +257,26 @@ jobs:
             fi
             echo "export RELEASE_VERSION=$VERSION" >> "$BASH_ENV"
 
-            if [ -n "<< pipeline.parameters.next_version >>" ]; then
-              NEXT="<< pipeline.parameters.next_version >>"
+            # Detect beta versions
+            if echo "$VERSION" | grep -qi "beta"; then
+              echo "export IS_BETA=true" >> "$BASH_ENV"
+              echo "Beta release detected — skipping GitHub Release and version bump"
             else
-              MAJOR=$(echo "$VERSION" | cut -d. -f1)
-              MINOR=$(echo "$VERSION" | cut -d. -f2)
-              PATCH=$(echo "$VERSION" | cut -d. -f3)
-              NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+              echo "export IS_BETA=false" >> "$BASH_ENV"
+
+              if [ -n "<< pipeline.parameters.next_version >>" ]; then
+                NEXT="<< pipeline.parameters.next_version >>"
+              else
+                MAJOR=$(echo "$VERSION" | cut -d. -f1)
+                MINOR=$(echo "$VERSION" | cut -d. -f2)
+                PATCH=$(echo "$VERSION" | cut -d. -f3)
+                NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+              fi
+              echo "export NEXT_VERSION=$NEXT" >> "$BASH_ENV"
+              echo "Next dev version: $NEXT"
             fi
-            echo "export NEXT_VERSION=$NEXT" >> "$BASH_ENV"
 
             echo "Releasing: $VERSION"
-            echo "Next dev version: $NEXT"
       - run:
           name: Set release version
           command: |
@@ -284,6 +292,10 @@ jobs:
       - run:
           name: Create GitHub Release
           command: |
+            if [ "$IS_BETA" = "true" ]; then
+              echo "Skipping GitHub Release for beta version"
+              exit 0
+            fi
             curl -s -X POST \
               "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases" \
               -H "Authorization: token $GITHUB_TOKEN" \
@@ -296,6 +308,10 @@ jobs:
       - run:
           name: Create version bump PR
           command: |
+            if [ "$IS_BETA" = "true" ]; then
+              echo "Skipping version bump for beta version"
+              exit 0
+            fi
             git config user.name "circleci[bot]"
             git config user.email "circleci[bot]@users.noreply.github.com"
 
