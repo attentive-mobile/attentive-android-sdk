@@ -280,8 +280,16 @@ jobs:
       - run:
           name: Set release version
           command: |
-            if [ -n "<< pipeline.parameters.release_version >>" ]; then
-              echo "VERSION_NAME=$RELEASE_VERSION" > attentive-android-sdk/gradle.properties
+            echo "VERSION_NAME=$RELEASE_VERSION" > attentive-android-sdk/gradle.properties
+      - run:
+          name: Commit release version
+          command: |
+            git config user.name "circleci[bot]"
+            git config user.email "circleci[bot]@users.noreply.github.com"
+            git add attentive-android-sdk/gradle.properties
+            if ! git diff --cached --quiet; then
+              git commit -m "Set version to $RELEASE_VERSION"
+              git push origin HEAD:main
             fi
       - run:
           name: Clean
