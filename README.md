@@ -29,33 +29,29 @@ __*** NOTE: Please refrain from using any private or undocumented classes or met
 
 ## Step 1 - SDK initialization
 
-__*** NOTE: To function properly, the SDK must be initialized as soon as possible after application startup. This is required for us to properly track metrics (app open events, etc) ***__
+> **Important:** The SDK **must** be initialized in your `Application.onCreate()` method — this is the earliest point in the Android lifecycle and ensures the SDK can properly track app open events, deep links, and push notification launches. Initializing later (e.g., in an Activity) may cause missed events and inconsistent behavior.
+>
+> The SDK includes a lint check that will warn you if `AttentiveSdk.initialize()` is called outside of an `Application` subclass.
 
 ```kotlin
-// Create an AttentiveConfig with your attentive domain, in production mode, with an Application context
-val attentiveConfig = AttentiveConfig.Builder()
-        .applicationContext(getApplicationContext())
-        .domain("YOUR_ATTENTIVE_DOMAIN")
-        .mode(AttentiveConfig.Mode.PRODUCTION)
-        // Add a notification icon drawable id if using push
-        .notificationIconId(R.drawable.your_notification_icon)
-        .build()
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
 
+        val attentiveConfig = AttentiveConfig.Builder()
+            .applicationContext(this)
+            .domain("YOUR_ATTENTIVE_DOMAIN")
+            .mode(AttentiveConfig.Mode.PRODUCTION)
+            // Add a notification icon drawable id if using push
+            .notificationIconId(R.drawable.your_notification_icon)
+            .build()
 
-
-// Alternatively, enable the SDK in debug mode for more information about your creative and filtering rules
-val attentiveConfig = AttentiveConfig.Builder()
-        .applicationContext(getApplicationContext())
-        .domain("YOUR_ATTENTIVE_DOMAIN")
-        .mode(AttentiveConfig.Mode.DEBUG)
-        .build()
+        AttentiveSdk.initialize(attentiveConfig)
+    }
+}
 ```
 
-### Initialize the SDK
-```kotlin
-// Right after defining the config, initialize the SDK in order to send ecommerce and identification events
-AttentiveSdk.initialize(attentiveConfig)
-```
+For debugging, use `AttentiveConfig.Mode.DEBUG` for more information about your creative and filtering rules.
 
 ## Step 2 - Identify the current user
 
