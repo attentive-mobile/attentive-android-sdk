@@ -64,6 +64,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
@@ -97,6 +98,12 @@ import kotlin.math.roundToInt
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    message = "Inbox is not yet available for public use.",
+    level = DeprecationLevel.WARNING,
+)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttentiveInbox(
@@ -225,6 +232,7 @@ private fun EmptyInboxView(
     }
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun MessageList(
     messages: List<Message>,
@@ -512,6 +520,7 @@ private fun SwipeToAction(
     }
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun MessageItem(
     message: Message,
@@ -574,6 +583,7 @@ private fun MessageItem(
     }
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun SmallMessageContent(
     message: Message,
@@ -664,6 +674,7 @@ private fun SmallMessageContent(
     }
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun LargeMessageContent(
     message: Message,

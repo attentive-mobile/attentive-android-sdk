@@ -1,5 +1,9 @@
+@file:Suppress("DEPRECATION")
+@file:SuppressLint("RestrictedApi")
+
 package com.attentive.bonni.inbox
 
+import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveSdk
@@ -8,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
+@Suppress("DEPRECATION")
 class InboxViewModel : ViewModel() {
     val inboxState: StateFlow<InboxState> =
         AttentiveSdk.inboxState.stateIn(

@@ -1,5 +1,8 @@
+@file:SuppressLint("RestrictedApi")
+
 package com.attentive.bonni.inbox
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -14,6 +17,7 @@ import com.attentive.bonni.R
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
 
+@Suppress("DEPRECATION")
 @Composable
 fun InboxScreen(navHostController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {
