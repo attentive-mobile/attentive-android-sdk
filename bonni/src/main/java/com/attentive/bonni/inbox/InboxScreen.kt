@@ -14,6 +14,7 @@ import com.attentive.bonni.R
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
 
+@Suppress("DEPRECATION")
 @Composable
 fun InboxScreen(navHostController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {

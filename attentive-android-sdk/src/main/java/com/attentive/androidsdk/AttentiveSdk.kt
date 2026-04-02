@@ -1,8 +1,11 @@
+@file:Suppress("DEPRECATION")
+
 package com.attentive.androidsdk
 
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
@@ -40,12 +43,19 @@ object AttentiveSdk {
             )
 
     // Inbox state management
+    @Suppress("DEPRECATION")
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**
      * Subscribe to the inbox state stream to receive updates when messages change.
      * This StateFlow emits a new InboxState whenever messages are updated.
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
     // Pagination management
@@ -57,6 +67,7 @@ object AttentiveSdk {
      * Starts with original 4 messages, then generates 16 more for a total of 20 (first page).
      * TODO: Remove this function once the backend API is ready.
      */
+    @Suppress("DEPRECATION")
     @SuppressLint("DefaultLocale")
     @VisibleForTesting
     internal fun initializeMockInbox() {
@@ -136,6 +147,12 @@ object AttentiveSdk {
      * Call this when the user scrolls near the end of the message list.
      * This function uses mock data until the backend API is ready.
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     suspend fun loadMoreInboxMessages() {
         paginationLock.withLock {
             val currentState = _inboxState.value
@@ -206,6 +223,7 @@ object AttentiveSdk {
      *
      * @param config The AttentiveConfig containing domain, mode, and other SDK settings
      */
+    @Suppress("DEPRECATION")
     @JvmStatic
     fun initialize(config: AttentiveConfig) {
         synchronized(AttentiveSdk::class.java) {
@@ -368,6 +386,12 @@ object AttentiveSdk {
      *
      * @return List of all messages in the inbox
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getAllMessages(): List<Message> {
         return inboxState.value.messages
     }
@@ -378,6 +402,12 @@ object AttentiveSdk {
      *
      * @return The number of unread messages
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getUnreadCount(): Int {
         return inboxState.value.unreadCount
     }
@@ -388,6 +418,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to mark as read
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markRead(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -412,6 +448,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to mark as unread
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markUnread(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -436,6 +478,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to delete
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun deleteMessage(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.attentive.bonni.inbox
 
 import androidx.lifecycle.ViewModel
@@ -8,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
+@Suppress("DEPRECATION")
 class InboxViewModel : ViewModel() {
     val inboxState: StateFlow<InboxState> =
         AttentiveSdk.inboxState.stateIn(

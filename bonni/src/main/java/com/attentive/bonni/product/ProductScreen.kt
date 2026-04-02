@@ -65,6 +65,7 @@ fun ProductScreen(
     ProductScreenContent(navHostController, viewModel)
 }
 
+@Suppress("DEPRECATION")
 @Composable
 fun ProductScreenContent(
     navHostController: NavHostController,
