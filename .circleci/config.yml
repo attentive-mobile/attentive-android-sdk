@@ -284,7 +284,7 @@ jobs:
       - run:
           name: Set release version
           command: |
-            echo "VERSION_NAME=$RELEASE_VERSION" > attentive-android-sdk/gradle.properties
+            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$RELEASE_VERSION/" attentive-android-sdk/gradle.properties
       - run:
           name: Commit release version
           command: |
@@ -308,7 +308,9 @@ jobs:
               echo "Skipping GitHub Release for beta version"
               exit 0
             fi
-            curl -s -X POST \
+            git tag "v$RELEASE_VERSION"
+            git push origin "v$RELEASE_VERSION"
+            curl -sf -X POST \
               "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases" \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/json" \
@@ -329,12 +331,12 @@ jobs:
 
             BRANCH="chore/bump-version-to-$NEXT_VERSION"
             git checkout -b "$BRANCH"
-            echo "VERSION_NAME=$NEXT_VERSION" > attentive-android-sdk/gradle.properties
+            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$NEXT_VERSION/" attentive-android-sdk/gradle.properties
             git add attentive-android-sdk/gradle.properties
             git commit -m "Bump version to $NEXT_VERSION"
             git push origin "$BRANCH"
 
-            curl -s -X POST \
+            curl -sf -X POST \
               "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/json" \
@@ -366,7 +368,6 @@ workflows:
               only:
                 - main
                 - develop
-                - feature/MSDK-234-circleci-bonni-distribution
 
   release:
     when: << pipeline.parameters.run_release >>
