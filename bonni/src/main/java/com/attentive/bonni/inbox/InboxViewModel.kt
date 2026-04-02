@@ -1,7 +1,9 @@
 @file:Suppress("DEPRECATION")
+@file:SuppressLint("RestrictedApi")
 
 package com.attentive.bonni.inbox
 
+import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attentive.androidsdk.AttentiveSdk

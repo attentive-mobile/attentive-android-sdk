@@ -1,5 +1,8 @@
+@file:SuppressLint("RestrictedApi")
+
 package com.attentive.bonni.product
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
