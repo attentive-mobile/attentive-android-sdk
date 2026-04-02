@@ -11,9 +11,8 @@ import java.util.regex.Pattern
 
 class GeoAdjustedDomainInterceptor(
     private val httpClient: OkHttpClient,
-    private val domain: String
+    private val domain: String,
 ) : Interceptor {
-
     @Volatile
     private var cachedGeoAdjustedDomain: String? = null
 
@@ -21,9 +20,9 @@ class GeoAdjustedDomainInterceptor(
         val geoDomain = getGeoAdjustedDomain()
         val originalRequest = chain.request()
         val originalUrl = originalRequest.url
-        var newRequestBuilder = originalRequest.newBuilder()
-            .url(originalUrl)
-
+        var newRequestBuilder =
+            originalRequest.newBuilder()
+                .url(originalUrl)
 
         // Only modify body for POST requests with a body
         if (originalRequest.method == "POST" && originalRequest.body != null) {
@@ -41,7 +40,6 @@ class GeoAdjustedDomainInterceptor(
         return chain.proceed(newRequestBuilder.build())
     }
 
-
     private fun getGeoAdjustedDomain(): String {
         cachedGeoAdjustedDomain?.let { return it }
 
@@ -54,8 +52,9 @@ class GeoAdjustedDomainInterceptor(
         }
 
         val fullTag = response.body!!.string()
-        val geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag)
-            ?: throw IOException("Could not parse the domain from the full tag")
+        val geoAdjustedDomain =
+            parseAttentiveDomainFromTag(fullTag)
+                ?: throw IOException("Could not parse the domain from the full tag")
 
         cachedGeoAdjustedDomain = geoAdjustedDomain
         return geoAdjustedDomain

@@ -8,12 +8,10 @@ import org.junit.Assert
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito
-import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class AttentivePushTest {
-
     @Mock
     private val context: Context = mock()
 
@@ -24,7 +22,7 @@ class AttentivePushTest {
     private val packageName = "com.example.app"
 
     @Test
-    fun testBuildLaunchIntentWithoutDeepLink(){
+    fun testBuildLaunchIntentWithoutDeepLink() {
         whenever(context.packageManager).thenReturn(pmMock)
         whenever(context.packageName).thenReturn(packageName)
         val intent = AttentivePush.getInstance().buildLaunchIntent(context, mapOf())
@@ -33,7 +31,7 @@ class AttentivePushTest {
     }
 
     @Test
-    fun testBuildLaunchIntentWithDeepLink(){
+    fun testBuildLaunchIntentWithDeepLink() {
         whenever(context.packageManager).thenReturn(pmMock)
         whenever(context.packageName).thenReturn(packageName)
         val intent = AttentivePush.getInstance().buildLaunchIntent(context, mapOf())

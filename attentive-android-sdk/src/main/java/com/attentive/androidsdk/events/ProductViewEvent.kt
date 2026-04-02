@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ProductViewEvent(
     val items: List<Item>,
-    val deeplink: String? = null
+    val deeplink: String? = null,
 ) : Event() {
     init {
         ParameterValidation.verifyNotEmpty(items, "items")
@@ -15,7 +15,7 @@ data class ProductViewEvent(
     companion object {
         @Deprecated(
             "As of release 1.0.0-beta01, replaced by standard builder methods",
-            ReplaceWith("ProductViewEvent.Builder().items(items).build()")
+            ReplaceWith("ProductViewEvent.Builder().items(items).build()"),
         )
         fun create(items: List<Item>): ProductViewEvent {
             ParameterValidation.verifyNotEmpty(items, "items")

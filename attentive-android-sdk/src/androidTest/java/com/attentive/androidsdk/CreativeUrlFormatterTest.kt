@@ -1,14 +1,12 @@
 package com.attentive.androidsdk
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.internal.util.AppInfo.attentiveSDKVersion
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
 import junit.framework.TestCase
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.util.Map
 
@@ -34,7 +32,7 @@ class CreativeUrlFormatterTest {
 
         TestCase.assertEquals(
             BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false",
-            url
+            url,
         )
     }
 
@@ -46,28 +44,29 @@ class CreativeUrlFormatterTest {
 
         TestCase.assertEquals(
             BASE_TEST_URL + "&debug=matter-trip-grass-symbol&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false",
-            url
+            url,
         )
     }
 
     @Test
     fun buildCompanyCreativeUrl_withUserIdentifiers_buildsUrlWithIdentifierQueryParams() {
-        val userIdentifiers = UserIdentifiers.Builder()
-            .withVisitorId("visitorId")
-            .withClientUserId("clientId")
-            .withPhone("+14156667777")
-            .withEmail("email@gmail.com")
-            .withShopifyId("12345")
-            .withKlaviyoId("54321")
-            .withCustomIdentifiers(Map.of("key1", "value1", "key2", "value2"))
-            .build()
+        val userIdentifiers =
+            UserIdentifiers.Builder()
+                .withVisitorId("visitorId")
+                .withClientUserId("clientId")
+                .withPhone("+14156667777")
+                .withEmail("email@gmail.com")
+                .withShopifyId("12345")
+                .withKlaviyoId("54321")
+                .withCustomIdentifiers(Map.of("key1", "value1", "key2", "value2"))
+                .build()
         Mockito.`when`(attentiveConfig!!.userIdentifiers).thenReturn(userIdentifiers)
 
         val url = creativeUrlBuilder!!.buildCompanyCreativeUrl(attentiveConfig!!, null)
 
         TestCase.assertEquals(
             BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D",
-            url
+            url,
         )
     }
 
@@ -78,7 +77,7 @@ class CreativeUrlFormatterTest {
 
         TestCase.assertEquals(
             BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false&attn_creative_id=" + creativeId,
-            url
+            url,
         )
     }
 

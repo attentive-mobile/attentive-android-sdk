@@ -19,11 +19,15 @@ object ProductListSerializer : KSerializer<List<ProductDto>?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("ProductList", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: List<ProductDto>?) {
+    @OptIn(ExperimentalSerializationApi::class)
+    override fun serialize(
+        encoder: Encoder,
+        value: List<ProductDto>?,
+    ) {
         if (value == null) {
             encoder.encodeNull()
         } else {
-            val json = Json{ignoreUnknownKeys = true}
+            val json = Json { ignoreUnknownKeys = true }
             val jsonString = json.encodeToString(JsonElement.serializer(), json.encodeToJsonElement(value))
             encoder.encodeString(jsonString)
         }

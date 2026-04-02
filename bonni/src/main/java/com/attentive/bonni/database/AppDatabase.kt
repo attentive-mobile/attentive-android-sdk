@@ -1,6 +1,5 @@
 package com.attentive.bonni.database
 
-import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -11,7 +10,6 @@ import com.attentive.bonni.BonniApp
 import com.attentive.bonni.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -24,13 +22,15 @@ import java.util.Locale
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cartItemDao(): ExampleCartItemDao
+
     abstract fun productItemDao(): ExampleProductDao
+
     abstract fun accountDao(): AccountDao
 
     internal fun initWithMockProducts() {
         CoroutineScope(Dispatchers.IO).launch {
             val count = productItemDao().getAll().first().count()
-            if( count > 0) {
+            if (count > 0) {
                 return@launch
             }
             val itemCount = 4
@@ -39,19 +39,20 @@ abstract class AppDatabase : RoomDatabase() {
                     R.drawable.superscreen,
                     R.drawable.stick1,
                     R.drawable.balm2,
-                    R.drawable.balm3
+                    R.drawable.balm3,
                 )
             val names = listOf("Protective Sunscreen", "The Stick", "The Balm", "The Balm")
-            val prices = listOf(
-                Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(12)).build(),
-                Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(20)).build(),
-                Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(15)).build(),
-                Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
-                    .price(BigDecimal(13)).build()
-            )
+            val prices =
+                listOf(
+                    Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
+                        .price(BigDecimal(12)).build(),
+                    Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
+                        .price(BigDecimal(20)).build(),
+                    Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
+                        .price(BigDecimal(15)).build(),
+                    Price.Builder().currency(Currency.getInstance(Locale.getDefault()))
+                        .price(BigDecimal(13)).build(),
+                )
             for (i in 0..<itemCount) {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
@@ -62,22 +63,21 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 
-
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
         fun getInstance(): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    BonniApp.getInstance().applicationContext,
-                    AppDatabase::class.java,
-                    "app_database"
-                ).build()
+                val instance =
+                    Room.databaseBuilder(
+                        BonniApp.getInstance().applicationContext,
+                        AppDatabase::class.java,
+                        "app_database",
+                    ).build()
                 INSTANCE = instance
                 instance
             }
         }
     }
 }
-

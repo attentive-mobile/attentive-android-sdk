@@ -1,31 +1,255 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
+# CircleCI configuration for Android SDK
 # See: https://circleci.com/docs/reference/configuration-reference
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
-jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
-    docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
-      - image: cimg/base:current
+orbs:
+  android: circleci/android@2.5.0
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
+# Reusable environment variables
+environment: &default_environment
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx4g"
+  JAVA_OPTS: "-Xmx4g"
+  JVM_OPTS: "-Xmx4g"
+
+# Reusable executor
+executors:
+  android-executor:
+    docker:
+      - image: cimg/android:2026.02.1
+    resource_class: large
+    environment:
+      <<: *default_environment
+
+jobs:
+  lint:
+    executor: android-executor
     steps:
-      # Checkout the code as the first step.
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Run Android Lint
+          command: ./gradlew lintDebug
+      - run:
+          name: Run ktlint
+          command: ./gradlew ktlintCheck
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/lint-results-debug.html
+          destination: lint-report.html
+
+  unit-test:
+    executor: android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Run Unit Tests with Coverage
+          command: ./gradlew testDebugUnitTest jacocoTestReport
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      # Store JUnit test results for CircleCI test insights
+      - store_test_results:
+          path: attentive-android-sdk/build/test-results/testDebugUnitTest
+      # Store test report as artifact
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/tests/testDebugUnitTest
+          destination: unit-test-report
+      # Store JaCoCo coverage report
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/jacoco/jacocoTestReport
+          destination: coverage-report
+      # Store coverage XML for potential CI integration (Codecov, etc.)
+      - persist_to_workspace:
+          root: attentive-android-sdk/build/reports
+          paths:
+            - jacoco/jacocoTestReport/jacocoTestReport.xml
+
+  instrumented-test:
+    machine:
+      image: android:default
+    resource_class: large
+    environment:
+      <<: *default_environment
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - android/create-avd:
+          avd-name: test-avd
+          system-image: system-images;android-30;google_apis;x86_64
+          install: true
+      - android/start-emulator:
+          avd-name: test-avd
+          no-window: true
+          restore-gradle-cache-prefix: gradle-v2
+          post-emulator-launch-assemble-command: ./gradlew :attentive-android-sdk:assembleDebugAndroidTest
+      - run:
+          name: Run Instrumented Tests
+          command: ./gradlew :attentive-android-sdk:connectedDebugAndroidTest
+          no_output_timeout: 20m
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      # Store instrumented test results
+      - store_test_results:
+          path: attentive-android-sdk/build/outputs/androidTest-results/connected
+      # Store instrumented test report
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/androidTests/connected
+          destination: instrumented-test-report
+      # Store instrumented test coverage
+      - store_artifacts:
+          path: attentive-android-sdk/build/reports/coverage/androidTest/debug
+          destination: instrumented-coverage-report
+
+  build:
+    executor: android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Build SDK
+          command: ./gradlew :attentive-android-sdk:assembleRelease
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+      - store_artifacts:
+          path: attentive-android-sdk/build/outputs/aar
+          destination: aar
+
+  snapshot-test:
+    executor: android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
+            - gradle-snapshot-v1-
+      - run:
+          name: Verify Snapshot Tests
+          command: ./gradlew :bonni:verifyRoborazziDebug
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
+      - store_artifacts:
+          path: bonni/build/outputs/roborazzi
+          destination: snapshot-diffs
+
+  distribute-bonni:
+    executor: android-executor
+    steps:
       - checkout
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+          name: Check if versionCode changed
+          command: |
+            # Get current versionCode
+            CURRENT_VERSION=$(grep -E "versionCode\s*=" bonni/build.gradle | grep -oE "[0-9]+")
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
+            # Fetch the base branch to compare against
+            git fetch origin "$CIRCLE_BRANCH"
+
+            # Get versionCode from the previous commit on this branch (before the push)
+            PREVIOUS_VERSION=$(git show origin/$CIRCLE_BRANCH^:bonni/build.gradle 2>/dev/null | grep -E "versionCode\s*=" | grep -oE "[0-9]+" || echo "")
+
+            echo "Current versionCode: $CURRENT_VERSION"
+            echo "Previous versionCode: $PREVIOUS_VERSION"
+
+            if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+              echo "versionCode unchanged, skipping distribution"
+              circleci-agent step halt
+            else
+              echo "versionCode changed ($PREVIOUS_VERSION -> $CURRENT_VERSION), proceeding with distribution"
+            fi
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
+            - gradle-v2-
+      - run:
+          name: Decode Keystore
+          command: echo "$BONNI_KEYSTORE_BASE64" | base64 -d > bonni/bonni-release.keystore
+      - run:
+          name: Build Bonni Release APK
+          command: ./gradlew :bonni:assembleRelease
+      - restore_cache:
+          keys:
+            - firebase-cli-v1
+      - run:
+          name: Install Firebase CLI
+          command: |
+            if ! command -v firebase &> /dev/null; then
+              npm install -g firebase-tools
+            fi
+      - save_cache:
+          paths:
+            - ~/.npm
+            - /usr/local/lib/node_modules/firebase-tools
+          key: firebase-cli-v1
+      - run:
+          name: Validate APK
+          command: |
+            APK_PATH="bonni/build/outputs/apk/release/bonni-release.apk"
+            if [ ! -f "$APK_PATH" ]; then
+              echo "Error: APK not found at $APK_PATH"
+              exit 1
+            fi
+            if [ ! -s "$APK_PATH" ]; then
+              echo "Error: APK file is empty"
+              exit 1
+            fi
+            echo "APK validated: $(ls -lh $APK_PATH)"
+      - run:
+          name: Upload to Firebase App Distribution
+          command: |
+            firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
+              --app "$FIREBASE_APP_ID" \
+              --groups "dev, product-+-eng" \
+              --token "$FIREBASE_TOKEN"
+      - store_artifacts:
+          path: bonni/build/outputs/apk/release
+          destination: bonni-apk
+
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  build-and-test:
     jobs:
-      - say-hello
+      - lint
+      - unit-test
+      - instrumented-test
+      - snapshot-test
+      - build:
+          requires:
+            - lint
+            - unit-test
+            - snapshot-test
+      - distribute-bonni:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+                - feature/MSDK-234-circleci-bonni-distribution

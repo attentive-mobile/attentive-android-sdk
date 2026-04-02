@@ -1,6 +1,5 @@
 package com.attentive.bonni.shipping
 
-import android.widget.Toolbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -31,7 +29,6 @@ import androidx.navigation.NavController
 import com.attentive.bonni.Routes
 import com.attentive.bonni.SimpleToolbar
 
-
 @Composable
 fun ShippingScreen(navController: NavController) {
     ShippingScreenContent(navController)
@@ -44,9 +41,10 @@ fun ShippingScreenContent(navController: NavController) {
             SimpleToolbar(title = "Checkout", actions = {}, navController)
             LazyColumn(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
             ) {
                 item { ShippingAddressForm(navController) }
                 item { BillingAddressForm(navController) }
@@ -102,16 +100,14 @@ fun PaymentMethodForm(navController: NavController) {
         Text("Payment Method")
         Text("Visa")
         TextField(cardNumber, onValueChange = { cardNumber = it })
-
     }
 }
 
 @Composable
 fun PlaceOrderButton(
     navController: NavController,
-    viewModel: ShippingScreenViewModel = ShippingScreenViewModel()
+    viewModel: ShippingScreenViewModel = ShippingScreenViewModel(),
 ) {
-
     var showThankYouDialog by remember { mutableStateOf(false) }
 
     Button(onClick = {
@@ -121,7 +117,7 @@ fun PlaceOrderButton(
         Text("Place Order")
     }
 
-    if(showThankYouDialog){
+    if (showThankYouDialog) {
         ThankYouDialog(navController = navController, onDismiss = { showThankYouDialog = false })
     }
 }
@@ -133,17 +129,21 @@ fun ShippingScreenPreview() {
 }
 
 @Composable
-fun ThankYouDialog(navController: NavController, onDismiss: () -> Unit) {
+fun ThankYouDialog(
+    navController: NavController,
+    onDismiss: () -> Unit,
+) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            modifier = Modifier
-                .background(Color.White)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .background(Color.White)
+                    .padding(16.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
                 Text(text = "Thank you for your order!", fontSize = 24.sp)
                 Spacer(modifier = Modifier.height(16.dp))

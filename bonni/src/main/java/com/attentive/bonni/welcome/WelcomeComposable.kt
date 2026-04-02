@@ -2,7 +2,6 @@ package com.attentive.bonni.welcome
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,8 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,38 +48,36 @@ import androidx.navigation.navDeepLink
 import com.attentive.bonni.R
 import com.attentive.bonni.Routes
 import com.attentive.bonni.cart.CartScreen
-import com.attentive.bonni.settings.debug.DebugScreenComposables
-import com.attentive.bonni.settings.SettingsScreen
+import com.attentive.bonni.inbox.InboxScreen
+import com.attentive.bonni.inbox.LegacyInboxScreen
 import com.attentive.bonni.product.ProductScreen
+import com.attentive.bonni.settings.SettingsScreen
+import com.attentive.bonni.settings.debug.DebugScreenComposables
 import com.attentive.bonni.shipping.ShippingScreen
 import com.attentive.bonni.ui.theme.AttentiveAndroidSDKTheme
-import com.attentive.bonni.ui.theme.BonniPink
 
 @Composable
 fun WelcomeScreenContent(
     navController: NavHostController,
-    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java],
 ) {
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
-    val signedIn by viewModel.signedIn.collectAsState()
-
-    LaunchedEffect(signedIn) {
-        if (signedIn) navController.navigate(Routes.ProductScreenRoute.name)
-    }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(
-            modifier = Modifier.paint(
-                painterResource(R.drawable.background),
-                contentScale = ContentScale.FillHeight
-            )
+            modifier =
+                Modifier.paint(
+                    painterResource(R.drawable.background),
+                    contentScale = ContentScale.FillHeight,
+                ),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 64.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 64.dp),
                 horizontalAlignment = CenterHorizontally,
             ) {
                 Greeting()
@@ -90,37 +85,40 @@ fun WelcomeScreenContent(
                 SignInForm(isVisible = existingAccount, navController)
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.padding(top = 106.dp)
+                    modifier = Modifier.padding(top = 106.dp),
                 ) {
-                    SignInButton(viewModel)
+                    SignInButton(navController, viewModel)
                     Spacer(modifier = Modifier.height(22.dp))
                     ContinueAsGuestButton(navController)
-
                 }
             }
         }
     }
 }
 
-
 @Composable
-fun SignInButton(viewModel: SignUpSignInViewModel? = null) {
+fun SignInButton(
+    navController: NavHostController,
+    viewModel: SignUpSignInViewModel? = null,
+) {
     Button(
         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
         onClick = {
             viewModel?.restorePreviousUser()
+            navController.navigate(Routes.ProductScreenRoute.name)
         },
         shape = RectangleShape,
-        modifier = Modifier
-            .width(378.dp)
-            .height(62.dp)
+        modifier =
+            Modifier
+                .width(378.dp)
+                .height(62.dp),
     ) {
         Text(
             "SIGN IN",
             color = White,
             fontSize = 22.sp,
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
         )
     }
 }
@@ -132,16 +130,17 @@ fun ContinueAsGuestButton(navController: NavHostController = rememberNavControll
         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
         shape = RectangleShape,
         onClick = { navController.navigate(Routes.ProductScreenRoute.name) },
-        modifier = Modifier
-            .width(378.dp)
-            .height(62.dp)
+        modifier =
+            Modifier
+                .width(378.dp)
+                .height(62.dp),
     ) {
         Text(
             "CONTINUE AS GUEST",
             color = Color.Black,
             fontSize = 22.sp,
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
         )
     }
 }
@@ -151,7 +150,7 @@ fun ContinueAsGuestButton(navController: NavHostController = rememberNavControll
 fun CreateAccountButton() {
     Button(
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        onClick = {}
+        onClick = {},
         //    onClick = { newAccount = true }
     ) {
         Text("Create Account", color = Color.Black)
@@ -170,7 +169,7 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(
                 Routes.CartScreen.name,
-                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" })
+                deepLinks = listOf(navDeepLink { uriPattern = "bonni://cart" }),
             ) {
                 CartScreen(navController)
             }
@@ -183,6 +182,12 @@ fun WelcomeScreen(navController: NavHostController) {
             composable(Routes.DebugScreen.name) {
                 DebugScreenComposables(navController)
             }
+            composable(Routes.InboxScreen.name) {
+                InboxScreen(navController)
+            }
+            composable(Routes.LegacyInboxScreen.name) {
+                LegacyInboxScreen(navController)
+            }
         }
     }
 }
@@ -194,7 +199,7 @@ fun AccountNameTextFieldPreview() {
         value = "",
         onValueChange = { },
         label = { Text("Account Name") },
-        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White)
+        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White),
     )
 }
 
@@ -215,9 +220,10 @@ fun Greeting() {
             text = "HEY BESTIE!",
             fontSize = 38.sp,
             color = colorResource(id = R.color.attentive_black),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 204.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 204.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             textAlign = TextAlign.Center,
         )
@@ -225,9 +231,10 @@ fun Greeting() {
             text = "Welcome to Bonni Beauty!",
             fontWeight = FontWeight.Medium,
             color = colorResource(id = R.color.attentive_black),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             lineHeight = 62.sp,
             fontSize = 54.sp,
@@ -240,28 +247,24 @@ fun Greeting() {
 fun SignUpForm(
     isVisible: Boolean,
     navHostController: NavHostController,
-    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java],
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var submitIsVisible by remember { mutableStateOf(false) }
-    val signedIn by viewModel.signedIn.collectAsState()
 
-    LaunchedEffect(signedIn) {
-        if (signedIn) navHostController.navigate(Routes.ProductScreenRoute.name)
-    }
     if (isVisible) {
         Column {
             TextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") }
+                label = { Text("Email") },
             )
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") }
+                label = { Text("Password") },
             )
             TextField(
                 value = confirmPassword,
@@ -269,12 +272,12 @@ fun SignUpForm(
                     confirmPassword = it
                     submitIsVisible = password == confirmPassword
                 },
-                label = { Text("Confirm Password") }
+                label = { Text("Confirm Password") },
             )
             if (submitIsVisible) {
                 Button(onClick = {
                     viewModel.onSignUp(email, password)
-
+                    navHostController.navigate(Routes.ProductScreenRoute.name)
                 }) {
                     Text("Submit")
                 }
@@ -287,40 +290,33 @@ fun SignUpForm(
 fun SignInForm(
     isVisible: Boolean,
     navHostController: NavHostController,
-    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java]
+    viewModel: SignUpSignInViewModel = ViewModelProvider(LocalActivity.current as ComponentActivity)[SignUpSignInViewModel::class.java],
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
-    val signedIn = viewModel.signedIn.collectAsState()
-
-    LaunchedEffect(signedIn) {
-        if (signedIn.value) navHostController.navigate(Routes.ProductScreenRoute.name)
-    }
 
     if (isVisible) {
         Column {
             TextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") }
+                label = { Text("Email") },
             )
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") }
+                label = { Text("Password") },
             )
             Button(onClick = {
                 viewModel.onSignIn(email, password)
+                navHostController.navigate(Routes.ProductScreenRoute.name)
             }) {
                 Text("Submit")
             }
-
         }
     }
 }
 
 @Composable
 fun SignOutButton() {
-
 }

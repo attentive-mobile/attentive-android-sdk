@@ -39,10 +39,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         apiVersion = builder.apiVersion
         configureLogging(logLevel, settingsService, builder._context)
 
-        val okHttpClient = builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
-            logLevel,
-            ClassFactory.buildUserAgentInterceptor(builder._context)
-        )
+        val okHttpClient =
+            builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
+                logLevel,
+                ClassFactory.buildUserAgentInterceptor(builder._context),
+            )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
     }
@@ -62,7 +63,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
         sendUserIdentifiersCollectedEvent()
     }
-
 
     override fun clearUser() {
         Timber.i("clearUser called")
@@ -95,7 +95,8 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 override fun onSuccess() {
                     Timber.i("Successfully sent the user identifiers")
                 }
-            })
+            },
+        )
     }
 
     private fun sendInfoEvent() {
@@ -106,7 +107,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         private fun configureLogging(
             logLevel: AttentiveLogLevel?,
             settingsService: SettingsService,
-            context: Context
+            context: Context,
         ) {
             val settingsLogLevel = settingsService.logLevel
             if (settingsLogLevel != null) {
@@ -143,10 +144,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
-        fun applicationContext(context: Application) = apply {
-            ParameterValidation.verifyNotNull(context, "context")
-            _context = context
-        }
+        fun applicationContext(context: Application) =
+            apply {
+                ParameterValidation.verifyNotNull(context, "context")
+                _context = context
+            }
 
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
         fun context(context: Application) = apply {
@@ -162,34 +164,40 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _domain = domain
         }
 
-        fun notificationIconId(notificationIconId: Int) = apply {
-            _notificationIconId = notificationIconId
-        }
+        fun notificationIconId(notificationIconId: Int) =
+            apply {
+                _notificationIconId = notificationIconId
+            }
 
-        fun notificationIconBackgroundColor(@ColorRes colorResourceId: Int) = apply {
+        fun notificationIconBackgroundColor(
+            @ColorRes colorResourceId: Int,
+        ) = apply {
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
         private val allowApiVersionOverride = false
-        fun apiVersion(apiVersion: ApiVersion) = apply {
-            if (allowApiVersionOverride) {
-                this.apiVersion = apiVersion
+
+        fun apiVersion(apiVersion: ApiVersion) =
+            apply {
+                if (allowApiVersionOverride) {
+                    this.apiVersion = apiVersion
+                }
             }
-        }
 
 
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             this.okHttpClient = okHttpClient
         }
 
-        fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) = apply {
-            this.skipFatigueOnCreatives = skipFatigueOnCreatives
-        }
+        fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
+            apply {
+                this.skipFatigueOnCreatives = skipFatigueOnCreatives
+            }
 
-        fun logLevel(logLevel: AttentiveLogLevel) = apply {
-            this.logLevel = logLevel
-        }
-
+        fun logLevel(logLevel: AttentiveLogLevel) =
+            apply {
+                this.logLevel = logLevel
+            }
 
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {
@@ -206,13 +214,14 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                    "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
+                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
         }
     }
 
 
     enum class Mode {
-        DEBUG, PRODUCTION
+        DEBUG,
+        PRODUCTION,
     }
 }
 

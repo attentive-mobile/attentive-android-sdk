@@ -4,13 +4,12 @@ import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.util.Arrays
 
 @RunWith(Parameterized::class)
 class CustomEventTest(
     val type: String,
     val properties: Map<String, String>,
-    val throwableClass: Class<Throwable>?
+    val throwableClass: Class<Throwable>?,
 ) {
     @Test
     fun customEventBuilder() {
@@ -20,11 +19,11 @@ class CustomEventTest(
             CustomEvent.Builder(type, properties)
         } else {
             Assert.assertThrows(
-                throwableClass
+                throwableClass,
             ) {
                 CustomEvent.Builder(
                     type,
-                    properties
+                    properties,
                 ).build()
             }
         }
@@ -39,7 +38,7 @@ class CustomEventTest(
                 arrayOf("typeWithInvalidChar[", emptyMap<String, String>(), IllegalArgumentException::class.java),
                 arrayOf("f", mapOf("keyWithInvalidChar[" to "value"), IllegalArgumentException::class.java),
                 arrayOf("f", emptyMap<String, String>(), null),
-                arrayOf("f", mapOf("key" to "value"), null)
+                arrayOf("f", mapOf("key" to "value"), null),
             )
         }
     }

@@ -12,5 +12,5 @@ data class Product(
     val categories: List<String>? = null,
     val price: String? = null,
     val quantity: Int? = null,
-    val productUrl: String? = null
+    val productUrl: String? = null,
 )

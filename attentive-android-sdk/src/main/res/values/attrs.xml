@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AttentiveInboxView">
+        <!-- Color Attributes -->
+        <attr name="attentive_backgroundColor" format="color|reference" />
+        <attr name="attentive_unreadIndicatorColor" format="color|reference" />
+        <attr name="attentive_titleTextColor" format="color|reference" />
+        <attr name="attentive_bodyTextColor" format="color|reference" />
+        <attr name="attentive_timestampTextColor" format="color|reference" />
+        <attr name="attentive_swipeBackgroundColor" format="color|reference" />
+
+        <!-- Font Attributes -->
+        <attr name="attentive_titleFontFamily" format="reference" />
+        <attr name="attentive_bodyFontFamily" format="reference" />
+        <attr name="attentive_timestampFontFamily" format="reference" />
+    </declare-styleable>
+</resources>
