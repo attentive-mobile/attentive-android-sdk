@@ -29,7 +29,7 @@ class PersistentStorageTest {
         context = Mockito.mock(Context::class.java)
         Mockito.doReturn(sharedPreferences).`when`(context)?.getSharedPreferences(
             ArgumentMatchers.eq(PersistentStorage.SHARED_PREFERENCES_NAME),
-            ArgumentMatchers.anyInt()
+            ArgumentMatchers.anyInt(),
         )
 
         persistentStorage = PersistentStorage(context)
@@ -40,7 +40,6 @@ class PersistentStorageTest {
         // never call 'commit' because it's not performant since it blocks
         Mockito.verify(sharedPreferencesEditor, Mockito.never()).commit()
     }
-
 
     @Test
     fun save_validValues_callsEditorPutString() {

@@ -76,7 +76,11 @@ object AppInfo {
     @JvmStatic
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun isDebuggable(context: Context): Boolean {
-        return ((context.applicationInfo.flags
-                and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
+        return (
+            (
+                context.applicationInfo.flags
+                    and ApplicationInfo.FLAG_DEBUGGABLE
+            ) != 0
+        )
     }
 }

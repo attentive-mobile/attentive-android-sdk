@@ -10,15 +10,15 @@ class UserIdentifiersTest {
         // Arrange
         val userIdentifiers = buildUserIdentifiers()
 
-        val newUserIdentifiers = UserIdentifiers.Builder()
-            .withClientUserId("newClientId")
-            .withPhone("+14158889999")
-            .withEmail("newEmail@gmail.com")
-            .withShopifyId("67890")
-            .withKlaviyoId("09876")
-            .withCustomIdentifiers(Map.of("key1", "newValue1", "extraKey", "extraValue"))
-            .build()
-
+        val newUserIdentifiers =
+            UserIdentifiers.Builder()
+                .withClientUserId("newClientId")
+                .withPhone("+14158889999")
+                .withEmail("newEmail@gmail.com")
+                .withShopifyId("67890")
+                .withKlaviyoId("09876")
+                .withCustomIdentifiers(Map.of("key1", "newValue1", "extraKey", "extraValue"))
+                .build()
 
         // Act
         val mergedUserIdentifiers = UserIdentifiers.merge(userIdentifiers, newUserIdentifiers)
@@ -31,7 +31,7 @@ class UserIdentifiersTest {
         Assert.assertEquals("09876", mergedUserIdentifiers.klaviyoId)
         Assert.assertEquals(
             Map.of("key1", "newValue1", "key2", "value2", "extraKey", "extraValue"),
-            mergedUserIdentifiers.customIdentifiers
+            mergedUserIdentifiers.customIdentifiers,
         )
     }
 
@@ -62,7 +62,7 @@ class UserIdentifiersTest {
     }
 
     @Test
-    fun merge_withIncompleteSetOfIdentifiers(){
+    fun merge_withIncompleteSetOfIdentifiers() {
         val userIdentifiers = UserIdentifiers.Builder().withClientUserId("oldUserId").build()
         val newUserIdentifiers = UserIdentifiers.Builder().withClientUserId("newUserId").build()
 
@@ -78,7 +78,7 @@ class UserIdentifiersTest {
         Assert.assertEquals("54321", userIdentifiersToVerify.klaviyoId)
         Assert.assertEquals(
             Map.of("key1", "value1", "key2", "value2"),
-            userIdentifiersToVerify.customIdentifiers
+            userIdentifiersToVerify.customIdentifiers,
         )
     }
 

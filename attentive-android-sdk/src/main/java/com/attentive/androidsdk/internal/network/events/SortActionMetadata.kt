@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class SortActionMetadata(
     val eventType: String = "SortAction",
     val sortBy: String? = null,
-    val direction: SortDirection? = null
+    val direction: SortDirection? = null,
 ) : EventMetadata()

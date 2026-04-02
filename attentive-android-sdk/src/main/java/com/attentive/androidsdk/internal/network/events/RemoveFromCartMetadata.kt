@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class RemoveFromCartMetadata(
     val eventType: String = "RemoveFromCart",
-    val product: Product? = null
+    val product: Product? = null,
 ) : EventMetadata()

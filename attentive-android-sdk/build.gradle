@@ -1,9 +1,11 @@
 plugins {
-    id 'com.android.library'
+    alias(libs.plugins.android.library)
     id 'maven-publish'
     id 'signing'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.0.0'
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
+    id 'jacoco'
 }
 
 def versionName = properties["VERSION_NAME"]
@@ -13,11 +15,11 @@ android {
 
     android.buildFeatures.buildConfig true
 
-    compileSdk 35
+    compileSdk libs.versions.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk 21
-        targetSdk 35
+        minSdk libs.versions.minSdk.get().toInteger()
+        targetSdk libs.versions.targetSdk.get().toInteger()
 
         buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
@@ -27,6 +29,10 @@ android {
 
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage true
+            enableAndroidTestCoverage true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -42,9 +48,18 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-//    kotlin {
-//        jvmToolchain(21)
-//    }
+    lint {
+        baseline = file("lint-baseline.xml")
+        lintConfig = rootProject.file("lint.xml")
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "2.0.0"
+    }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -53,6 +68,12 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            jacoco {
+                includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
+            }
+        }
     }
 
     testFixtures {
@@ -78,50 +99,57 @@ android {
 }
 
 dependencies {
-    // build errors in unity for appcompat 1.1.0+
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
-    implementation 'androidx.webkit:webkit:1.12.1'
-    // Timber for logging - Upgrading to 5.+ versions causes compilation errors
-    implementation 'com.jakewharton.timber:timber:4.7.1'
+    // Lint checks bundled with the SDK
+    lintPublish(project(":attentive-lint"))
 
-    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
-    implementation 'com.google.code.gson:gson:2.13.1'
-    implementation "com.squareup.retrofit2:converter-gson:3.0.0" // or latest
+    // AndroidX
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.webkit)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.test.runner)
 
+    // Google Material
+    implementation(libs.google.material)
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
-    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+    // Logging
+    implementation(libs.timber)
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
-    implementation "androidx.activity:activity-ktx:1.10.1"
+    // Networking
+    api(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.gson)
 
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
 
+    // Coroutines
+    implementation(libs.bundles.coroutines)
 
-    // 'api' instead of 'implementation' because we allow the host app to pass in an okhttp object,
-    // so we want to expose the okhttp object
-    api 'com.squareup.okhttp3:okhttp:4.12.0'
-    implementation 'androidx.activity:activity-ktx:1.10.0'
-    implementation 'androidx.activity:activity:1.8.0'
-    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
-    implementation 'androidx.test:runner:1.7.0'
+    // Compose
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.bundles.compose.sdk)
 
-    testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-inline:5.2.0'
-    testImplementation "org.mockito.kotlin:mockito-kotlin:5.4.0"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
+    // Image loading
+    implementation(libs.bundles.coil)
 
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
-    androidTestImplementation 'org.mockito:mockito-android:5.5.0'
+    // Testing
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.inline)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlinx.coroutines.test)
 
-//    classpath 'com.google.gms:google-services:4.4.2'
-
-    implementation platform('com.google.firebase:firebase-bom:32.2.0')
-    implementation 'com.google.firebase:firebase-messaging'
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.espresso)
+    androidTestImplementation(libs.mockito.android)
 }
 
 ext {
@@ -131,3 +159,58 @@ ext {
 }
 
 apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
+
+// JaCoCo configuration
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.register('jacocoTestReport', JacocoReport) {
+    dependsOn 'testDebugUnitTest'
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    def fileFilter = [
+        '**/R.class',
+        '**/R$*.class',
+        '**/BuildConfig.*',
+        '**/Manifest*.*',
+        '**/*Test*.*',
+        'android/**/*.*',
+        '**/*$ViewInjector*.*',
+        '**/*$ViewBinder*.*',
+        '**/Lambda$*.class',
+        '**/Lambda.class',
+        '**/*Lambda.class',
+        '**/*Lambda*.class',
+        '**/*_MembersInjector.class',
+        '**/Dagger*Component*.class',
+        '**/Dagger*Subcomponent*.class',
+        '**/*Subcomponent$Builder.class',
+        '**/*Module_*Factory.class',
+    ]
+
+    def debugTree = fileTree(
+        dir: "${buildDir}/tmp/kotlin-classes/debug",
+        excludes: fileFilter
+    ) + fileTree(
+        dir: "${buildDir}/intermediates/javac/debug/classes",
+        excludes: fileFilter
+    )
+
+    def mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files([mainSrc]))
+    classDirectories.setFrom(files([debugTree]))
+    executionData.setFrom(fileTree(
+        dir: "$buildDir",
+        includes: [
+            'outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec',
+            'jacoco/testDebugUnitTest.exec'
+        ]
+    ))
+}

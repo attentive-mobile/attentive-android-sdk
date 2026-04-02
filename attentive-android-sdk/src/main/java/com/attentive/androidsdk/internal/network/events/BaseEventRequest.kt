@@ -15,7 +15,7 @@ data class BaseEventRequest(
     val referrer: String,
     val locationHref: String? = null,
     val genericMetadata: GenericMetadata? = null,
-    val appSdk: AppSdk = AppSdk.Android
+    val appSdk: AppSdk = AppSdk.Android,
 )
 
 @Serializable
@@ -34,7 +34,7 @@ enum class EventType {
     CollectionView,
     SearchSubmit,
     CheckoutStarted,
-    PaymentInfoSubmitted
+    PaymentInfoSubmitted,
 }
 
 @Serializable
@@ -42,10 +42,10 @@ enum class SourceType {
     mobile,
     shp_pixel,
     sst,
-    ct
+    ct,
 }
 
 @Serializable
 enum class AppSdk {
-    Android
+    Android,
 }

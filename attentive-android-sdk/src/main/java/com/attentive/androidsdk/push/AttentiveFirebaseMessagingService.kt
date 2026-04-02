@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.push
 
-import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -11,7 +10,6 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
-
     override fun onNewToken(token: String) {
         Timber.i("Refreshed token: $token")
         super.onNewToken(token)
@@ -22,12 +20,12 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        Timber.i("Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}")
+        Timber.i(
+            "Message received with data: ${remoteMessage.data} and title ${remoteMessage.notification?.title} and body ${remoteMessage.notification?.body}",
+        )
 
-        if(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
+        if (AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
             AttentiveSdk.sendNotification(remoteMessage)
         }
     }
-
-
 }

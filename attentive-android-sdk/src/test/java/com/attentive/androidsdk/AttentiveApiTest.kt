@@ -11,7 +11,6 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
-import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
@@ -54,7 +53,7 @@ class AttentiveApiTest {
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
         attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "games"))
-        json = Json{ignoreUnknownKeys = true}
+        json = Json { ignoreUnknownKeys = true }
     }
 
     @Test
@@ -77,7 +76,8 @@ class AttentiveApiTest {
                 override fun onSuccess() {
                     Log.i(tag, "Successfully sent the user identifiers")
                 }
-            })
+            },
+        )
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
@@ -87,12 +87,14 @@ class AttentiveApiTest {
 
         val decoded = json.decodeFromString<Metadata>(url.queryParameter("m")!!)
         verifyCommonEventFields(
-            url, "idn", decoded
+            url,
+            "idn",
+            decoded,
         )
 
         Assert.assertEquals(
             "[{\"vendor\":\"2\",\"id\":\"someClientUserId\"},{\"vendor\":\"0\",\"id\":\"someShopifyId\"},{\"vendor\":\"1\",\"id\":\"someKlaviyoId\"}]",
-            url.queryParameter("evs")
+            url.queryParameter("evs"),
         )
     }
 
@@ -109,8 +111,9 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
-        val addToCartRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
+        val addToCartRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         val request = addToCartRequest.get()
         Assert.assertEquals("POST", request.method.uppercase(Locale.getDefault()))
@@ -129,15 +132,17 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
-        val purchaseRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
+        val purchaseRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
         Assert.assertTrue(purchaseRequest.isPresent)
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
 
-        val m = json.decodeFromString<PurchaseMetadataDto>(
-            url.queryParameter("m")!!
-        )
+        val m =
+            json.decodeFromString<PurchaseMetadataDto>(
+                url.queryParameter("m")!!,
+            )
         verifyCommonEventFields(url, "p", m)
         Assert.assertEquals("USD", m.currency)
         val purchasedItem = purchaseEvent.items[0]!!
@@ -147,9 +152,10 @@ class AttentiveApiTest {
         Assert.assertEquals(purchaseEvent.order.orderId, m.orderId)
     }
 
-    private val requestArgumentCaptor: ArgumentCaptor<Request> = ArgumentCaptor.forClass(
-        Request::class.java
-    )
+    private val requestArgumentCaptor: ArgumentCaptor<Request> =
+        ArgumentCaptor.forClass(
+            Request::class.java,
+        )
 
     @Test
     @Throws(SerializationException::class)
@@ -159,14 +165,14 @@ class AttentiveApiTest {
         givenOkHttpClientReturnsResponseBasedOnHost()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
-
         // Act
         attentiveApi.sendEvent(purchaseEvent, ALL_USER_IDENTIFIERS, DOMAIN)
 
         // Assert
         verify(okHttpClient, times(2)).newCall(capture(requestArgumentCaptor))
-        val purchaseRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
+        val purchaseRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=p") }.findFirst()
         Assert.assertTrue(purchaseRequest.isPresent)
         assertRequestMethodIsPost(purchaseRequest.get())
         val url = purchaseRequest.get().url
@@ -201,15 +207,19 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
-        val orderConfirmedRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=oc") }.findFirst()
+        val orderConfirmedRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=oc") }.findFirst()
         Assert.assertTrue(orderConfirmedRequest.isPresent)
         assertRequestMethodIsPost(orderConfirmedRequest.get())
         val url = orderConfirmedRequest.get().url
 
         verifyCommonEventFields(
-            url, "oc", json.decodeFromString<Metadata>(
-                url.queryParameter("m")!!)
+            url,
+            "oc",
+            json.decodeFromString<Metadata>(
+                url.queryParameter("m")!!,
+            ),
         )
 
         val metadataString = url.queryParameter("m")!!
@@ -219,12 +229,12 @@ class AttentiveApiTest {
         Assert.assertEquals(expectedItem.price.price.toString(), metadata["cartTotal"])
         Assert.assertEquals(
             expectedItem.price.currency.currencyCode,
-            metadata["currency"]
+            metadata["currency"],
         )
 
         val products =
             json.decodeFromString<Array<ProductDto>>(
-                metadata["products"]!!
+                metadata["products"]!!,
             )
         Assert.assertEquals(1, products.size.toLong())
         Assert.assertEquals(expectedItem.price.price.toString(), products[0].price)
@@ -278,8 +288,9 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
-        val addToCartRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
+        val addToCartRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
@@ -310,8 +321,9 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
-        val addToCartRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=d") }.findFirst()
+        val addToCartRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=d") }.findFirst()
         Assert.assertTrue(addToCartRequest.isPresent)
         assertRequestMethodIsPost(addToCartRequest.get())
         val url = addToCartRequest.get().url
@@ -341,15 +353,18 @@ class AttentiveApiTest {
 
         // Assert
         Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
-        val customEventRequest = requestArgumentCaptor.allValues.stream()
-            .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
+        val customEventRequest =
+            requestArgumentCaptor.allValues.stream()
+                .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
         Assert.assertTrue(customEventRequest.isPresent)
         assertRequestMethodIsPost(customEventRequest.get())
         val url = customEventRequest.get().url
 
         val metadataString = url.queryParameter("m")!!
         verifyCommonEventFields(
-            url, "ce", json.decodeFromString(metadataString)
+            url,
+            "ce",
+            json.decodeFromString(metadataString),
         )
 
         val metadata = json.decodeFromString<Map<String, String>>(metadataString)
@@ -400,14 +415,17 @@ class AttentiveApiTest {
 
         Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
-    
+
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(
                 Item.Builder(
-                    "11", "22", Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
-                ).build()
-            ), Order.Builder().orderId("5555").build()
+                    "11",
+                    "22",
+                    Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build(),
+                ).build(),
+            ),
+            Order.Builder().orderId("5555").build(),
         ).build()
     }
 
@@ -417,24 +435,24 @@ class AttentiveApiTest {
                 Item.Builder(
                     "11",
                     "22",
-                    Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build()
+                    Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build(),
                 ).build(),
                 Item.Builder(
                     "77",
                     "99",
-                    Price.Builder().price(BigDecimal("20.00")).currency(Currency.getInstance("USD")).build()
-                ).build()
+                    Price.Builder().price(BigDecimal("20.00")).currency(Currency.getInstance("USD")).build(),
+                ).build(),
             ),
-            Order.Builder().orderId("5555").build()
+            Order.Builder().orderId("5555").build(),
         ).build()
     }
 
     private fun buildPurchaseEventWithAllFields(): PurchaseEvent {
         return PurchaseEvent.Builder(
             listOf(buildItemWithAllFields()),
-            Order.Builder().orderId("5555").build()
+            Order.Builder().orderId("5555").build(),
         ).cart(
-            Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build()
+            Cart.Builder().cartCoupon("cartCoupon").cartId("cartId").build(),
         ).build()
     }
 
@@ -450,7 +468,7 @@ class AttentiveApiTest {
     private fun buildCustomEventWithAllFields(): CustomEvent {
         return CustomEvent.Builder(
             "High Fived Friend",
-            mapOf("friendGivenTheHighFive" to "Warthog234")
+            mapOf("friendGivenTheHighFive" to "Warthog234"),
         ).build()
     }
 
@@ -458,8 +476,9 @@ class AttentiveApiTest {
         return Item.Builder(
             "11",
             "22",
-            Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build())
-        .category("categoryValue").name("nameValue").productImage("imageUrl").build()
+            Price.Builder().price(BigDecimal("15.99")).currency(Currency.getInstance("USD")).build(),
+        )
+            .category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
     private fun givenOkHttpClientReturnsResponseBasedOnHost() {
@@ -477,10 +496,11 @@ class AttentiveApiTest {
                 }
                 "cdn.attn.tv" -> {
                     val dtagResponse = mock<Response>()
-                    val content = String.format(
-                        "window.__attentive_domain='%s.attn.tv'",
-                        GEO_ADJUSTED_DOMAIN
-                    )
+                    val content =
+                        String.format(
+                            "window.__attentive_domain='%s.attn.tv'",
+                            GEO_ADJUSTED_DOMAIN,
+                        )
                     val responseBody = content.toResponseBody("text/html".toMediaTypeOrNull())
 
                     whenever(dtagResponse.body).thenReturn(responseBody)
@@ -516,7 +536,8 @@ class AttentiveApiTest {
                 invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
             argument.onSuccess(GEO_ADJUSTED_DOMAIN)
         }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
-            eq(DOMAIN), any()
+            eq(DOMAIN),
+            any(),
         )
     }
 
@@ -548,9 +569,13 @@ class AttentiveApiTest {
                 .withVisitorId("someVisitorId").build()
         }
 
-        private fun verifyCommonEventFields(url: HttpUrl, eventType: String?, m: Metadata) {
+        private fun verifyCommonEventFields(
+            url: HttpUrl,
+            eventType: String?,
+            m: Metadata,
+        ) {
             Assert.assertEquals("modern", url.queryParameter("tag"))
-            if(eventType != null) {
+            if (eventType != null) {
                 Assert.assertEquals("mobile-app", url.queryParameter("v"))
             } else {
                 Assert.assertNull("mobile-app-${AppInfo.attentiveSDKVersion}", url.queryParameter("v"))

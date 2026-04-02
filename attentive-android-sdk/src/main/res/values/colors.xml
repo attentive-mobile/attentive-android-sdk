@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Attentive Inbox Default Colors -->
+    <color name="attentive_inbox_background">#FFFFFF</color>
+    <color name="attentive_inbox_unread_indicator">#FFC5B9</color>
+    <color name="attentive_inbox_title_text">#1A1E22</color>
+    <color name="attentive_inbox_body_text">#A9A9A9</color> <!-- DarkGray -->
+    <color name="attentive_inbox_timestamp_text">#808080</color> <!-- Gray -->
+    <color name="attentive_inbox_swipe_background">#FFC5B9</color>
+</resources>

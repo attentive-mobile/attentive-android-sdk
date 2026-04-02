@@ -1,5 +1,8 @@
+@file:SuppressLint("RestrictedApi")
+
 package com.attentive.bonni.product
 
+import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -17,6 +20,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -44,32 +49,71 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.Price
 import com.attentive.bonni.R
 import com.attentive.bonni.Routes
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.database.ExampleProduct
-import timber.log.Timber
 
 @Composable
 fun ProductScreen(
     navHostController: NavHostController,
-    viewModel: ProductViewModel = ViewModelProvider(
-        LocalActivity.current as ComponentActivity
-    )[ProductViewModel::class.java]
+    viewModel: ProductViewModel =
+        ViewModelProvider(
+            LocalActivity.current as ComponentActivity,
+        )[ProductViewModel::class.java],
 ) {
     ProductScreenContent(navHostController, viewModel)
 }
 
-
+@Suppress("DEPRECATION")
 @Composable
-fun ProductScreenContent(navHostController: NavHostController, viewModel: ProductViewModel) {
+fun ProductScreenContent(
+    navHostController: NavHostController,
+    viewModel: ProductViewModel,
+) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val items by viewModel.productItemsFlow.collectAsState()
+    val inboxState by AttentiveSdk.inboxState.collectAsState()
 
     Column {
         SimpleToolbar(title = "Products", actions = {
+            BadgedBox(
+                modifier = Modifier.padding(4.dp),
+                badge = {
+                    if (inboxState.unreadCount > 0) {
+                        Badge(containerColor = Color.White, contentColor = Color.Black) {
+                            Text(text = inboxState.unreadCount.toString())
+                        }
+                    }
+                },
+            ) {
+                IconButton(
+                    onClick = {
+                        navHostController.navigate(Routes.InboxScreen.name)
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MailOutline,
+                        tint = colorResource(id = R.color.attentive_black),
+                        contentDescription = "Inbox",
+                    )
+                }
+            }
+            // Legacy inbox using View system wrapper
+            IconButton(
+                onClick = {
+                    navHostController.navigate(Routes.LegacyInboxScreen.name)
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.List,
+                    tint = colorResource(id = R.color.attentive_black),
+                    contentDescription = "Inbox (Legacy View)",
+                )
+            }
             BadgedBox(
                 modifier = Modifier.padding(4.dp),
                 badge = {
@@ -78,30 +122,29 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
                             Text(text = cartItemCount.toString())
                         }
                     }
-                }
+                },
             ) {
                 IconButton(
-
                     onClick = {
                         navHostController.navigate(Routes.CartScreen.name)
-                    }
+                    },
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ShoppingCart,
                         tint = colorResource(id = R.color.attentive_black),
-                        contentDescription = "Cart"
+                        contentDescription = "Cart",
                     )
                 }
             }
             IconButton(
                 onClick = {
                     navHostController.navigate(Routes.SettingsScreen.name)
-                }
+                },
             ) {
                 Icon(
                     imageVector = Icons.Filled.Build,
                     tint = colorResource(id = R.color.attentive_black),
-                    contentDescription = "Debug"
+                    contentDescription = "Debug",
                 )
             }
         }, navHostController)
@@ -110,10 +153,10 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
             fontSize = 20.sp,
             fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 16.dp)
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 16.dp),
         )
 
-            ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
+        ProductsGrid(items, viewModel::productWasViewed, viewModel::addToCart)
     }
 }
 
@@ -121,7 +164,7 @@ fun ProductScreenContent(navHostController: NavHostController, viewModel: Produc
 fun ProductsGrid(
     products: List<ExampleProduct>,
     onProductViewed: (item: Item) -> Unit,
-    onAddToCart: (item: ExampleProduct) -> Unit
+    onAddToCart: (item: ExampleProduct) -> Unit,
 ) {
     LazyVerticalGrid(modifier = Modifier.background(Color.White), columns = GridCells.Fixed(2)) {
         items(products.size) { index ->
@@ -135,38 +178,39 @@ fun ProductCard(
     index: Int,
     item: ExampleProduct,
     onProductViewed: (item: Item) -> Unit,
-    onAddToCart: (item: ExampleProduct) -> Unit
+    onAddToCart: (item: ExampleProduct) -> Unit,
 ) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(8.dp)
-            .clickable(
-                onClick = {
-                    onAddToCart(item)
-                    Toast.makeText(context, "Added Product: $index to cart", Toast.LENGTH_SHORT)
-                        .show()
-                },
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple()
-            ),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .clickable(
+                    onClick = {
+                        onAddToCart(item)
+                        Toast.makeText(context, "Added Product: $index to cart", Toast.LENGTH_SHORT)
+                            .show()
+                    },
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(),
+                ),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
             ImageBitmap.imageResource(item.imageId),
             contentDescription = "T shirt",
-            modifier = Modifier
-                .fillMaxSize()
-                .height(285.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .height(285.dp),
         )
         ProductTitle(item.item.name!!)
         ProductSubtitle(item.item.price)
         onProductViewed(item.item)
     }
 }
-
 
 @Composable
 fun ProductTitle(title: String) {
@@ -175,9 +219,10 @@ fun ProductTitle(title: String) {
         fontSize = 15.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth(),
     )
 }
 
@@ -189,9 +234,10 @@ fun ProductSubtitle(price: Price) {
         fontSize = 12.sp,
         fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
         textAlign = TextAlign.Start,
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth(),
     )
 }
 
@@ -201,9 +247,6 @@ fun ProductScreenPreview() {
     val viewModel = remember { ProductViewModel() }
     ProductScreenContent(
         navHostController = NavHostController(LocalContext.current),
-        viewModel
+        viewModel,
     )
 }
-
-
-

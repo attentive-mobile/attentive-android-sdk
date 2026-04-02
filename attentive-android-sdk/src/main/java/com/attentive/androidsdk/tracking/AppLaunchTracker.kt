@@ -22,7 +22,6 @@ internal class AppLaunchTracker(
     internal val application: Application,
     internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle
 ) : DefaultLifecycleObserver {
-
     init {
         registerAppLaunchTracker()
         registerActivityCallback()

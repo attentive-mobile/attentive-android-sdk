@@ -15,5 +15,5 @@ enum class IdType {
     SalesforceMcId,
     CordialId,
     GenericClickId,
-    AttnEatId
+    AttnEatId,
 }
