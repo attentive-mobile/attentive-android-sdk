@@ -15,6 +15,7 @@ import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -338,26 +339,53 @@ object AttentiveSdk {
         }
     }
 
-    fun updateUser(
-        email: String? = null,
-        phoneNumber: String? = null,
-    ) {
-        if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
+    fun updateUser(email: String? = null, phoneNumber: String? = null) {
+        val trimmedEmail = email?.trim()?.ifBlank { null }
+        val trimmedPhone = phoneNumber?.trim()?.ifBlank { null }
+
+        if (trimmedEmail == null && trimmedPhone == null) {
             Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
             return
         }
 
-        var number = phoneNumber
-        phoneNumber?.let {
+        var number = trimmedPhone
+        trimmedPhone?.let {
             if (it.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
+                Timber.e("Invalid phone number: $trimmedPhone")
                 number = null
             }
         }
 
+        if(trimmedEmail == null && number == null){
+            Timber.e("No valid identifiers to update. Email is null and phone number failed validation.")
+            return
+        }
+
+        config.resetIdentifiers()
         val domain = config.domain
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, email, number)
+            config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
+        }
+    }
+
+
+    fun clearUser() {
+        config.resetIdentifiers()
+        val domain = config.domain
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.w("Skipping clearUser network call: visitorId=$visitorId, pushToken=$pushToken")
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken)
         }
     }
 

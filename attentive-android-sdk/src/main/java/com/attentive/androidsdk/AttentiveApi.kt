@@ -137,20 +137,13 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     val api: RetrofitApiService = retrofit.create(RetrofitApiService::class.java)
 
-    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
-        AttentiveEventTracker.instance.config.clearUser()
-
-        val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
-        if (visitorId == null) {
-            Timber.e("No visitorId available, cannot send user update")
-            return
-        }
-        val pushToken = TokenProvider.getInstance().token
-        if (pushToken == null) {
-            Timber.e("No push token available, cannot send user update")
-            return
-        }
-
+    internal fun sendUserUpdate(
+        domain: String,
+        email: String?,
+        phoneNumber: String?,
+        visitorId: String,
+        pushToken: String,
+    ) {
         val contactInfo = ContactInfo().apply {
             if (email != null) {
                 this.email = email
@@ -160,15 +153,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             }
         }
 
-        val builder = UserIdentifiers.Builder()
-        email?.let {
-            builder.withEmail(it)
+        if (email != null || phoneNumber != null) {
+            val builder = UserIdentifiers.Builder()
+            email?.let { builder.withEmail(it) }
+            phoneNumber?.let { builder.withPhone(it) }
+            AttentiveEventTracker.instance.config.identify(builder.build())
         }
-        phoneNumber?.let {
-            builder.withPhone(it)
-        }
-
-        AttentiveEventTracker.instance.config.identify(builder.build())
 
         api.updateUser(
             UserUpdateRequest(
