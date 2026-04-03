@@ -338,26 +338,41 @@ object AttentiveSdk {
         }
     }
 
-    fun updateUser(
-        email: String? = null,
-        phoneNumber: String? = null,
-    ) {
-        if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
+    fun updateUser(email: String? = null, phoneNumber: String? = null) {
+        val trimmedEmail = email?.trim()?.ifBlank { null }
+        val trimmedPhone = phoneNumber?.trim()?.ifBlank { null }
+
+        if (trimmedEmail == null && trimmedPhone == null) {
             Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
             return
         }
 
-        var number = phoneNumber
-        phoneNumber?.let {
+        var number = trimmedPhone
+        trimmedPhone?.let {
             if (it.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
+                Timber.e("Invalid phone number: $trimmedPhone")
                 number = null
             }
         }
 
+        if(trimmedEmail == null && number == null){
+            Timber.e("No valid identifiers to update. Email is null and phone number failed validation.")
+            return
+        }
+
+        config.resetIdentifiers()
         val domain = config.domain
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, email, number)
+            config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number)
+        }
+    }
+
+
+    fun clearUser() {
+        config.resetIdentifiers()
+        val domain = config.domain
+        CoroutineScope(Dispatchers.IO).launch {
+            config.attentiveApi.sendUserUpdate(domain, null, null)
         }
     }
 
