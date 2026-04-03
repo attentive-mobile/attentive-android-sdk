@@ -5,6 +5,7 @@ import android.content.Context
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
 import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -28,7 +29,6 @@ class AttentiveSdkTest {
     private lateinit var callback: AttentiveSdk.PushTokenCallback
     private lateinit var factoryMocks: FactoryMocks
     private var mockedAppInfo: MockedStatic<AppInfo>? = null
-
     @Before
     fun setUp() {
         remoteMessage = mock(RemoteMessage::class.java)
@@ -42,6 +42,9 @@ class AttentiveSdkTest {
 
         mockedAppInfo = Mockito.mockStatic(AppInfo::class.java)
         Mockito.`when`(isDebuggable(any())).thenReturn(false)
+
+        // Set push token on the real TokenProvider singleton
+        TokenProvider.getInstance().token = PUSH_TOKEN
 
         val config = AttentiveConfig.Builder()
             .domain(DOMAIN)
@@ -59,6 +62,7 @@ class AttentiveSdkTest {
     fun tearDown() {
         factoryMocks.close()
         mockedAppInfo?.close()
+        TokenProvider.getInstance().token = null
     }
 
     @Test
@@ -80,7 +84,9 @@ class AttentiveSdkTest {
         // sendUserUpdate is launched on Dispatchers.IO; give it time to execute
         Thread.sleep(100)
 
-        verify(factoryMocks.attentiveApi).sendUserUpdate(eq(DOMAIN), isNull(), isNull())
+        verify(factoryMocks.attentiveApi).sendUserUpdate(
+            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), eq(PUSH_TOKEN)
+        )
     }
 
     @Test
@@ -94,19 +100,20 @@ class AttentiveSdkTest {
     fun updateUser_withWhitespaceOnlyEmail_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = "   ")
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any())
+        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any())
     }
 
     @Test
     fun updateUser_withBothNullParams_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = null, phoneNumber = null)
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any())
+        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any())
     }
 
     companion object {
         private const val DOMAIN = "testDomain"
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
+        private const val PUSH_TOKEN = "testPushToken"
     }
 }
