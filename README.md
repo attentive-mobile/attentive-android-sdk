@@ -478,7 +478,7 @@ and
 
 ### Update user via email and/or phone
 
-Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided). Input is automatically trimmed of whitespace.
+Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided).
 Calling this method will clear all identifiers previously associated with the current user (the SDK will automatically call `clearUser()`), detach the push token from the previous user, and associate the app with the new identifier(s) you provide.
 This ensures that all subsequent events and messages are attributed to the newly identified user.
 
