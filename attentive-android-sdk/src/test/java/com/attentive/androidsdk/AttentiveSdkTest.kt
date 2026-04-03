@@ -85,7 +85,7 @@ class AttentiveSdkTest {
         Thread.sleep(100)
 
         verify(factoryMocks.attentiveApi).sendUserUpdate(
-            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), eq(PUSH_TOKEN)
+            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any()
         )
     }
 

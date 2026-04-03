@@ -366,7 +366,7 @@ object AttentiveSdk {
         val visitorId = config.userIdentifiers.visitorId
         val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
-            Timber.e("Cannot send user update: visitorId=$visitorId, pushToken=$pushToken")
+            Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
@@ -381,7 +381,7 @@ object AttentiveSdk {
         val visitorId = config.userIdentifiers.visitorId
         val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
-            Timber.e("Cannot send clearUser update: visitorId=$visitorId, pushToken=$pushToken")
+            Timber.w("Skipping clearUser network call: visitorId=$visitorId, pushToken=$pushToken")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
