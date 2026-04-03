@@ -109,12 +109,12 @@ allIdentifiers.klaviyoId // == 777
 
 ### Clearing user data
 
-If the user "logs out" of your application, you can call `clearUser` to remove all current identifiers.
+If the user "logs out" of your application, call `clearUser()` to remove all current identifiers and detach the push token from the logged-out user. This creates a new anonymous visitor so that the device returns to a "guest" state.
 
 ```kotlin
 // If the user logs out then the current user identifiers should be deleted
-attentiveConfig.clearUser();
-// When/if a user logs back in, `identify` should be called again with the logged in user's identfiers
+AttentiveSdk.clearUser()
+// When/if a user logs back in, `identify` should be called again with the logged in user's identifiers
 ```
 
 ### Managing User Identity
@@ -122,7 +122,7 @@ attentiveConfig.clearUser();
 The SDK provides three methods for managing user identity:
 
 - **`identify()`** – Add or enrich information about the current user
-- **`clearUser()`** – Clear all identifiers for the current user (used on logout)
+- **`clearUser()`** – Clear all identifiers and detach the push token, returning the device to a "guest" state (used on logout)
 - **`updateUser()`** – Switch to a different user (automatically calls `clearUser()` first)
 
 - Warning: Avoid using hardcoded identifiers like email/phone number in your application's distributed test builds. This will cause every new device to associate a new push token with the same user info on our backend.
@@ -147,10 +147,10 @@ attentiveConfig.identify(userIdentifiers)
 
 **3. User logs out**
 
-Call `clearUser()` to remove identifiers.
+Call `clearUser()` to remove identifiers and detach the push token from the previous user. The device returns to an anonymous "guest" state.
 
 ```kotlin
-attentiveConfig.clearUser()
+AttentiveSdk.clearUser()
 ```
 
 **4. Different user logs in on the same device**
@@ -164,6 +164,7 @@ AttentiveSdk.updateUser(email = "newuser@example.com", phone = "+15559876543")
 #### Notes
 - If the same person logs in again with the same identifiers, the SDK continues to treat the device as belonging to them
 - At least one identifier (email or phone) must be provided when calling `identify()` or `updateUser()`
+- `clearUser()` detaches the push token from the previous user so that push notifications are no longer sent to them. A new anonymous visitor is created for the device.
 - Use `updateUser()` only when switching users; otherwise prefer `identify()` for enriching the current user's profile
 
 ## Step 3 - Record user events
@@ -477,8 +478,8 @@ and
 
 ### Update user via email and/or phone
 
-Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided). 
-Calling this method will clear all identifiers previously associated with the current user (the sdk will automatically call clearUser()), and associate the app with the new identifier(s) you provide. 
+Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided). Input is automatically trimmed of whitespace.
+Calling this method will clear all identifiers previously associated with the current user (the SDK will automatically call `clearUser()`), detach the push token from the previous user, and associate the app with the new identifier(s) you provide.
 This ensures that all subsequent events and messages are attributed to the newly identified user.
 
 ```kotlin

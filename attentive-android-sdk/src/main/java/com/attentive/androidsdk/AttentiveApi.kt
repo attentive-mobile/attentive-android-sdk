@@ -138,8 +138,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
     val api: RetrofitApiService = retrofit.create(RetrofitApiService::class.java)
 
     internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
-        AttentiveEventTracker.instance.config.clearUser()
-
         val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
         if (visitorId == null) {
             Timber.e("No visitorId available, cannot send user update")

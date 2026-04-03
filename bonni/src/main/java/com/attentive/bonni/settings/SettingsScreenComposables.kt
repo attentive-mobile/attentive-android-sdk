@@ -747,7 +747,7 @@ fun clearUsers(viewModel: SettingsViewModel) {
     Timber.d("Clearing users")
     viewModel.clearPhone()
     viewModel.clearEmail()
-    AttentiveEventTracker.instance.config.clearUser()
+    AttentiveSdk.clearUser()
     BonniApp
         .getInstance()
         .getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
