@@ -15,6 +15,7 @@ import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -362,8 +363,14 @@ object AttentiveSdk {
 
         config.resetIdentifiers()
         val domain = config.domain
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.e("Cannot send user update: visitorId=$visitorId, pushToken=$pushToken")
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number)
+            config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
         }
     }
 
@@ -371,8 +378,14 @@ object AttentiveSdk {
     fun clearUser() {
         config.resetIdentifiers()
         val domain = config.domain
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.e("Cannot send clearUser update: visitorId=$visitorId, pushToken=$pushToken")
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, null, null)
+            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken)
         }
     }
 
