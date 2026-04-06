@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        Timber.d("🔗 onNewIntent called — action: ${intent.action}, extras: ${intent.extras?.keySet()?.joinToString()}, data: ${intent.data}")
+        setIntent(intent)
         handleDeepLink(intent)
     }
 
