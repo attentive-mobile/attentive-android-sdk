@@ -495,7 +495,6 @@ class AttentiveApiTest {
                     }
                 }
                 "cdn.attn.tv" -> {
-                    val dtagResponse = mock<Response>()
                     val content =
                         String.format(
                             "window.__attentive_domain='%s.attn.tv'",
@@ -503,12 +502,13 @@ class AttentiveApiTest {
                         )
                     val responseBody = content.toResponseBody("text/html".toMediaTypeOrNull())
 
-                    whenever(dtagResponse.body).thenReturn(responseBody)
-                    whenever(dtagResponse.request).thenReturn(request)
-                    whenever(dtagResponse.protocol).thenReturn(Protocol.HTTP_1_1)
-                    whenever(dtagResponse.code).thenReturn(200)
-                    whenever(dtagResponse.message).thenReturn("OK")
-                    whenever(dtagResponse.isSuccessful).thenReturn(true)
+                    val dtagResponse = Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body(responseBody)
+                        .build()
 
                     whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
                         val callback = enqueueInvocation.getArgument<Callback>(0)
