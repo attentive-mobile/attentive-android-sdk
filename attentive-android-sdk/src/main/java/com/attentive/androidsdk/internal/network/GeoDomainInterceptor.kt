@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
+import timber.log.Timber
 import java.io.IOException
 import java.util.regex.Pattern
 
@@ -45,16 +46,23 @@ class GeoAdjustedDomainInterceptor(
 
         val url = String.format(ATTENTIVE_DTAG_URL, domain)
         val request = Request.Builder().url(url).build()
-        val response = httpClient.newCall(request).execute()
 
-        if (response.code != 200 || response.body == null) {
-            throw IOException("Failed to get geo-adjusted domain")
+        val geoAdjustedDomain = try {
+            val response = httpClient.newCall(request).execute()
+            if (response.code != 200 || response.body == null) {
+                Timber.w("Failed to get geo-adjusted domain (code: ${response.code}). Using original domain.")
+                domain
+            } else {
+                val fullTag = response.body!!.string()
+                parseAttentiveDomainFromTag(fullTag) ?: run {
+                    Timber.w("Could not parse the domain from the full tag. Using original domain.")
+                    domain
+                }
+            }
+        } catch (e: IOException) {
+            Timber.w("Geo-adjusted domain request failed: ${e.message}. Using original domain.")
+            domain
         }
-
-        val fullTag = response.body!!.string()
-        val geoAdjustedDomain =
-            parseAttentiveDomainFromTag(fullTag)
-                ?: throw IOException("Could not parse the domain from the full tag")
 
         cachedGeoAdjustedDomain = geoAdjustedDomain
         return geoAdjustedDomain
