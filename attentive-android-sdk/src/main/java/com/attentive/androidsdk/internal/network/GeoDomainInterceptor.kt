@@ -48,15 +48,16 @@ class GeoAdjustedDomainInterceptor(
         val request = Request.Builder().url(url).build()
 
         val geoAdjustedDomain = try {
-            val response = httpClient.newCall(request).execute()
-            if (response.code != 200 || response.body == null) {
-                Timber.w("Failed to get geo-adjusted domain (code: ${response.code}). Using original domain.")
-                domain
-            } else {
-                val fullTag = response.body!!.string()
-                parseAttentiveDomainFromTag(fullTag) ?: run {
-                    Timber.w("Could not parse the domain from the full tag. Using original domain.")
+            httpClient.newCall(request).execute().use { response ->
+                if (response.code != 200 || response.body == null) {
+                    Timber.w("Failed to get geo-adjusted domain (code: ${response.code}). Using original domain.")
                     domain
+                } else {
+                    val fullTag = response.body!!.string()
+                    parseAttentiveDomainFromTag(fullTag) ?: run {
+                        Timber.w("Could not parse the domain from the full tag. Using original domain.")
+                        domain
+                    }
                 }
             }
         } catch (e: IOException) {
