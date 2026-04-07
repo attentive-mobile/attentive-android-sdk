@@ -552,6 +552,49 @@ class AttentiveApiTest {
 //        }
 //    }
 
+    // -- isGeoQualifiedDomain tests --
+
+    @Test
+    fun isGeoQualifiedDomain_domainWithCountryCode_returnsTrue() {
+        Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("youngla-pt"))
+        Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("youngla-es"))
+        Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("my-brand-uk"))
+    }
+
+    @Test
+    fun isGeoQualifiedDomain_plainDomain_returnsFalse() {
+        Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("youngla"))
+        Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("adj"))
+    }
+
+    @Test
+    fun isGeoQualifiedDomain_domainEndingInThreeLetters_returnsFalse() {
+        Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("brand-usa"))
+    }
+
+    @Test
+    fun getGeoAdjustedDomainAsync_geoQualifiedDomain_skipsNetworkCall() {
+        // Arrange - use a geo-qualified domain (has country code suffix)
+        val geoQualifiedDomain = "youngla-pt"
+        val testApi = AttentiveApi(okHttpClient, "games")
+        var resultDomain: String? = null
+
+        // Act
+        testApi.getGeoAdjustedDomainAsync(geoQualifiedDomain, object : GetGeoAdjustedDomainCallback {
+            override fun onFailure(reason: String?) {
+                Assert.fail("Should not fail for geo-qualified domain")
+            }
+
+            override fun onSuccess(geoAdjustedDomain: String) {
+                resultDomain = geoAdjustedDomain
+            }
+        })
+
+        // Assert - should return domain as-is without any network call
+        Assert.assertEquals(geoQualifiedDomain, resultDomain)
+        Mockito.verify(okHttpClient, Mockito.never()).newCall(any())
+    }
+
     private fun assertRequestMethodIsPost(request: Request) {
         Assert.assertEquals("POST", request.method.uppercase(Locale.getDefault()))
     }

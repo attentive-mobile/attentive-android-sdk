@@ -1,6 +1,7 @@
 package com.attentive.androidsdk.internal.network
 
 import com.attentive.androidsdk.AttentiveApi.Companion.ATTENTIVE_DTAG_URL
+import com.attentive.androidsdk.AttentiveApi.Companion.isGeoQualifiedDomain
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -43,6 +44,12 @@ class GeoAdjustedDomainInterceptor(
 
     private fun getGeoAdjustedDomain(): String {
         cachedGeoAdjustedDomain?.let { return it }
+
+        if (isGeoQualifiedDomain(domain)) {
+            Timber.d("Domain '%s' already contains a country code, skipping geo-adjusted domain lookup", domain)
+            cachedGeoAdjustedDomain = domain
+            return domain
+        }
 
         val url = String.format(ATTENTIVE_DTAG_URL, domain)
         val request = Request.Builder().url(url).build()

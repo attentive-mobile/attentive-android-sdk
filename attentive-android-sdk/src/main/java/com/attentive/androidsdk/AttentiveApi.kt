@@ -354,6 +354,7 @@ fun sendUserIdentifiersCollectedEvent(
         }
 
         override fun onSuccess(geoAdjustedDomain: String) {
+            Timber.i(" Sending identifiers with Geo-adjusted domain: $geoAdjustedDomain")
             internalSendUserIdentifiersCollectedEventAsync(
                 geoAdjustedDomain,
                 userIdentifiers,
@@ -406,11 +407,18 @@ internal fun getGeoAdjustedDomainAsync(domain: String, callback: GetGeoAdjustedD
         return
     }
 
+    if (isGeoQualifiedDomain(domain)) {
+        Timber.d("Domain '%s' already contains a country code, skipping geo-adjusted domain lookup", domain)
+        cachedGeoAdjustedDomain = domain
+        callback.onSuccess(domain)
+        return
+    }
+
     val url = String.format(ATTENTIVE_DTAG_URL, domain)
     val request: Request = Request.Builder().url(url).build()
     httpClient.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            callback.onFailure("Getting geo-adjusted domain failed: " + e.message)
+            callback.onFailure("Getting geo-adjusted domain failed: " + e.message + call.request().url)
         }
 
         @Throws(IOException::class)
@@ -446,6 +454,7 @@ internal fun getGeoAdjustedDomainAsync(domain: String, callback: GetGeoAdjustedD
                 return
             }
 
+            Timber.d("Geo-adjusted domain: %s", geoAdjustedDomain)
             cachedGeoAdjustedDomain = geoAdjustedDomain
             callback.onSuccess(geoAdjustedDomain)
         }
@@ -1495,6 +1504,12 @@ companion object {
     const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
     const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
     const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
+
+    private val GEO_QUALIFIED_DOMAIN_PATTERN = Regex("^.+-[a-z]{2}$")
+
+    fun isGeoQualifiedDomain(domain: String): Boolean {
+        return GEO_QUALIFIED_DOMAIN_PATTERN.matches(domain)
+    }
 //        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.dev.attentivemobile.com"
 
     private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
