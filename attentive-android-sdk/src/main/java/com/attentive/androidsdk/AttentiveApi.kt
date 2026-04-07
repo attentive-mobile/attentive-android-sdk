@@ -410,7 +410,12 @@ internal fun getGeoAdjustedDomainAsync(domain: String, callback: GetGeoAdjustedD
                 return
             }
 
-            val fullTag = body.string()
+            val fullTag = try {
+                body.use { it.string() }
+            } catch (e: java.io.IOException) {
+                callback.onFailure("Failed to read geo-adjusted domain response body: ${e.message}")
+                return
+            }
             val geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag)
 
             if (geoAdjustedDomain == null) {
@@ -979,6 +984,11 @@ internal fun registerPushToken(
     permissionGranted: Boolean,
     userIdentifiers: UserIdentifiers
 ) {
+    if (userIdentifiers.visitorId.isNullOrEmpty()) {
+        Timber.e("No visitorId available, cannot register push token")
+        return
+    }
+
     val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
     val metadata: Metadata
     try {
@@ -991,7 +1001,7 @@ internal fun registerPushToken(
     val request = PushTokenRequest(
         company = geoAdjustedDomain,
         version = "mobile-app-${AppInfo.attentiveSDKVersion}",
-        visitorId = userIdentifiers.visitorId ?: "",
+        visitorId = userIdentifiers.visitorId,
         externalVendorIds = JsonParser.parseString(externalVendorIdsJson),
         metadata = ContactInfo(
             phone = metadata.phone ?: "",
@@ -1060,6 +1070,11 @@ private fun sendDirectOpenStatusInternal(
 
     Timber.d("sendDirectOpenStatusInternal called with launchType: %s", launchType.value)
 
+    if (userIdentifiers.visitorId.isNullOrEmpty()) {
+        Timber.e("No visitorId available, cannot send direct open status")
+        return
+    }
+
     //TODO root cause triage this
     if (lastLaunchEventTimeStamp == 0L) {
         lastLaunchEventTimeStamp = System.currentTimeMillis()
@@ -1095,7 +1110,7 @@ private fun sendDirectOpenStatusInternal(
         device = DeviceInfo(
             company = geoAdjustedDomain,
             version = "mobile-app-${AppInfo.attentiveSDKVersion}",
-            visitorId = userIdentifiers.visitorId ?: "",
+            visitorId = userIdentifiers.visitorId,
             externalVendorIds = JsonParser.parseString(externalVendorIdsJson),
             metadata = ContactInfo(
                 phone = metadata.phone ?: "",
@@ -1158,12 +1173,16 @@ internal fun sendOptInSubscriptionStatus(
                 pushToken: String,
             ) {
                 val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+                if (userIdentifiers.visitorId.isNullOrEmpty()) {
+                    Timber.e("No visitorId available, cannot send opt-in subscription")
+                    return
+                }
                 val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
 
                 val request = OptInSubscriptionRequest(
                     company = domain,
                     version = "mobile-app",
-                    visitorId = userIdentifiers.visitorId ?: "",
+                    visitorId = userIdentifiers.visitorId,
                     externalVendorIds = JsonParser.parseString(externalVendorIdsJson),
                     pushToken = pushToken,
                     email = email,
@@ -1224,12 +1243,16 @@ internal fun sendOptOutSubscriptionStatus(
             pushToken: String
         ) {
             val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+            if (userIdentifiers.visitorId.isNullOrEmpty()) {
+                Timber.e("No visitorId available, cannot send opt-out subscription")
+                return
+            }
             val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
 
             val request = OptOutSubscriptionRequest(
                 company = domain,
                 version = "mobile-app",
-                visitorId = userIdentifiers.visitorId ?: "",
+                visitorId = userIdentifiers.visitorId,
                 externalVendorIds = JsonParser.parseString(externalVendorIdsJson),
                 pushToken = pushToken,
                 email = email,
