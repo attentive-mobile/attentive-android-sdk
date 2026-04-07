@@ -16,6 +16,7 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
+import com.google.gson.JsonParser
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -43,6 +44,8 @@ import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class AttentiveApiTest {
     private lateinit var attentiveApi: AttentiveApi
@@ -551,6 +554,192 @@ class AttentiveApiTest {
 //            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
 //        }
 //    }
+
+    // -- Retrofit endpoint tests (registerPushToken, sendDirectOpenStatus) --
+
+    @Test
+    fun registerPushToken_callsTokenEndpoint_withCorrectRequestFields() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = AttentiveApi(interceptorClient, "games")
+
+        // Act
+        testApi.registerPushToken(
+            GEO_ADJUSTED_DOMAIN,
+            "test-push-token",
+            true,
+            ALL_USER_IDENTIFIERS,
+        )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert
+        Assert.assertEquals(1, capturedRequests.size)
+        val captured = capturedRequests[0]
+
+        // Verify endpoint and method
+        Assert.assertTrue(captured.request.url.encodedPath.endsWith("/token"))
+        Assert.assertEquals("POST", captured.request.method)
+
+        // Verify headers
+        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
+
+        // Verify JSON body fields match @SerializedName annotations
+        val body = JsonParser.parseString(captured.bodyJson).asJsonObject
+        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, body.get("c").asString)
+        Assert.assertTrue(body.get("v").asString.startsWith("mobile-app-"))
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, body.get("u").asString)
+        Assert.assertEquals("test-push-token", body.get("pt").asString)
+        Assert.assertEquals("true", body.get("st").asString)
+        Assert.assertEquals("fcm", body.get("tp").asString)
+
+        // Verify metadata (m) contains phone and email
+        val metadata = body.getAsJsonObject("m")
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.phone, metadata.get("phone").asString)
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.email, metadata.get("email").asString)
+
+        // Verify external vendor IDs (evs) are serialized
+        val evs = body.getAsJsonArray("evs")
+        Assert.assertEquals(3, evs.size())
+    }
+
+    @Test
+    fun sendDirectOpenStatus_callsMtctrlEndpoint_withCorrectRequestFields() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = Mockito.spy(AttentiveApi(interceptorClient, "games"))
+
+        Mockito.doAnswer { invocation: InvocationOnMock ->
+            val callback = invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
+            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
+        }.whenever(testApi).getGeoAdjustedDomainAsync(eq(DOMAIN), any())
+
+        val callbackMap = mapOf(
+            "attentive_open_action_url" to "https://example.com/deep-link",
+            "someKey" to "someValue",
+        )
+
+        // Act - use DIRECT_OPEN launch type ("o")
+        testApi.sendDirectOpenStatus(
+            AttentiveApi.LaunchType.DIRECT_OPEN,
+            "test-push-token",
+            callbackMap,
+            true,
+            ALL_USER_IDENTIFIERS,
+            DOMAIN,
+        )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert
+        Assert.assertEquals(1, capturedRequests.size)
+        val captured = capturedRequests[0]
+
+        // Verify endpoint and method
+        Assert.assertTrue(captured.request.url.encodedPath.endsWith("/mtctrl"))
+        Assert.assertEquals("POST", captured.request.method)
+
+        // Verify headers
+        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
+
+        // Verify JSON body structure
+        val body = JsonParser.parseString(captured.bodyJson).asJsonObject
+
+        // Verify events array
+        val events = body.getAsJsonArray("events")
+        Assert.assertTrue(events.size() >= 1)
+        val firstEvent = events[0].asJsonObject
+        Assert.assertEquals("o", firstEvent.get("ist").asString)  // DIRECT_OPEN value
+        val eventData = firstEvent.getAsJsonObject("data")
+        Assert.assertEquals("https://example.com/deep-link", eventData.get("attentive_open_action_url").asString)
+
+        // Verify device info
+        val device = body.getAsJsonObject("device")
+        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, device.get("c").asString)
+        Assert.assertTrue(device.get("v").asString.startsWith("mobile-app-"))
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, device.get("u").asString)
+        Assert.assertEquals("test-push-token", device.get("pt").asString)
+        Assert.assertEquals("true", device.get("st").asString)
+        Assert.assertEquals("fcm", device.get("tp").asString)
+        Assert.assertEquals("https://example.com/deep-link", device.get("pd").asString)
+
+        // Verify metadata in device
+        val metadata = device.getAsJsonObject("m")
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.phone, metadata.get("phone").asString)
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.email, metadata.get("email").asString)
+
+        // Verify external vendor IDs in device
+        val evs = device.getAsJsonArray("evs")
+        Assert.assertEquals(3, evs.size())
+    }
+
+    @Test
+    fun sendDirectOpenStatus_directOpen_alsoIncludesAppLaunchedEvent() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = Mockito.spy(AttentiveApi(interceptorClient, "games"))
+
+        Mockito.doAnswer { invocation: InvocationOnMock ->
+            val callback = invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
+            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
+        }.whenever(testApi).getGeoAdjustedDomainAsync(eq(DOMAIN), any())
+
+        // Act
+        testApi.sendDirectOpenStatus(
+            AttentiveApi.LaunchType.DIRECT_OPEN,
+            "test-push-token",
+            mapOf("key" to "value"),
+            true,
+            ALL_USER_IDENTIFIERS,
+            DOMAIN,
+        )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert - DIRECT_OPEN should include both the direct open event and an APP_LAUNCHED event
+        val body = JsonParser.parseString(capturedRequests[0].bodyJson).asJsonObject
+        val events = body.getAsJsonArray("events")
+        Assert.assertEquals(2, events.size())
+        Assert.assertEquals("o", events[0].asJsonObject.get("ist").asString)   // DIRECT_OPEN
+        Assert.assertEquals("al", events[1].asJsonObject.get("ist").asString)  // APP_LAUNCHED
+    }
+
+    private data class CapturedApiRequest(
+        val request: Request,
+        val bodyJson: String,
+    )
+
+    private fun buildInterceptorClient(
+        capturedRequests: MutableList<CapturedApiRequest>,
+        latch: CountDownLatch,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                if (request.url.host == "mobile.attentivemobile.com") {
+                    val buffer = okio.Buffer()
+                    request.body?.writeTo(buffer)
+                    capturedRequests.add(
+                        CapturedApiRequest(
+                            request = request,
+                            bodyJson = buffer.readUtf8(),
+                        ),
+                    )
+                    latch.countDown()
+                }
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(204)
+                    .message("No Content")
+                    .body("".toResponseBody())
+                    .build()
+            }
+            .build()
+    }
 
     private fun assertRequestMethodIsPost(request: Request) {
         Assert.assertEquals("POST", request.method.uppercase(Locale.getDefault()))
