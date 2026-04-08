@@ -52,6 +52,11 @@ internal class AppLaunchTracker(
         Timber.d("onResume")
     }
 
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        hasSentLaunchEvent = false
+    }
+
     fun registerAppLaunchTracker() {
         Timber.d("Adding lifecycle observer")
         lifecycle.addObserver(this)
@@ -75,7 +80,6 @@ internal class AppLaunchTracker(
 
             override fun onActivityStopped(activity: Activity) {
                 launchEvents.clear()
-                hasSentLaunchEvent = false
             }
 
             override fun onActivityResumed(activity: Activity) {
