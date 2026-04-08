@@ -86,7 +86,7 @@ internal class AppLaunchTracker(
                 if (hasSentLaunchEvent) return
                 hasSentLaunchEvent = true
 
-                Timber.d("onActivityResumed — intent action: ${activity.intent?.action}, extras: ${activity.intent?.extras?.keySet()?.joinToString()}, data: ${activity.intent?.data}")
+                Timber.d("onActivityResumed")
 
                 // Check in onActivityResumed (not onActivityStarted) because onResume always fires
                 // after onNewIntent. This ensures activity.intent is up to date for singleTop/singleTask
