@@ -1505,10 +1505,11 @@ companion object {
     const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
     const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
 
-    private val GEO_QUALIFIED_DOMAIN_PATTERN = Regex("^.+-[a-z]{2}$")
+    private val ISO_COUNTRY_CODES: Set<String> = Locale.getISOCountries().toSet()
 
     fun isGeoQualifiedDomain(domain: String): Boolean {
-        return GEO_QUALIFIED_DOMAIN_PATTERN.matches(domain)
+        val suffix = domain.substringAfterLast('-', "")
+        return suffix.length == 2 && suffix.uppercase() in ISO_COUNTRY_CODES
     }
 //        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.dev.attentivemobile.com"
 

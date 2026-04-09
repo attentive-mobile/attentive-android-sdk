@@ -558,7 +558,7 @@ class AttentiveApiTest {
     fun isGeoQualifiedDomain_domainWithCountryCode_returnsTrue() {
         Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("youngla-pt"))
         Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("youngla-es"))
-        Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("my-brand-uk"))
+        Assert.assertTrue(AttentiveApi.isGeoQualifiedDomain("my-brand-gb"))
     }
 
     @Test
@@ -570,6 +570,12 @@ class AttentiveApiTest {
     @Test
     fun isGeoQualifiedDomain_domainEndingInThreeLetters_returnsFalse() {
         Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("brand-usa"))
+    }
+
+    @Test
+    fun isGeoQualifiedDomain_domainEndingInTwoLettersNotCountryCode_returnsFalse() {
+        Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("my-brand-zz"))
+        Assert.assertFalse(AttentiveApi.isGeoQualifiedDomain("some-store-xx"))
     }
 
     @Test
