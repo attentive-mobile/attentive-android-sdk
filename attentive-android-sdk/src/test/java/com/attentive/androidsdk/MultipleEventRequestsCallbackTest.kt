@@ -14,14 +14,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
-import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.util.Currency
@@ -36,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger
 class MultipleEventRequestsCallbackTest {
     private lateinit var attentiveApi: AttentiveApi
     private lateinit var okHttpClient: OkHttpClient
-    private val callCaptor = ArgumentCaptor.forClass(Request::class.java)
 
     @Before
     fun setup() {
@@ -46,9 +41,7 @@ class MultipleEventRequestsCallbackTest {
 
     @Test
     fun sendEvent_multipleRequests_callbackOnSuccessOnlyOnce() {
-        // Arrange - Setup to return geo-adjusted domain
-        setupGeoAdjustedDomainSuccess()
-
+        // Arrange
         // Mock OkHttp to succeed for all requests
         setupOkHttpSuccessForAllRequests()
 
@@ -91,7 +84,7 @@ class MultipleEventRequestsCallbackTest {
     @Test
     fun sendEvent_multipleRequestsOneFailure_callbackOnFailureOnlyOnce() {
         // Arrange
-        setupGeoAdjustedDomainSuccess()
+
 
         // Mock OkHttp to fail on second request
         setupOkHttpWithOneFailure()
@@ -134,7 +127,7 @@ class MultipleEventRequestsCallbackTest {
     @Test
     fun sendEvent_multipleRequestsAllFail_callbackOnFailureOnlyOnce() {
         // Arrange
-        setupGeoAdjustedDomainSuccess()
+
 
         // Mock OkHttp to fail for all requests
         setupOkHttpFailureForAllRequests()
@@ -176,7 +169,7 @@ class MultipleEventRequestsCallbackTest {
     @Test
     fun sendEvent_nullCallback_doesNotCrash() {
         // Arrange
-        setupGeoAdjustedDomainSuccess()
+
         setupOkHttpSuccessForAllRequests()
 
         val event = createAddToCartEventWithMultipleItems()
@@ -196,21 +189,6 @@ class MultipleEventRequestsCallbackTest {
     }
 
     // Helper methods
-
-    private fun setupGeoAdjustedDomainSuccess() {
-        doAnswer { invocation: InvocationOnMock ->
-            val callback =
-                invocation.getArgument(
-                    1,
-                    AttentiveApi.GetGeoAdjustedDomainCallback::class.java,
-                )
-            callback.onSuccess("test-domain-geo")
-            null
-        }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
-            eq("test-domain"),
-            any(),
-        )
-    }
 
     private fun setupOkHttpSuccessForAllRequests() {
         val mockCall = mock<Call>()

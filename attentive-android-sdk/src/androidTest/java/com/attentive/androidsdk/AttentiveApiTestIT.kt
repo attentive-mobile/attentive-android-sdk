@@ -285,8 +285,6 @@ class AttentiveApiTestIT {
     companion object {
         private const val DOMAIN = "mobileapps"
 
-        // Update this accordingly when running on VPN
-        private const val GEO_ADJUSTED_DOMAIN = "mobileapps"
         private const val EVENT_SEND_TIMEOUT_MS = 5000
         private val ALL_USER_IDENTIFIERS = buildAllUserIdentifiers()
 
@@ -299,7 +297,7 @@ class AttentiveApiTestIT {
             // Legacy event endpoints use "mobile-app" for the v parameter
             Assert.assertEquals("mobile-app", url.queryParameter("v"))
             Assert.assertEquals("0", url.queryParameter("lt"))
-            Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
+            Assert.assertEquals(DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))
             Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, url.queryParameter("u"))
 
