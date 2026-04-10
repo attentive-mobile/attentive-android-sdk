@@ -11,7 +11,6 @@ import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.AddToCartMetadataDto
 import com.attentive.androidsdk.internal.network.ContactInfo
 import com.attentive.androidsdk.internal.network.CustomEventMetadataDto
-import com.attentive.androidsdk.internal.network.GeoAdjustedDomainInterceptor
 import com.attentive.androidsdk.internal.network.Metadata
 import com.attentive.androidsdk.internal.network.OrderConfirmedMetadataDto
 import com.attentive.androidsdk.internal.network.ProductDto
@@ -44,16 +43,10 @@ import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
-import java.util.regex.Pattern
 import com.attentive.androidsdk.internal.network.events.*
 
 
 class AttentiveApi(private var httpClient: OkHttpClient, private val domain: String) {
-    @get:VisibleForTesting
-    var cachedGeoAdjustedDomain: String? = null
-        private set
-
-
     val metadataModule = SerializersModule {
         polymorphic(Metadata::class) {
             subclass(Metadata::class)
@@ -205,7 +198,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
      * - AddToCartEvent -> AddToCart EventMetadata
      * - CustomEvent -> MobileCustomEvent EventMetadata
      *
-     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
      * This is a suspend function that should be called from a coroutine context.
      */
     internal suspend fun recordEvent(
@@ -229,7 +221,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             return
         }
 
-        // Send each request - the interceptor will handle geo-domain adjustment
+        // Send each request
         for (request in baseEventRequests) {
             try {
                 // Serialize the BaseEventRequest to JSON string for the -d parameter
@@ -255,7 +247,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
      * - AddToCartEvent -> AddToCart EventMetadata
      * - CustomEvent -> MobileCustomEvent EventMetadata
      *
-     * The geo-adjusted domain is handled automatically by the Retrofit interceptor.
      * Returns a Retrofit Call that can be executed synchronously or asynchronously.
      *
      * @return A Call object that can be used to execute the request. Returns null if validation fails.
@@ -347,21 +338,11 @@ fun sendUserIdentifiersCollectedEvent(
     callback: AttentiveApiCallback
 ) {
     Timber.i("Send user identifiers $userIdentifiers")
-    // first get the geo-adjusted domain, and then call the events endpoint
-    getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-        override fun onFailure(reason: String?) {
-            callback.onFailure(reason)
-        }
-
-        override fun onSuccess(geoAdjustedDomain: String) {
-            Timber.i(" Sending identifiers with Geo-adjusted domain: $geoAdjustedDomain")
-            internalSendUserIdentifiersCollectedEventAsync(
-                geoAdjustedDomain,
-                userIdentifiers,
-                callback
-            )
-        }
-    })
+    internalSendUserIdentifiersCollectedEventAsync(
+        domain,
+        userIdentifiers,
+        callback
+    )
 }
 
 @JvmOverloads
@@ -372,93 +353,12 @@ fun sendEvent(
     callback: AttentiveApiCallback? = null
 ) {
     Timber.d("sendEvent called with event: %s \n userIdentifiers: %s \n domain: %s", event, userIdentifiers, domain)
-    getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-        override fun onFailure(reason: String?) {
-            Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-            sendEvent(event, userIdentifiers, domain)
-        }
-
-        override fun onSuccess(geoAdjustedDomain: String) {
-            sendEvent(event, userIdentifiers, geoAdjustedDomain)
-        }
-
-        fun sendEvent(event: Event, userIdentifiers: UserIdentifiers, domain: String) {
-            sendEventInternalAsync(
-                getEventRequestsFromEvent(event),
-                userIdentifiers,
-                domain,
-                callback
-            )
-        }
-    })
-}
-
-@VisibleForTesting
-internal interface GetGeoAdjustedDomainCallback {
-    fun onFailure(reason: String?)
-
-    fun onSuccess(geoAdjustedDomain: String)
-}
-
-@VisibleForTesting
-internal fun getGeoAdjustedDomainAsync(domain: String, callback: GetGeoAdjustedDomainCallback) {
-    if (cachedGeoAdjustedDomain != null) {
-        callback.onSuccess(cachedGeoAdjustedDomain!!)
-        return
-    }
-
-    if (isGeoQualifiedDomain(domain)) {
-        Timber.d("Domain '%s' already contains a country code, skipping geo-adjusted domain lookup", domain)
-        cachedGeoAdjustedDomain = domain
-        callback.onSuccess(domain)
-        return
-    }
-
-    val url = String.format(ATTENTIVE_DTAG_URL, domain)
-    val request: Request = Request.Builder().url(url).build()
-    httpClient.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            callback.onFailure("Getting geo-adjusted domain failed: " + e.message + call.request().url)
-        }
-
-        @Throws(IOException::class)
-        override fun onResponse(call: Call, response: Response) {
-            // Check explicitly for 200 (instead of response.isSuccessful()) because the response only has the tag in the body when its code is 200
-            if (response.code != 200) {
-                callback.onFailure(
-                    String.format(
-                        Locale.getDefault(),
-                        "Getting geo-adjusted domain returned invalid code: '%d', message: '%s'",
-                        response.code,
-                        response.message
-                    )
-                )
-                return
-            }
-
-            val body = response.body
-
-            if (body == null) {
-                callback.onFailure("Getting geo-adjusted domain returned no body")
-                return
-            }
-
-            var fullTag: String? = null
-            if (response.body != null) {
-                fullTag = response.body!!.string()
-            }
-            val geoAdjustedDomain = parseAttentiveDomainFromTag(fullTag!!)
-
-            if (geoAdjustedDomain == null) {
-                callback.onFailure("Could not parse the domain from the full tag")
-                return
-            }
-
-            Timber.d("Geo-adjusted domain: %s", geoAdjustedDomain)
-            cachedGeoAdjustedDomain = geoAdjustedDomain
-            callback.onSuccess(geoAdjustedDomain)
-        }
-    })
+    sendEventInternalAsync(
+        getEventRequestsFromEvent(event),
+        userIdentifiers,
+        domain,
+        callback
+    )
 }
 
 private fun buildExternalVendorIdsJson(userIdentifiers: UserIdentifiers): String {
@@ -476,7 +376,7 @@ private fun buildExternalVendorIdsJson(userIdentifiers: UserIdentifiers): String
 
 // TODO replace with the generic 'sendEvent' code
 private fun internalSendUserIdentifiersCollectedEventAsync(
-    geoAdjustedDomain: String,
+    domain: String,
     userIdentifiers: UserIdentifiers,
     callback: AttentiveApiCallback
 ) {
@@ -499,7 +399,7 @@ private fun internalSendUserIdentifiersCollectedEventAsync(
     val urlBuilder = httpUrlEventsEndpointBuilder
         .addQueryParameter("tag", "modern")
         .addQueryParameter("v", "mobile-app")
-        .addQueryParameter("c", geoAdjustedDomain)
+        .addQueryParameter("c", domain)
         .addQueryParameter("t", "idn")
         .addQueryParameter("evs", externalVendorIdsJson)
         .addQueryParameter("m", metadataJson)
@@ -538,18 +438,6 @@ private fun internalSendUserIdentifiersCollectedEventAsync(
             callback.onSuccess()
         }
     })
-}
-
-private fun parseAttentiveDomainFromTag(tag: String): String? {
-    val pattern = Pattern.compile("='([a-z0-9-]+)[.]attn[.]tv'")
-    val matcher = pattern.matcher(tag)
-    if (matcher.find()) {
-        if (matcher.groupCount() == 1) {
-            return matcher.group(1)
-        }
-    }
-
-    return null
 }
 
 private fun buildMetadata(userIdentifiers: UserIdentifiers): Metadata {
@@ -1010,30 +898,16 @@ internal fun registerPushToken(
     userIdentifiers: UserIdentifiers,
     domain: String
 ) {
-    getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-        override fun onFailure(reason: String?) {
-            Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-            registerPushToken(
-                geoAdjustedDomain = domain,
-                token = token,
-                permissionGranted = permissionGranted,
-                userIdentifiers = userIdentifiers
-            )
-        }
-
-        override fun onSuccess(geoAdjustedDomain: String) {
-            registerPushToken(
-                geoAdjustedDomain = geoAdjustedDomain,
-                token = token,
-                permissionGranted = permissionGranted,
-                userIdentifiers = userIdentifiers
-            )
-        }
-    })
+    registerPushTokenInternal(
+        domain = domain,
+        token = token,
+        permissionGranted = permissionGranted,
+        userIdentifiers = userIdentifiers
+    )
 }
 
-internal fun registerPushToken(
-    geoAdjustedDomain: String,
+private fun registerPushTokenInternal(
+    domain: String,
     token: String,
     permissionGranted: Boolean,
     userIdentifiers: UserIdentifiers
@@ -1057,7 +931,7 @@ internal fun registerPushToken(
 
     val jsonBody = """
     {
-        "c": "$geoAdjustedDomain",
+        "c": "$domain",
         "v": "mobile-app-${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
@@ -1099,31 +973,14 @@ internal fun sendDirectOpenStatus(
     userIdentifiers: UserIdentifiers,
     domain: String
 ) {
-    getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-        override fun onFailure(reason: String?) {
-            Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-            sendDirectOpenStatusInternal(
-                launchTypes,
-                pushToken,
-                callbackMap,
-                permissionGranted,
-                userIdentifiers,
-                domain
-            )
-        }
-
-        override fun onSuccess(geoAdjustedDomain: String) {
-            Timber.d("Geo adjusted domain: $geoAdjustedDomain")
-            sendDirectOpenStatusInternal(
-                launchTypes,
-                pushToken,
-                callbackMap,
-                permissionGranted,
-                userIdentifiers,
-                geoAdjustedDomain
-            )
-        }
-    })
+    sendDirectOpenStatusInternal(
+        launchTypes,
+        pushToken,
+        callbackMap,
+        permissionGranted,
+        userIdentifiers,
+        domain
+    )
 }
 
 private var lastLaunchEventTimeStamp = 0L
@@ -1134,7 +991,7 @@ private fun sendDirectOpenStatusInternal(
     callbackMap: Map<String, String>,
     permissionGranted: Boolean,
     userIdentifiers: UserIdentifiers,
-    geoAdjustedDomain: String,
+    domain: String,
 ) {
 
     Timber.d("sendDirectOpenStatusInternal called with alaunchType: %s", launchType.value)
@@ -1200,7 +1057,7 @@ private fun sendDirectOpenStatusInternal(
     val jsonBody = """
     $eventsArray
     "device":{
-        "c": "$geoAdjustedDomain",
+        "c": "$domain",
         "v": "mobile-app-${AppInfo.attentiveSDKVersion}",
         "u": "${userIdentifiers.visitorId}",
         "evs": ${externalVendorIdsJson},
@@ -1246,40 +1103,12 @@ internal fun sendOptInSubscriptionStatus(
         Timber.e("Invalid push token, cannot send opt-in subscription status")
         return
     }
-    getGeoAdjustedDomainAsync(
-        AttentiveEventTracker.instance.config.domain,
-        object : GetGeoAdjustedDomainCallback {
-            override fun onFailure(reason: String?) {
-                Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-                sendOptInSubscriptionStatusInternal(
-                    phoneNumber,
-                    email,
-                    AttentiveEventTracker.instance.config.domain,
-                    pushToken
-                )
-            }
-
-            override fun onSuccess(geoAdjustedDomain: String) {
-                Timber.d("Geo adjusted domain: $geoAdjustedDomain")
-                sendOptInSubscriptionStatusInternal(
-                    phoneNumber,
-                    email,
-                    geoAdjustedDomain,
-                    pushToken
-                )
-            }
-
-            private fun sendOptInSubscriptionStatusInternal(
-                phoneNumber: String? = "",
-                email: String? = "",
-                domain: String,
-                pushToken: String,
-                type: String = "MARKETING"
-            ) {
-                val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
-                val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
-                val visitorId = userIdentifiers.visitorId ?: ""
-                val jsonBody = """
+    val domain = AttentiveEventTracker.instance.config.domain
+    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+    val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+    val visitorId = userIdentifiers.visitorId ?: ""
+    val type = "MARKETING"
+    val jsonBody = """
         {
             "c": "$domain",
             "v": "mobile-app",
@@ -1293,27 +1122,23 @@ internal fun sendOptInSubscriptionStatus(
         }
     """.trimIndent()
 
-                val url = httpUrlOptInSubscriptionStatusEndpointBuilder.build()
-                val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
-                val request = Request.Builder()
-                    .url(url)
-                    .addHeader("Content-Type", "application/json")
-                    .post(requestBody)
-                    .build()
+    val url = httpUrlOptInSubscriptionStatusEndpointBuilder.build()
+    val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("Content-Type", "application/json")
+        .post(requestBody)
+        .build()
 
-                httpClient.newCall(request).enqueue(object : Callback {
-                    override fun onFailure(call: Call, e: IOException) {
-                        Timber.e("Opt-in subscription request failed: ${e.message}")
-                    }
+    httpClient.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Timber.e("Opt-in subscription request failed: ${e.message}")
+        }
 
-                    override fun onResponse(call: Call, response: Response) {
-                        Timber.i("Opt-in subscription request success: ${response.message}")
-                    }
-                })
-            }
-
-
-        })
+        override fun onResponse(call: Call, response: Response) {
+            Timber.i("Opt-in subscription request success: ${response.message}")
+        }
+    })
 }
 
 
@@ -1327,39 +1152,11 @@ internal fun sendOptOutSubscriptionStatus(
         Timber.e("Invalid push token, cannot send opt-in subscription status")
         return
     }
-    getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
-        override fun onFailure(reason: String?) {
-            Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
-            sendOptOutSubscriptionStatusInternal(
-                domain,
-                email,
-                phoneNumber,
-                pushToken
-            )
-        }
-
-        override fun onSuccess(geoAdjustedDomain: String) {
-            Timber.d("Geo adjusted domain: $geoAdjustedDomain")
-            sendOptOutSubscriptionStatusInternal(
-                geoAdjustedDomain,
-                email,
-                phoneNumber,
-                pushToken
-            )
-        }
-
-        private fun sendOptOutSubscriptionStatusInternal(
-            domain: String,
-            email: String?,
-            phoneNumber: String?,
-            pushToken: String
-        ) {
-            val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
-            val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
-            val email = email
-            val phone = phoneNumber
-            val visitorId = userIdentifiers.visitorId ?: ""
-            val jsonBody = """
+    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+    val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
+    val phone = phoneNumber
+    val visitorId = userIdentifiers.visitorId ?: ""
+    val jsonBody = """
         {
             "c": "$domain",
             "v": "mobile-app",
@@ -1372,26 +1169,22 @@ internal fun sendOptOutSubscriptionStatus(
         }
     """.trimIndent()
 
-            val url = httpUrlOptOutSubscriptionStatusEndpointBuilder.build()
-            val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Content-Type", "application/json")
-                .post(requestBody)
-                .build()
+    val url = httpUrlOptOutSubscriptionStatusEndpointBuilder.build()
+    val requestBody = RequestBody.create("application/json".toMediaType(), jsonBody)
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("Content-Type", "application/json")
+        .post(requestBody)
+        .build()
 
-            httpClient.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    Timber.e("Opt-out subscription request failed: ${e.message}")
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    Timber.i("Opt-out subscription request success: ${response.message}")
-                }
-            })
+    httpClient.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Timber.e("Opt-out subscription request failed: ${e.message}")
         }
 
-
+        override fun onResponse(call: Call, response: Response) {
+            Timber.i("Opt-out subscription request success: ${response.message}")
+        }
     })
 }
 
@@ -1502,15 +1295,7 @@ internal fun calculateCartTotal(items: List<Item>): String {
 
 companion object {
     const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
-    const val ATTENTIVE_DTAG_URL: String = "https://cdn.attn.tv/%s/dtag.js"
     const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
-
-    private val ISO_COUNTRY_CODES: Set<String> = Locale.getISOCountries().toSet()
-
-    fun isGeoQualifiedDomain(domain: String): Boolean {
-        val suffix = domain.substringAfterLast('-', "")
-        return suffix.length == 2 && suffix.uppercase() in ISO_COUNTRY_CODES
-    }
 //        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.dev.attentivemobile.com"
 
     private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {
