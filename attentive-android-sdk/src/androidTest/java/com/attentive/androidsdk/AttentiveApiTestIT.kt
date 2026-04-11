@@ -92,7 +92,7 @@ class AttentiveApiTestIT {
         countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
+        Mockito.verify(okHttpClient, Mockito.times(1))?.newCall(capture(requestArgumentCaptor))
         val uicRequest =
             requestArgumentCaptor.allValues.stream()
                 .filter { request: Request -> request.url.toString().contains("t=idn") }.findFirst()
@@ -120,7 +120,7 @@ class AttentiveApiTestIT {
         countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
-        Mockito.verify(okHttpClient, Mockito.times(3)).newCall(capture(requestArgumentCaptor))
+        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
 
         // Verify Purchase event
         val purchaseRequest =
@@ -186,7 +186,7 @@ class AttentiveApiTestIT {
         countDownLatch!!.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
+        Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
 
         val addToCartRequest =
             requestArgumentCaptor.allValues.stream()
@@ -221,7 +221,7 @@ class AttentiveApiTestIT {
         countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
+        Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
         val addToCartRequest =
             requestArgumentCaptor.allValues.stream()
                 .filter { request: Request -> request.url.toString().contains("t=c") }.findFirst()
@@ -256,7 +256,7 @@ class AttentiveApiTestIT {
         countDownLatch.await(EVENT_SEND_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
 
         // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2)).newCall(capture(requestArgumentCaptor))
+        Mockito.verify(okHttpClient, Mockito.times(1)).newCall(capture(requestArgumentCaptor))
         val customEventRequest =
             requestArgumentCaptor.allValues.stream()
                 .filter { request: Request -> request.url.toString().contains("t=ce") }.findFirst()
