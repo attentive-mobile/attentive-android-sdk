@@ -1,7 +1,6 @@
 package com.attentive.androidsdk
 
 import android.util.Log
-import com.attentive.androidsdk.AttentiveApi.GetGeoAdjustedDomainCallback
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Cart
 import com.attentive.androidsdk.events.CustomEvent
@@ -16,12 +15,12 @@ import com.attentive.androidsdk.internal.network.ProductDto
 import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
+import com.google.gson.JsonParser
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
@@ -35,7 +34,6 @@ import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -43,6 +41,8 @@ import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class AttentiveApiTest {
     private lateinit var attentiveApi: AttentiveApi
@@ -59,8 +59,8 @@ class AttentiveApiTest {
     @Test
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
 
         // Act
         attentiveApi.sendUserIdentifiersCollectedEvent(
@@ -101,8 +101,8 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_validEvent_httpMethodIsPost() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         // Which event we send for this test doesn't matter - choosing AddToCart randomly
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
@@ -123,8 +123,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithRequiredFields()
 
         // Act
@@ -161,8 +161,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -198,8 +198,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -247,8 +247,8 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_purchaseEventWithTwoProducts_callsEventsEndpointTwiceForPurchasesAndOnceForOrderConfirmed() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithTwoItems()
 
         // Act
@@ -279,8 +279,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
@@ -312,8 +312,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val productViewEvent = buildProductViewEventWithAllFields()
 
         // Act
@@ -344,8 +344,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val customEvent = buildCustomEventWithAllFields()
 
         // Act
@@ -371,49 +371,6 @@ class AttentiveApiTest {
         val actualProperties = json.decodeFromString<Map<String, String>>(metadata["properties"]!!)
         Assert.assertEquals(customEvent.type, metadata["type"])
         Assert.assertEquals(customEvent.properties, actualProperties)
-    }
-
-    @Test
-    fun sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() {
-        // Arrange
-        givenOkHttpClientReturnsResponseBasedOnHost()
-        val productViewEvent = buildProductViewEventWithAllFields()
-
-        // Act
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-
-        // Assert
-        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(capture(requestArgumentCaptor))
-
-        val eventsSentCount =
-            requestArgumentCaptor.allValues.stream()
-                .filter { request: Request -> request.url.toString().contains("t=d") }
-                .count()
-        Assert.assertEquals(2, eventsSentCount)
-
-        val geoAdjustedDomainCallsSent =
-            requestArgumentCaptor.allValues.stream()
-                .filter { request: Request -> request.url.toString() == DTAG_URL }
-                .count()
-        Assert.assertEquals(1, geoAdjustedDomainCallsSent)
-    }
-
-    @Test
-    fun sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() {
-        // Arrange
-        givenOkHttpClientReturnsResponseBasedOnHost()
-        val productViewEvent = buildProductViewEventWithAllFields()
-
-        Assert.assertNull(attentiveApi.cachedGeoAdjustedDomain)
-
-        // Act
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-
-        // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
-
-        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
 
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
@@ -481,43 +438,12 @@ class AttentiveApiTest {
             .category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
-    private fun givenOkHttpClientReturnsResponseBasedOnHost() {
+    private fun givenOkHttpClientReturnsSuccessResponse() {
         whenever(okHttpClient.newCall(any())).doAnswer { invocation: InvocationOnMock ->
-            val request = invocation.arguments[0] as Request
-            val host = request.url.host
             val call = mock<Call>()
-
-            when (host) {
-                "events.attentivemobile.com" -> {
-                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
-                        val callback = enqueueInvocation.getArgument<Callback>(0)
-                        callback.onResponse(call, buildSuccessfulResponseMock())
-                    }
-                }
-                "cdn.attn.tv" -> {
-                    val dtagResponse = mock<Response>()
-                    val content =
-                        String.format(
-                            "window.__attentive_domain='%s.attn.tv'",
-                            GEO_ADJUSTED_DOMAIN,
-                        )
-                    val responseBody = content.toResponseBody("text/html".toMediaTypeOrNull())
-
-                    whenever(dtagResponse.body).thenReturn(responseBody)
-                    whenever(dtagResponse.request).thenReturn(request)
-                    whenever(dtagResponse.protocol).thenReturn(Protocol.HTTP_1_1)
-                    whenever(dtagResponse.code).thenReturn(200)
-                    whenever(dtagResponse.message).thenReturn("OK")
-                    whenever(dtagResponse.isSuccessful).thenReturn(true)
-
-                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
-                        val callback = enqueueInvocation.getArgument<Callback>(0)
-                        callback.onResponse(call, dtagResponse)
-                    }
-                }
-                else -> {
-                    throw IllegalArgumentException("Unhandled host: $host")
-                }
+            whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
+                val callback = enqueueInvocation.getArgument<Callback>(0)
+                callback.onResponse(call, buildSuccessfulResponseMock())
             }
             call
         }
@@ -530,27 +456,181 @@ class AttentiveApiTest {
         return mock
     }
 
-    private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfully() {
-        Mockito.doAnswer { invocation: InvocationOnMock ->
-            val argument =
-                invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
-            argument.onSuccess(GEO_ADJUSTED_DOMAIN)
-        }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
-            eq(DOMAIN),
-            any(),
+    // -- Retrofit endpoint tests (registerPushToken, sendDirectOpenStatus) --
+
+    @Test
+    fun registerPushToken_callsTokenEndpoint_withCorrectRequestFields() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = AttentiveApi(interceptorClient, "games")
+
+        // Act
+        testApi.registerPushToken(
+            token = "test-push-token",
+            permissionGranted = true,
+            userIdentifiers = ALL_USER_IDENTIFIERS,
+            domain = DOMAIN,
         )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert
+        Assert.assertEquals(1, capturedRequests.size)
+        val captured = capturedRequests[0]
+
+        // Verify endpoint and method
+        Assert.assertTrue(captured.request.url.encodedPath.endsWith("/token"))
+        Assert.assertEquals("POST", captured.request.method)
+
+        // Verify headers
+        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
+
+        // Verify JSON body fields match @SerializedName annotations
+        val body = JsonParser.parseString(captured.bodyJson).asJsonObject
+        Assert.assertEquals(DOMAIN, body.get("c").asString)
+        Assert.assertTrue(body.get("v").asString.startsWith("mobile-app-"))
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, body.get("u").asString)
+        Assert.assertEquals("test-push-token", body.get("pt").asString)
+        Assert.assertEquals("true", body.get("st").asString)
+        Assert.assertEquals("fcm", body.get("tp").asString)
+
+        // Verify metadata (m) contains phone and email
+        val metadata = body.getAsJsonObject("m")
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.phone, metadata.get("phone").asString)
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.email, metadata.get("email").asString)
+
+        // Verify external vendor IDs (evs) are serialized
+        val evs = body.getAsJsonArray("evs")
+        Assert.assertEquals(3, evs.size())
     }
 
-//    private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfullyAlternative() {
-//        whenever(
-//            attentiveApi.getGeoAdjustedDomainAsync(
-//                eq(DOMAIN),
-//                argThat { true })
-//        ) doAnswer { invocation: InvocationOnMock ->
-//            val (_, callback: GetGeoAdjustedDomainCallback) = invocation.arguments
-//            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
-//        }
-//    }
+    @Test
+    fun sendDirectOpenStatus_callsMtctrlEndpoint_withCorrectRequestFields() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = AttentiveApi(interceptorClient, "games")
+
+        val callbackMap = mapOf(
+            "attentive_open_action_url" to "https://example.com/deep-link",
+            "someKey" to "someValue",
+        )
+
+        // Act - use DIRECT_OPEN launch type ("o")
+        testApi.sendDirectOpenStatus(
+            AttentiveApi.LaunchType.DIRECT_OPEN,
+            "test-push-token",
+            callbackMap,
+            true,
+            ALL_USER_IDENTIFIERS,
+            DOMAIN,
+        )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert
+        Assert.assertEquals(1, capturedRequests.size)
+        val captured = capturedRequests[0]
+
+        // Verify endpoint and method
+        Assert.assertTrue(captured.request.url.encodedPath.endsWith("/mtctrl"))
+        Assert.assertEquals("POST", captured.request.method)
+
+        // Verify headers
+        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
+
+        // Verify JSON body structure
+        val body = JsonParser.parseString(captured.bodyJson).asJsonObject
+
+        // Verify events array
+        val events = body.getAsJsonArray("events")
+        Assert.assertTrue(events.size() >= 1)
+        val firstEvent = events[0].asJsonObject
+        Assert.assertEquals("o", firstEvent.get("ist").asString)  // DIRECT_OPEN value
+        val eventData = firstEvent.getAsJsonObject("data")
+        Assert.assertEquals("https://example.com/deep-link", eventData.get("attentive_open_action_url").asString)
+
+        // Verify device info
+        val device = body.getAsJsonObject("device")
+        Assert.assertEquals(DOMAIN, device.get("c").asString)
+        Assert.assertTrue(device.get("v").asString.startsWith("mobile-app-"))
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, device.get("u").asString)
+        Assert.assertEquals("test-push-token", device.get("pt").asString)
+        Assert.assertEquals("true", device.get("st").asString)
+        Assert.assertEquals("fcm", device.get("tp").asString)
+        Assert.assertEquals("https://example.com/deep-link", device.get("pd").asString)
+
+        // Verify metadata in device
+        val metadata = device.getAsJsonObject("m")
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.phone, metadata.get("phone").asString)
+        Assert.assertEquals(ALL_USER_IDENTIFIERS.email, metadata.get("email").asString)
+
+        // Verify external vendor IDs in device
+        val evs = device.getAsJsonArray("evs")
+        Assert.assertEquals(3, evs.size())
+    }
+
+    @Test
+    fun sendDirectOpenStatus_directOpen_alsoIncludesAppLaunchedEvent() {
+        // Arrange
+        val capturedRequests = mutableListOf<CapturedApiRequest>()
+        val requestLatch = CountDownLatch(1)
+        val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
+        val testApi = AttentiveApi(interceptorClient, "games")
+
+        // Act
+        testApi.sendDirectOpenStatus(
+            AttentiveApi.LaunchType.DIRECT_OPEN,
+            "test-push-token",
+            mapOf("key" to "value"),
+            true,
+            ALL_USER_IDENTIFIERS,
+            DOMAIN,
+        )
+        requestLatch.await(5, TimeUnit.SECONDS)
+
+        // Assert - DIRECT_OPEN should include both the direct open event and an APP_LAUNCHED event
+        val body = JsonParser.parseString(capturedRequests[0].bodyJson).asJsonObject
+        val events = body.getAsJsonArray("events")
+        Assert.assertEquals(2, events.size())
+        Assert.assertEquals("o", events[0].asJsonObject.get("ist").asString)   // DIRECT_OPEN
+        Assert.assertEquals("al", events[1].asJsonObject.get("ist").asString)  // APP_LAUNCHED
+    }
+
+    private data class CapturedApiRequest(
+        val request: Request,
+        val bodyJson: String,
+    )
+
+    private fun buildInterceptorClient(
+        capturedRequests: MutableList<CapturedApiRequest>,
+        latch: CountDownLatch,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                if (request.url.host == "mobile.attentivemobile.com") {
+                    val buffer = okio.Buffer()
+                    request.body?.writeTo(buffer)
+                    capturedRequests.add(
+                        CapturedApiRequest(
+                            request = request,
+                            bodyJson = buffer.readUtf8(),
+                        ),
+                    )
+                    latch.countDown()
+                }
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(204)
+                    .message("No Content")
+                    .body("".toResponseBody())
+                    .build()
+            }
+            .build()
+    }
 
     private fun assertRequestMethodIsPost(request: Request) {
         Assert.assertEquals("POST", request.method.uppercase(Locale.getDefault()))
@@ -558,8 +638,6 @@ class AttentiveApiTest {
 
     companion object {
         private const val DOMAIN = "adj"
-        private const val GEO_ADJUSTED_DOMAIN = "domain-adj"
-        private val DTAG_URL = String.format(AttentiveApi.ATTENTIVE_DTAG_URL, DOMAIN)
         private val ALL_USER_IDENTIFIERS = buildAllUserIdentifiers()
 
         private fun buildAllUserIdentifiers(): UserIdentifiers {
@@ -581,7 +659,7 @@ class AttentiveApiTest {
                 Assert.assertNull("mobile-app-${AppInfo.attentiveSDKVersion}", url.queryParameter("v"))
             }
             Assert.assertEquals("0", url.queryParameter("lt"))
-            Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
+            Assert.assertEquals(DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))
             Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, url.queryParameter("u"))
 
