@@ -60,7 +60,7 @@ class AttentiveApiTest {
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
 
         // Act
         attentiveApi.sendUserIdentifiersCollectedEvent(
@@ -102,7 +102,7 @@ class AttentiveApiTest {
     fun sendEvent_validEvent_httpMethodIsPost() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         // Which event we send for this test doesn't matter - choosing AddToCart randomly
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
@@ -124,7 +124,7 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithRequiredFields()
 
         // Act
@@ -162,7 +162,7 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -199,7 +199,7 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -248,7 +248,7 @@ class AttentiveApiTest {
     fun sendEvent_purchaseEventWithTwoProducts_callsEventsEndpointTwiceForPurchasesAndOnceForOrderConfirmed() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithTwoItems()
 
         // Act
@@ -280,7 +280,7 @@ class AttentiveApiTest {
     fun sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
@@ -313,7 +313,7 @@ class AttentiveApiTest {
     fun sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val productViewEvent = buildProductViewEventWithAllFields()
 
         // Act
@@ -345,7 +345,7 @@ class AttentiveApiTest {
     fun sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
 
-        givenOkHttpClientReturnsResponseBasedOnHost()
+        givenOkHttpClientReturnsSuccessResponse()
         val customEvent = buildCustomEventWithAllFields()
 
         // Act
@@ -438,7 +438,7 @@ class AttentiveApiTest {
             .category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
-    private fun givenOkHttpClientReturnsResponseBasedOnHost() {
+    private fun givenOkHttpClientReturnsSuccessResponse() {
         whenever(okHttpClient.newCall(any())).doAnswer { invocation: InvocationOnMock ->
             val call = mock<Call>()
             whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->

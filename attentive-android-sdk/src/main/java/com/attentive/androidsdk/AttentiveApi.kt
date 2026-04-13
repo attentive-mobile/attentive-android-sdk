@@ -1038,7 +1038,7 @@ internal fun sendOptOutSubscriptionStatus(
     pushToken: String?
 ) {
     if (pushToken == null) {
-        Timber.e("Invalid push token, cannot send opt-in subscription status")
+        Timber.e("Invalid push token, cannot send opt-out subscription status")
         return
     }
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
