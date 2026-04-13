@@ -1,7 +1,6 @@
 package com.attentive.androidsdk
 
 import android.util.Log
-import com.attentive.androidsdk.AttentiveApi.GetGeoAdjustedDomainCallback
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.Cart
 import com.attentive.androidsdk.events.CustomEvent
@@ -22,7 +21,6 @@ import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
@@ -36,7 +34,6 @@ import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -62,8 +59,8 @@ class AttentiveApiTest {
     @Test
     fun sendUserIdentifiersCollectedEvent_userIdentifierCollectedEvent_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
 
         // Act
         attentiveApi.sendUserIdentifiersCollectedEvent(
@@ -104,8 +101,8 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_validEvent_httpMethodIsPost() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         // Which event we send for this test doesn't matter - choosing AddToCart randomly
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
@@ -126,8 +123,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithOnlyRequiredParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithRequiredFields()
 
         // Act
@@ -164,8 +161,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -201,8 +198,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_purchaseEventWithAllParams_sendsCorrectOrderConfirmedEvent() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithAllFields()
 
         // Act
@@ -250,8 +247,8 @@ class AttentiveApiTest {
     @Test
     fun sendEvent_purchaseEventWithTwoProducts_callsEventsEndpointTwiceForPurchasesAndOnceForOrderConfirmed() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val purchaseEvent = buildPurchaseEventWithTwoItems()
 
         // Act
@@ -282,8 +279,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_addToCartEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val addToCartEvent = buildAddToCartEventWithAllFields()
 
         // Act
@@ -315,8 +312,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_productViewEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val productViewEvent = buildProductViewEventWithAllFields()
 
         // Act
@@ -347,8 +344,8 @@ class AttentiveApiTest {
     @Throws(SerializationException::class)
     fun sendEvent_customEventWithAllParams_callsOkHttpClientWithCorrectPayload() {
         // Arrange
-        givenAttentiveApiGetsGeoAdjustedDomainSuccessfully()
-        givenOkHttpClientReturnsResponseBasedOnHost()
+
+        givenOkHttpClientReturnsSuccessResponse()
         val customEvent = buildCustomEventWithAllFields()
 
         // Act
@@ -374,49 +371,6 @@ class AttentiveApiTest {
         val actualProperties = json.decodeFromString<Map<String, String>>(metadata["properties"]!!)
         Assert.assertEquals(customEvent.type, metadata["type"])
         Assert.assertEquals(customEvent.properties, actualProperties)
-    }
-
-    @Test
-    fun sendEvent_multipleEvents_onlyGetsGeoAdjustedDomainOnce() {
-        // Arrange
-        givenOkHttpClientReturnsResponseBasedOnHost()
-        val productViewEvent = buildProductViewEventWithAllFields()
-
-        // Act
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-
-        // Assert
-        Mockito.verify(okHttpClient, Mockito.times(3))?.newCall(capture(requestArgumentCaptor))
-
-        val eventsSentCount =
-            requestArgumentCaptor.allValues.stream()
-                .filter { request: Request -> request.url.toString().contains("t=d") }
-                .count()
-        Assert.assertEquals(2, eventsSentCount)
-
-        val geoAdjustedDomainCallsSent =
-            requestArgumentCaptor.allValues.stream()
-                .filter { request: Request -> request.url.toString() == DTAG_URL }
-                .count()
-        Assert.assertEquals(1, geoAdjustedDomainCallsSent)
-    }
-
-    @Test
-    fun sendEvent_geoAdjustedDomainRetrieved_domainValueIsCorrect() {
-        // Arrange
-        givenOkHttpClientReturnsResponseBasedOnHost()
-        val productViewEvent = buildProductViewEventWithAllFields()
-
-        Assert.assertNull(attentiveApi.cachedGeoAdjustedDomain)
-
-        // Act
-        attentiveApi.sendEvent(productViewEvent, ALL_USER_IDENTIFIERS, DOMAIN)
-
-        // Assert
-        Mockito.verify(okHttpClient, Mockito.times(2))?.newCall(capture(requestArgumentCaptor))
-
-        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, attentiveApi.cachedGeoAdjustedDomain)
     }
 
     private fun buildPurchaseEventWithRequiredFields(): PurchaseEvent {
@@ -484,43 +438,12 @@ class AttentiveApiTest {
             .category("categoryValue").name("nameValue").productImage("imageUrl").build()
     }
 
-    private fun givenOkHttpClientReturnsResponseBasedOnHost() {
+    private fun givenOkHttpClientReturnsSuccessResponse() {
         whenever(okHttpClient.newCall(any())).doAnswer { invocation: InvocationOnMock ->
-            val request = invocation.arguments[0] as Request
-            val host = request.url.host
             val call = mock<Call>()
-
-            when (host) {
-                "events.attentivemobile.com" -> {
-                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
-                        val callback = enqueueInvocation.getArgument<Callback>(0)
-                        callback.onResponse(call, buildSuccessfulResponseMock())
-                    }
-                }
-                "cdn.attn.tv" -> {
-                    val content =
-                        String.format(
-                            "window.__attentive_domain='%s.attn.tv'",
-                            GEO_ADJUSTED_DOMAIN,
-                        )
-                    val responseBody = content.toResponseBody("text/html".toMediaTypeOrNull())
-
-                    val dtagResponse = Response.Builder()
-                        .request(request)
-                        .protocol(Protocol.HTTP_1_1)
-                        .code(200)
-                        .message("OK")
-                        .body(responseBody)
-                        .build()
-
-                    whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
-                        val callback = enqueueInvocation.getArgument<Callback>(0)
-                        callback.onResponse(call, dtagResponse)
-                    }
-                }
-                else -> {
-                    throw IllegalArgumentException("Unhandled host: $host")
-                }
+            whenever(call.enqueue(any())).doAnswer { enqueueInvocation: InvocationOnMock ->
+                val callback = enqueueInvocation.getArgument<Callback>(0)
+                callback.onResponse(call, buildSuccessfulResponseMock())
             }
             call
         }
@@ -532,28 +455,6 @@ class AttentiveApiTest {
         Mockito.doReturn(200).`when`(mock).code
         return mock
     }
-
-    private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfully() {
-        Mockito.doAnswer { invocation: InvocationOnMock ->
-            val argument =
-                invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
-            argument.onSuccess(GEO_ADJUSTED_DOMAIN)
-        }.whenever(attentiveApi).getGeoAdjustedDomainAsync(
-            eq(DOMAIN),
-            any(),
-        )
-    }
-
-//    private fun givenAttentiveApiGetsGeoAdjustedDomainSuccessfullyAlternative() {
-//        whenever(
-//            attentiveApi.getGeoAdjustedDomainAsync(
-//                eq(DOMAIN),
-//                argThat { true })
-//        ) doAnswer { invocation: InvocationOnMock ->
-//            val (_, callback: GetGeoAdjustedDomainCallback) = invocation.arguments
-//            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
-//        }
-//    }
 
     // -- Retrofit endpoint tests (registerPushToken, sendDirectOpenStatus) --
 
@@ -567,10 +468,10 @@ class AttentiveApiTest {
 
         // Act
         testApi.registerPushToken(
-            GEO_ADJUSTED_DOMAIN,
-            "test-push-token",
-            true,
-            ALL_USER_IDENTIFIERS,
+            token = "test-push-token",
+            permissionGranted = true,
+            userIdentifiers = ALL_USER_IDENTIFIERS,
+            domain = DOMAIN,
         )
         requestLatch.await(5, TimeUnit.SECONDS)
 
@@ -587,7 +488,7 @@ class AttentiveApiTest {
 
         // Verify JSON body fields match @SerializedName annotations
         val body = JsonParser.parseString(captured.bodyJson).asJsonObject
-        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, body.get("c").asString)
+        Assert.assertEquals(DOMAIN, body.get("c").asString)
         Assert.assertTrue(body.get("v").asString.startsWith("mobile-app-"))
         Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, body.get("u").asString)
         Assert.assertEquals("test-push-token", body.get("pt").asString)
@@ -610,12 +511,7 @@ class AttentiveApiTest {
         val capturedRequests = mutableListOf<CapturedApiRequest>()
         val requestLatch = CountDownLatch(1)
         val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
-        val testApi = Mockito.spy(AttentiveApi(interceptorClient, "games"))
-
-        Mockito.doAnswer { invocation: InvocationOnMock ->
-            val callback = invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
-            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
-        }.whenever(testApi).getGeoAdjustedDomainAsync(eq(DOMAIN), any())
+        val testApi = AttentiveApi(interceptorClient, "games")
 
         val callbackMap = mapOf(
             "attentive_open_action_url" to "https://example.com/deep-link",
@@ -657,7 +553,7 @@ class AttentiveApiTest {
 
         // Verify device info
         val device = body.getAsJsonObject("device")
-        Assert.assertEquals(GEO_ADJUSTED_DOMAIN, device.get("c").asString)
+        Assert.assertEquals(DOMAIN, device.get("c").asString)
         Assert.assertTrue(device.get("v").asString.startsWith("mobile-app-"))
         Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, device.get("u").asString)
         Assert.assertEquals("test-push-token", device.get("pt").asString)
@@ -681,12 +577,7 @@ class AttentiveApiTest {
         val capturedRequests = mutableListOf<CapturedApiRequest>()
         val requestLatch = CountDownLatch(1)
         val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
-        val testApi = Mockito.spy(AttentiveApi(interceptorClient, "games"))
-
-        Mockito.doAnswer { invocation: InvocationOnMock ->
-            val callback = invocation.getArgument(1, GetGeoAdjustedDomainCallback::class.java)
-            callback.onSuccess(GEO_ADJUSTED_DOMAIN)
-        }.whenever(testApi).getGeoAdjustedDomainAsync(eq(DOMAIN), any())
+        val testApi = AttentiveApi(interceptorClient, "games")
 
         // Act
         testApi.sendDirectOpenStatus(
@@ -747,8 +638,6 @@ class AttentiveApiTest {
 
     companion object {
         private const val DOMAIN = "adj"
-        private const val GEO_ADJUSTED_DOMAIN = "domain-adj"
-        private val DTAG_URL = String.format(AttentiveApi.ATTENTIVE_DTAG_URL, DOMAIN)
         private val ALL_USER_IDENTIFIERS = buildAllUserIdentifiers()
 
         private fun buildAllUserIdentifiers(): UserIdentifiers {
@@ -770,7 +659,7 @@ class AttentiveApiTest {
                 Assert.assertNull("mobile-app-${AppInfo.attentiveSDKVersion}", url.queryParameter("v"))
             }
             Assert.assertEquals("0", url.queryParameter("lt"))
-            Assert.assertEquals(GEO_ADJUSTED_DOMAIN, url.queryParameter("c"))
+            Assert.assertEquals(DOMAIN, url.queryParameter("c"))
             Assert.assertEquals(eventType, url.queryParameter("t"))
             Assert.assertEquals(ALL_USER_IDENTIFIERS.visitorId, url.queryParameter("u"))
 
