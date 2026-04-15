@@ -31,7 +31,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
-    var apiVersion = ApiVersion.OLD
+    var apiVersion = ApiVersion.NEW
 
     init {
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
@@ -142,7 +142,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
 
-        internal var apiVersion: ApiVersion = ApiVersion.OLD
+        internal var apiVersion: ApiVersion = ApiVersion.NEW
 
         fun applicationContext(context: Application) =
             apply {
@@ -175,7 +175,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
-        private val allowApiVersionOverride = false
+        private val allowApiVersionOverride = true
 
         fun apiVersion(apiVersion: ApiVersion) =
             apply {
