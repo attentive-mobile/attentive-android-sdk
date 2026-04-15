@@ -335,6 +335,43 @@ creative.trigger()
 ```
 See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/attentive-android-sdk/src/main/java/com/attentive/androidsdk/creatives/CreativeTriggerCallback.java) for more information on the callback handler methods.
 
+#### Trigger a Specific Creative
+
+You can display a specific sign-up unit by passing its creative ID to the `trigger` method. This is useful when you want to show different creatives based on where the user is in your app (e.g., a different sign-up unit on the home screen vs. a product page).
+
+To find your creative ID, go to the [Attentive Sign-up Units page](https://ui.attentivemobile.com/subscribers/sign-up-units), select your company, and look for **mobile app** sign-up units. There are two mobile types:
+- **Mobile Full Screen** — a full-screen creative that covers the entire app view
+- **Mobile Partial** — a partial creative that overlays part of the app view
+
+The creative ID is displayed on the sign-up unit detail page.
+
+```kotlin
+// Trigger a specific creative by ID
+creative.trigger(creativeId = "YOUR_CREATIVE_ID")
+
+// Trigger a specific creative by ID with a callback handler
+creative.trigger(
+    creativeId = "YOUR_CREATIVE_ID",
+    callback = object : CreativeTriggerCallback {
+        override fun onOpen() {
+            Log.i(this.javaClass.getName(), "Opened the creative!")
+        }
+
+        override fun onCreativeNotOpened() {
+            Log.e(this.javaClass.getName(), "Couldn't open the creative!")
+        }
+
+        override fun onClose() {
+            Log.i(this.javaClass.getName(), "Closed the creative!")
+        }
+
+        override fun onCreativeNotClosed() {
+            Log.e(this.javaClass.getName(), "Couldn't close the creative!")
+        }
+    }
+)
+```
+
 #### 3. Destroy the Creative
 ```kotlin
 // Destroy the creative and it's associated WebView.
