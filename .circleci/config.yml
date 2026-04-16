@@ -65,6 +65,11 @@ jobs:
             - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
             - gradle-v2-
       - run:
+          name: Intentional failure to test Slack notifications
+          command: |
+            echo "This step fails intentionally to test Slack notifications"
+            exit 1
+      - run:
           name: Run Android Lint
           command: ./gradlew lintDebug
       - run:
