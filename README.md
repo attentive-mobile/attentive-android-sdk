@@ -339,12 +339,6 @@ See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive
 
 You can display a specific sign-up unit by passing its creative ID to the `trigger` method. This is useful when you want to show different creatives based on where the user is in your app (e.g., a different sign-up unit on the home screen vs. a product page).
 
-To find your creative ID, go to the [Attentive Sign-up Units page](https://ui.attentivemobile.com/subscribers/sign-up-units), select your company, and look for **mobile app** sign-up units. There are two mobile types:
-- **Mobile Full Screen** — a full-screen creative that covers the entire app view
-- **Mobile Partial** — a partial creative that overlays part of the app view
-
-The creative ID is displayed on the sign-up unit detail page.
-
 ```kotlin
 // Trigger a specific creative by ID
 creative.trigger(creativeId = "YOUR_CREATIVE_ID")
