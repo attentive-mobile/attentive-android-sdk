@@ -43,7 +43,7 @@ PAYLOAD=$(jq -n \
   --arg project "$CIRCLE_PROJECT_REPONAME" \
   '{
     "blocks": [
-      {"type":"header","text":{"type":"plain_text","text":"Job Failed","emoji":true}},
+      {"type":"header","text":{"type":"plain_text","text":"🚨 Job Failed","emoji":true}},
       {"type":"section","fields":(
         [{"type":"mrkdwn","text":("*Job/Build:*\n<" + $job_url + "|" + $job + ">")}]
         + (if $workflow != "" then [{"type":"mrkdwn","text":("*Workflow:*\n<" + $workflow_url + "|" + $workflow + ">")}] else [] end)
