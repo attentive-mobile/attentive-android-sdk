@@ -342,28 +342,6 @@ You can display a specific sign-up unit by passing its creative ID to the `trigg
 ```kotlin
 // Trigger a specific creative by ID
 creative.trigger(creativeId = "YOUR_CREATIVE_ID")
-
-// Trigger a specific creative by ID with a callback handler
-creative.trigger(
-    creativeId = "YOUR_CREATIVE_ID",
-    callback = object : CreativeTriggerCallback {
-        override fun onOpen() {
-            Log.i(this.javaClass.getName(), "Opened the creative!")
-        }
-
-        override fun onCreativeNotOpened() {
-            Log.e(this.javaClass.getName(), "Couldn't open the creative!")
-        }
-
-        override fun onClose() {
-            Log.i(this.javaClass.getName(), "Closed the creative!")
-        }
-
-        override fun onCreativeNotClosed() {
-            Log.e(this.javaClass.getName(), "Couldn't close the creative!")
-        }
-    }
-)
 ```
 
 #### 3. Destroy the Creative
