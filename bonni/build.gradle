@@ -117,6 +117,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     annotationProcessor(libs.androidx.room.compiler)
 
+    // Memory leak detection
+    debugImplementation(libs.leakcanary)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

@@ -831,7 +831,8 @@ private fun sendEventInternalAsync(
         }
 
         override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
-            val error = "Could not send the request. Error: ${t.message}"
+            var error = "Could not send the request. Error: ${t.message}"
+            error += "\n ${call.request()}"
             Timber.e(error)
             callback?.onFailure(error)
         }
