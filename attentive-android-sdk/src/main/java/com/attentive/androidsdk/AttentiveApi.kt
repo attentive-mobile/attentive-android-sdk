@@ -22,7 +22,6 @@ import com.attentive.androidsdk.internal.network.RetrofitApiService
 import com.attentive.androidsdk.internal.network.UserUpdateRequest
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
-import com.attentive.androidsdk.push.TokenProvider
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -151,13 +150,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             if (phoneNumber != null) {
                 this.phone = phoneNumber
             }
-        }
-
-        if (email != null || phoneNumber != null) {
-            val builder = UserIdentifiers.Builder()
-            email?.let { builder.withEmail(it) }
-            phoneNumber?.let { builder.withPhone(it) }
-            AttentiveEventTracker.instance.config.identify(builder.build())
         }
 
         api.updateUser(
@@ -1221,21 +1213,27 @@ private fun sendDirectOpenStatusInternal(
 internal fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
-    pushToken: String?
+    pushToken: String?,
+    domain: String,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
         Timber.e("Invalid push token, cannot send opt-in subscription status")
         return
     }
+    if (userIdentifiers.visitorId.isNullOrEmpty()) {
+        Timber.e("No visitorId available, cannot send opt-in subscription")
+        return
+    }
     getGeoAdjustedDomainAsync(
-        AttentiveEventTracker.instance.config.domain,
+        domain,
         object : GetGeoAdjustedDomainCallback {
             override fun onFailure(reason: String?) {
                 Timber.w("Could not get geo-adjusted domain. Trying to use the original domain.")
                 sendOptInSubscriptionStatusInternal(
                     phoneNumber,
                     email,
-                    AttentiveEventTracker.instance.config.domain,
+                    domain,
                     pushToken
                 )
             }
@@ -1257,7 +1255,6 @@ internal fun sendOptInSubscriptionStatus(
                 pushToken: String,
                 type: String = "MARKETING"
             ) {
-                val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
                 val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
                 val visitorId = userIdentifiers.visitorId ?: ""
                 val jsonBody = """
@@ -1302,10 +1299,15 @@ internal fun sendOptOutSubscriptionStatus(
     email: String?,
     phoneNumber: String?,
     domain: String,
-    pushToken: String?
+    pushToken: String?,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
-        Timber.e("Invalid push token, cannot send opt-in subscription status")
+        Timber.e("Invalid push token, cannot send opt-out subscription status")
+        return
+    }
+    if (userIdentifiers.visitorId.isNullOrEmpty()) {
+        Timber.e("No visitorId available, cannot send opt-out subscription")
         return
     }
     getGeoAdjustedDomainAsync(domain, object : GetGeoAdjustedDomainCallback {
@@ -1335,7 +1337,6 @@ internal fun sendOptOutSubscriptionStatus(
             phoneNumber: String?,
             pushToken: String
         ) {
-            val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
             val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
             val email = email
             val phone = phoneNumber
