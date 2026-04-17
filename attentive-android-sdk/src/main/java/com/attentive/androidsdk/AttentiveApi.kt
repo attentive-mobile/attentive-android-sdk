@@ -143,6 +143,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         phoneNumber: String?,
         visitorId: String,
         pushToken: String,
+        logLabel: String = "user update",
     ) {
         val contactInfo = ContactInfo().apply {
             if (email != null) {
@@ -175,14 +176,14 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 response: retrofit2.Response<Unit>
             ) {
                 if(response.isSuccessful) {
-                    Timber.i("Successfully sent user update")
+                    Timber.i("Successfully sent $logLabel")
                 } else {
-                    Timber.e("Failed to send user update: ${response.code()}")
+                    Timber.e("Failed to send $logLabel: ${response.code()}")
                 }
             }
 
             override fun onFailure(call: retrofit2.Call<kotlin.Unit?>, t: kotlin.Throwable) {
-               Timber.e("Failed to send user update: ${t.message}")
+               Timber.e("Failed to send $logLabel: ${t.message}")
             }
         })
     }

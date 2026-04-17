@@ -381,11 +381,11 @@ object AttentiveSdk {
         val visitorId = config.userIdentifiers.visitorId
         val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
-            Timber.w("Skipping clearUser network call: visitorId=$visitorId, pushToken=$pushToken")
+            Timber.w("Skipping clear user: visitorId=$visitorId, pushToken=$pushToken")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken)
+            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken, logLabel = "clear user")
         }
     }
 
