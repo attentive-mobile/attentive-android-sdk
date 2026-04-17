@@ -12,6 +12,7 @@ import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -337,9 +338,29 @@ object AttentiveSdk {
             }
         }
 
+        // Clear user and re-identify with updated contact info
+        config.clearUser()
+
+        val visitorId = config.userIdentifiers.visitorId
+        if (visitorId == null) {
+            Timber.e("No visitorId available, cannot send user update")
+            return
+        }
+
+        val pushToken = TokenProvider.getInstance().token
+        if (pushToken == null) {
+            Timber.e("No push token available, cannot send user update")
+            return
+        }
+
+        val identifiersBuilder = UserIdentifiers.Builder()
+        email?.let { identifiersBuilder.withEmail(it) }
+        number?.let { identifiersBuilder.withPhone(it) }
+        config.identify(identifiersBuilder.build())
+
         val domain = config.domain
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, email, number)
+            config.attentiveApi.sendUserUpdate(domain, email, number, visitorId, pushToken)
         }
     }
 

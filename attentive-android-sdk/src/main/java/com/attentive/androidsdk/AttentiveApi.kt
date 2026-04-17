@@ -28,7 +28,6 @@ import com.attentive.androidsdk.internal.network.RetrofitEventsApiService
 import com.attentive.androidsdk.internal.network.UserUpdateRequest
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
-import com.attentive.androidsdk.push.TokenProvider
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -103,20 +102,13 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     val eventsApi: RetrofitEventsApiService = retrofitEvents.create(RetrofitEventsApiService::class.java)
 
-    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
-        AttentiveEventTracker.instance.config.clearUser()
-
-        val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
-        if (visitorId == null) {
-            Timber.e("No visitorId available, cannot send user update")
-            return
-        }
-        val pushToken = TokenProvider.getInstance().token
-        if (pushToken == null) {
-            Timber.e("No push token available, cannot send user update")
-            return
-        }
-
+    internal fun sendUserUpdate(
+        domain: String,
+        email: String?,
+        phoneNumber: String?,
+        visitorId: String,
+        pushToken: String
+    ) {
         val contactInfo = ContactInfo().apply {
             if (email != null) {
                 this.email = email
@@ -125,16 +117,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 this.phone = phoneNumber
             }
         }
-
-        val builder = UserIdentifiers.Builder()
-        email?.let {
-            builder.withEmail(it)
-        }
-        phoneNumber?.let {
-            builder.withPhone(it)
-        }
-
-        AttentiveEventTracker.instance.config.identify(builder.build())
 
         api.updateUser(
             UserUpdateRequest(
@@ -996,14 +978,14 @@ private fun sendDirectOpenStatusInternal(
 internal fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
-    pushToken: String?
+    pushToken: String?,
+    domain: String,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
         Timber.e("Invalid push token, cannot send opt-in subscription status")
         return
     }
-    val domain = AttentiveEventTracker.instance.config.domain
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         Timber.e("No visitorId available, cannot send opt-in subscription")
         return
@@ -1036,13 +1018,13 @@ internal fun sendOptOutSubscriptionStatus(
     email: String?,
     phoneNumber: String?,
     domain: String,
-    pushToken: String?
+    pushToken: String?,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
         Timber.e("Invalid push token, cannot send opt-out subscription status")
         return
     }
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         Timber.e("No visitorId available, cannot send opt-out subscription")
         return

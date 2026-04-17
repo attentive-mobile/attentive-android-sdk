@@ -197,6 +197,8 @@ class AttentiveEventTracker private constructor() {
                     phoneNumber,
                     email,
                     it.getOrNull()?.token,
+                    config.domain,
+                    config.userIdentifiers,
                 )
             }
         }
@@ -218,6 +220,7 @@ class AttentiveEventTracker private constructor() {
                     phoneNumber,
                     config.domain,
                     it.getOrNull()?.token,
+                    config.userIdentifiers,
                 )
             }
         }
