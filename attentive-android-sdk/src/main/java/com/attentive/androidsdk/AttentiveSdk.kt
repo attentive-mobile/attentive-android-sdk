@@ -245,7 +245,10 @@ object AttentiveSdk {
             Timber.e("Invalid phone number: $phoneNumber")
         }
 
-        AttentiveEventTracker.instance.optIn(email, phoneNumber)
+        val result = AttentiveEventTracker.instance.optIn(email, phoneNumber)
+        if (result.isFailure) {
+            Timber.e("optIn failed: ${result.exceptionOrNull()?.message}")
+        }
     }
 
     suspend fun optUserOutOfMarketingSubscription(
@@ -255,7 +258,10 @@ object AttentiveSdk {
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
         }
-        AttentiveEventTracker.instance.optOut(email, phoneNumber)
+        val result = AttentiveEventTracker.instance.optOut(email, phoneNumber)
+        if (result.isFailure) {
+            Timber.e("optOut failed: ${result.exceptionOrNull()?.message}")
+        }
     }
 
     /**
@@ -339,7 +345,10 @@ object AttentiveSdk {
 
         val domain = config.domain
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, email, number)
+            val result = config.attentiveApi.sendUserUpdate(domain, email, number)
+            if (result.isFailure) {
+                Timber.e("updateUser failed: ${result.exceptionOrNull()?.message}")
+            }
         }
     }
 

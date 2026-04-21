@@ -1,6 +1,7 @@
 package com.attentive.androidsdk.internal.network
 
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -53,4 +54,32 @@ interface RetrofitApiService {
     fun optOutSubscription(
         @Body request: OptOutSubscriptionRequest,
     ): Call<Unit>
+
+    @Headers(
+        "x-datadog-sampling-priority: 1",
+        "Content-Type: application/json",
+    )
+    @POST("user-update")
+    suspend fun updateUserSuspend(
+        @Body request: UserUpdateRequest,
+    ): Response<Unit>
+
+    @Headers("x-datadog-sampling-priority: 1")
+    @FormUrlEncoded
+    @POST("mobile")
+    suspend fun sendEventSuspend(
+        @Field("d") eventData: String,
+    ): Response<Unit>
+
+    @Headers("Content-Type: application/json")
+    @POST("opt-in-subscriptions")
+    suspend fun optInSubscriptionSuspend(
+        @Body request: OptInSubscriptionRequest,
+    ): Response<Unit>
+
+    @Headers("Content-Type: application/json")
+    @POST("opt-out-subscriptions")
+    suspend fun optOutSubscriptionSuspend(
+        @Body request: OptOutSubscriptionRequest,
+    ): Response<Unit>
 }
