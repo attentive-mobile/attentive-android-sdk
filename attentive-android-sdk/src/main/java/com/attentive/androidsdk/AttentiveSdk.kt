@@ -215,8 +215,13 @@ object AttentiveSdk {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
+    }
+
+    suspend fun recordEventSuspend(event: Event): Result<Unit> {
+        return AttentiveEventTracker.instance.recordEventSuspend(event)
     }
 
     /**
@@ -240,28 +245,27 @@ object AttentiveSdk {
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-            Timber.e("Invalid phone number: $phoneNumber")
+            val msg = "Invalid phone number: $phoneNumber"
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
-        val result = AttentiveEventTracker.instance.optIn(email, phoneNumber)
-        if (result.isFailure) {
-            Timber.e("optIn failed: ${result.exceptionOrNull()?.message}")
-        }
+        return AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
 
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-            Timber.e("Invalid phone number: $phoneNumber")
+            val msg = "Invalid phone number: $phoneNumber"
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
-        val result = AttentiveEventTracker.instance.optOut(email, phoneNumber)
-        if (result.isFailure) {
-            Timber.e("optOut failed: ${result.exceptionOrNull()?.message}")
-        }
+
+        return AttentiveEventTracker.instance.optOut(email, phoneNumber)
     }
 
     /**
@@ -330,26 +334,35 @@ object AttentiveSdk {
         email: String? = null,
         phoneNumber: String? = null,
     ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = updateUserSuspend(email, phoneNumber)
+            if (result.isFailure) {
+                Timber.e("updateUser failed: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    suspend fun updateUserSuspend(
+        email: String? = null,
+        phoneNumber: String? = null,
+    ): Result<Unit> {
         if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
-            Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
-            return
+            val msg = "Both email and phone number are empty or null. At least one must be provided to update the user."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         var number = phoneNumber
         phoneNumber?.let {
             if (it.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
-                number = null
+                val msg = "Invalid phone number: $phoneNumber"
+                Timber.e(msg)
+                return Result.failure(IllegalArgumentException(msg))
             }
         }
 
         val domain = config.domain
-        CoroutineScope(Dispatchers.IO).launch {
-            val result = config.attentiveApi.sendUserUpdate(domain, email, number)
-            if (result.isFailure) {
-                Timber.e("updateUser failed: ${result.exceptionOrNull()?.message}")
-            }
-        }
+        return config.attentiveApi.sendUserUpdate(domain, email, number)
     }
 
     interface PushTokenCallback {
