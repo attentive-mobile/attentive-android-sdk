@@ -9,6 +9,7 @@ import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.internal.network.ApiVersion
+import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.bonni.BonniApp
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_ENDPOINT_PREFS
@@ -52,7 +53,11 @@ class SettingsViewModel : ViewModel() {
         _phone.value = ""
     }
 
-    fun savePhoneNumber() {
+    fun savePhoneNumber(): Boolean {
+        if (!phone.value.isPhoneNumber()) {
+            return false
+        }
+
         BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).edit {
             putString(
                 ATTENTIVE_PHONE_PREFS,
@@ -62,6 +67,7 @@ class SettingsViewModel : ViewModel() {
 
         val identifiers = UserIdentifiers.Builder().withPhone(phone.value).build()
         AttentiveEventTracker.instance.config.identify(identifiers)
+        return true
     }
 
     fun getPersistedPhoneNumber(): String {

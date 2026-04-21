@@ -176,8 +176,9 @@ fun SettingsList(
             enabled = true,
             editable = true,
             onClick = {
-                viewModel.savePhoneNumber()
-                viewModel.switchUser()
+                if (viewModel.savePhoneNumber()) {
+                    viewModel.switchUser()
+                }
             },
         )
 
@@ -566,16 +567,25 @@ fun EditablePhoneNumberSetting(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
-    var updatedNumber = phone
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { viewModel.updatePhone(it) },
+                    onValueChange = {
+                        viewModel.updatePhone(it)
+                        isError = false
+                    },
                     label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid phone number (E.164 format, e.g. +14155551234)") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
@@ -585,8 +595,12 @@ fun EditablePhoneNumberSetting(
                         ),
                     trailingIcon = {
                         IconButton(onClick = {
-                            settingItem.onClick(updatedNumber)
-                            isEditing = false
+                            if (viewModel.savePhoneNumber()) {
+                                isError = false
+                                isEditing = false
+                            } else {
+                                isError = true
+                            }
                         }) {
                             Icon(
                                 Icons.Filled.Check,
@@ -770,8 +784,8 @@ fun changeEmail(viewModel: SettingsViewModel) {
     viewModel.saveEmail()
 }
 
-fun changePhoneNumber(viewModel: SettingsViewModel) {
-    viewModel.savePhoneNumber()
+fun changePhoneNumber(viewModel: SettingsViewModel): Boolean {
+    return viewModel.savePhoneNumber()
 }
 
 suspend fun sharePushToken(activity: Activity) {
