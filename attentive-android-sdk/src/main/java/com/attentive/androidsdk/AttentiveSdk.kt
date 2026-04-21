@@ -224,6 +224,13 @@ object AttentiveSdk {
         return AttentiveEventTracker.instance.recordEventSuspend(event)
     }
 
+    @JvmStatic
+    fun recordEventWithCallback(event: Event, callback: AttentiveCallback) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(recordEventSuspend(event), callback)
+        }
+    }
+
     /**
      * Determines whether the given Firebase RemoteMessage is from Attentive.
      */
@@ -255,6 +262,17 @@ object AttentiveSdk {
         return AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
 
+    @JvmStatic
+    fun optUserIntoMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserIntoMarketingSubscription(email, phoneNumber), callback)
+        }
+    }
+
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
@@ -266,6 +284,17 @@ object AttentiveSdk {
         }
 
         return AttentiveEventTracker.instance.optOut(email, phoneNumber)
+    }
+
+    @JvmStatic
+    fun optUserOutOfMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserOutOfMarketingSubscription(email, phoneNumber), callback)
+        }
     }
 
     /**
@@ -365,10 +394,34 @@ object AttentiveSdk {
         return config.attentiveApi.sendUserUpdate(domain, email, number)
     }
 
+    @JvmStatic
+    fun updateUserWithCallback(
+        email: String? = null,
+        phoneNumber: String? = null,
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(updateUserSuspend(email, phoneNumber), callback)
+        }
+    }
+
     interface PushTokenCallback {
         fun onSuccess(result: TokenFetchResult)
 
         fun onFailure(exception: Exception)
+    }
+
+    interface AttentiveCallback {
+        fun onSuccess()
+
+        fun onFailure(exception: Exception)
+    }
+
+    private fun dispatchResult(result: Result<Unit>, callback: AttentiveCallback) {
+        result.fold(
+            onSuccess = { callback.onSuccess() },
+            onFailure = { callback.onFailure(it as? Exception ?: Exception(it)) },
+        )
     }
 
     fun isPushPermissionGranted(context: Context): Boolean {
