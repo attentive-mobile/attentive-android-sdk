@@ -375,6 +375,12 @@ object AttentiveSdk {
         email: String? = null,
         phoneNumber: String? = null,
     ): Result<Unit> {
+        if (_config == null) {
+            val msg = "AttentiveSdk must be initialized before calling updateUserSuspend"
+            Timber.e(msg)
+            return Result.failure(IllegalStateException(msg))
+        }
+
         if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
             val msg = "Both email and phone number are empty or null. At least one must be provided to update the user."
             Timber.e(msg)

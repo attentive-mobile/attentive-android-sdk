@@ -1,5 +1,6 @@
 package com.attentive.androidsdk
 
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.CustomEvent
@@ -155,6 +156,8 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 Timber.e(msg)
                 Result.failure(Exception(msg))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e("Failed to send user update: ${e.message}")
             Result.failure(e)
@@ -207,6 +210,8 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                     Timber.e(msg)
                     return Result.failure(Exception(msg))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e("Failed to send ${request.eventType} event: ${e.message}")
                 return Result.failure(e)
@@ -1035,6 +1040,8 @@ internal suspend fun sendOptInSubscriptionStatus(
             Timber.e(msg)
             Result.failure(Exception(msg))
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         Timber.e("Opt-in subscription request failed: ${e.message}")
         Result.failure(e)
@@ -1081,6 +1088,8 @@ internal suspend fun sendOptOutSubscriptionStatus(
             Timber.e(msg)
             Result.failure(Exception(msg))
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         Timber.e("Opt-out subscription request failed: ${e.message}")
         Result.failure(e)
