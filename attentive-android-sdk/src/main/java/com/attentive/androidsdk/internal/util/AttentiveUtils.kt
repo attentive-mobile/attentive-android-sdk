@@ -23,7 +23,7 @@ class DefaultPhoneValidator : PhoneValidator {
 
 class DefaultEmailValidator : EmailValidator {
     private val emailRegex = Regex(
-        """^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-.]*)[a-zA-Z0-9_'+\-]@([a-zA-Z0-9][a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$""",
+        """^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-.]*)[a-zA-Z0-9_'+\-]@([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$""",
     )
 
     override fun isEmail(email: String): Boolean {

@@ -132,6 +132,23 @@ class ValidationRegexTest {
     }
 
     @Test
+    fun email_domainLabelEndingWithHyphen_returnsFalse() {
+        assertFalse(emailValidator.isEmail("user@example-.com"))
+        assertFalse(emailValidator.isEmail("user@e-.co"))
+    }
+
+    @Test
+    fun email_domainLabelWithInternalHyphen_returnsTrue() {
+        assertTrue(emailValidator.isEmail("user@my-domain.com"))
+        assertTrue(emailValidator.isEmail("user@sub-domain.example.com"))
+    }
+
+    @Test
+    fun email_singleCharDomainLabel_returnsTrue() {
+        assertTrue(emailValidator.isEmail("user@a.com"))
+    }
+
+    @Test
     fun email_spacesInEmail_returnsFalse() {
         assertFalse(emailValidator.isEmail("user @example.com"))
         assertFalse(emailValidator.isEmail("user@ example.com"))
