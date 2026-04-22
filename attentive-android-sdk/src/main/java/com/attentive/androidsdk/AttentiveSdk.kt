@@ -9,6 +9,7 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
@@ -244,6 +245,9 @@ object AttentiveSdk {
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
         }
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
+        }
 
         AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
@@ -254,6 +258,9 @@ object AttentiveSdk {
     ) {
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
+        }
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
         }
         AttentiveEventTracker.instance.optOut(email, phoneNumber)
     }
@@ -337,9 +344,22 @@ object AttentiveSdk {
             }
         }
 
+        var validatedEmail = email
+        email?.let {
+            if (it.isNotEmpty() && it.isEmail().not()) {
+                Timber.e("Invalid email: $email")
+                validatedEmail = null
+            }
+        }
+
+        if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
+            Timber.e("No valid email or phone number provided after validation.")
+            return
+        }
+
         val domain = config.domain
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, email, number)
+            config.attentiveApi.sendUserUpdate(domain, validatedEmail, number)
         }
     }
 
