@@ -9,6 +9,7 @@ import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.internal.network.ApiVersion
+import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.bonni.BonniApp
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
@@ -83,7 +84,11 @@ class SettingsViewModel : ViewModel() {
         _email.value = ""
     }
 
-    fun saveEmail() {
+    fun saveEmail(): Boolean {
+        if (!email.value.isEmail()) {
+            return false
+        }
+
         BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE).edit {
             putString(
                 ATTENTIVE_EMAIL_PREFS,
@@ -93,6 +98,7 @@ class SettingsViewModel : ViewModel() {
 
         val identifiers = UserIdentifiers.Builder().withEmail(email.value).build()
         AttentiveEventTracker.instance.config.identify(identifiers)
+        return true
     }
 
     fun getPersistedEmail(): String {

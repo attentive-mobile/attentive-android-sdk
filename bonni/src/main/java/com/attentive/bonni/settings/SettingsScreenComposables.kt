@@ -148,7 +148,6 @@ fun SettingsList(
             title = "Change Email",
             enabled = true,
             editable = true,
-            onClick = { email -> changeEmail(viewModel) },
         )
 
     val changePhoneNumberSetting =
@@ -163,10 +162,6 @@ fun SettingsList(
             title = "Switch User with email",
             enabled = true,
             editable = true,
-            onClick = {
-                viewModel.saveEmail()
-                viewModel.switchUser()
-            },
         )
 
     val switchUserWithPhoneSetting =
@@ -425,13 +420,69 @@ fun SwitchUserWithEmailSetting(
     settingItem: SettingItem,
     viewModel: SettingsViewModel = viewModel(),
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
-    SwitchUserSetting(
-        settingItem = settingItem,
-        value = email,
-        displayLabel = "Switch user with email",
-        onValueChange = { viewModel.updateEmail(it) },
-    )
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        viewModel.updateEmail(it)
+                        isError = false
+                    },
+                    label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid email address") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
+                    singleLine = true,
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BonniPink,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedTextColor = Color.Black,
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (viewModel.saveEmail()) {
+                                isError = false
+                                isEditing = false
+                                viewModel.switchUser()
+                            } else {
+                                isError = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink,
+                            )
+                        }
+                    },
+                )
+            }
+        } else {
+            Text(
+                text =
+                    buildAnnotatedString {
+                        append("Switch user with email: ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(email)
+                        }
+                    },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier =
+                    Modifier
+                        .padding(8.dp)
+                        .clickable { isEditing = true },
+            )
+        }
+    }
 }
 
 @Composable
@@ -562,6 +613,7 @@ fun EditableEmailSetting(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
 
     AnimatedContent(targetState = isEditing) { editing ->
@@ -569,8 +621,17 @@ fun EditableEmailSetting(
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { viewModel.updateEmail(it) },
+                    onValueChange = {
+                        viewModel.updateEmail(it)
+                        isError = false
+                    },
                     label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid email address") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
@@ -580,8 +641,12 @@ fun EditableEmailSetting(
                         ),
                     trailingIcon = {
                         IconButton(onClick = {
-                            settingItem.onClick(email)
-                            isEditing = false
+                            if (viewModel.saveEmail()) {
+                                isError = false
+                                isEditing = false
+                            } else {
+                                isError = true
+                            }
                         }) {
                             Icon(
                                 Icons.Filled.Check,
