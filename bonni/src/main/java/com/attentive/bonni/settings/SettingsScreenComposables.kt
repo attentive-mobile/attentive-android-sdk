@@ -156,7 +156,6 @@ fun SettingsList(
             title = "Change Phone Number",
             enabled = true,
             editable = true,
-            onClick = { phone -> changePhoneNumber(viewModel) },
         )
 
     val switchUserWithEmailSetting =
@@ -175,11 +174,6 @@ fun SettingsList(
             title = "Switch User with phone",
             enabled = true,
             editable = true,
-            onClick = {
-                if (viewModel.savePhoneNumber()) {
-                    viewModel.switchUser()
-                }
-            },
         )
 
     val apiVersionSetting =
@@ -445,13 +439,69 @@ fun SwitchUserWithPhoneSetting(
     settingItem: SettingItem,
     viewModel: SettingsViewModel = viewModel(),
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
-    SwitchUserSetting(
-        settingItem = settingItem,
-        value = phone,
-        displayLabel = "Switch user with phone",
-        onValueChange = { viewModel.updatePhone(it) },
-    )
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = {
+                        viewModel.updatePhone(it)
+                        isError = false
+                    },
+                    label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid phone number (E.164 format, e.g. +14155551234)") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
+                    singleLine = true,
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BonniPink,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedTextColor = Color.Black,
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (viewModel.savePhoneNumber()) {
+                                isError = false
+                                isEditing = false
+                                viewModel.switchUser()
+                            } else {
+                                isError = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink,
+                            )
+                        }
+                    },
+                )
+            }
+        } else {
+            Text(
+                text =
+                    buildAnnotatedString {
+                        append("Switch user with phone: ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(phone)
+                        }
+                    },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier =
+                    Modifier
+                        .padding(8.dp)
+                        .clickable { isEditing = true },
+            )
+        }
+    }
 }
 
 @Composable
@@ -570,6 +620,17 @@ fun EditablePhoneNumberSetting(
     var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
 
+    fun attemptSave(): Boolean {
+        return if (viewModel.savePhoneNumber()) {
+            isError = false
+            isEditing = false
+            true
+        } else {
+            isError = true
+            false
+        }
+    }
+
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
             Row(modifier = Modifier.padding(8.dp)) {
@@ -594,14 +655,7 @@ fun EditablePhoneNumberSetting(
                             focusedTextColor = Color.Black,
                         ),
                     trailingIcon = {
-                        IconButton(onClick = {
-                            if (viewModel.savePhoneNumber()) {
-                                isError = false
-                                isEditing = false
-                            } else {
-                                isError = true
-                            }
-                        }) {
+                        IconButton(onClick = { attemptSave() }) {
                             Icon(
                                 Icons.Filled.Check,
                                 contentDescription = "Submit",
