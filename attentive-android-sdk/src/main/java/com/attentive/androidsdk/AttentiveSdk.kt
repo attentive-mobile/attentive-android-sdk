@@ -9,6 +9,7 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
@@ -253,13 +254,23 @@ object AttentiveSdk {
         email: String = "",
         phoneNumber: String = "",
     ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-            val msg = "Invalid phone number: $phoneNumber"
+            Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
+        }
+        var validEmail = email
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
+            validEmail = ""
+        }
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
             Timber.e(msg)
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        return AttentiveEventTracker.instance.optIn(email, phoneNumber)
+        return AttentiveEventTracker.instance.optIn(validEmail, validPhone)
     }
 
     @JvmStatic
@@ -277,13 +288,23 @@ object AttentiveSdk {
         email: String = "",
         phoneNumber: String = "",
     ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
-            val msg = "Invalid phone number: $phoneNumber"
+            Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
+        }
+        var validEmail = email
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
+            validEmail = ""
+        }
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
             Timber.e(msg)
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        return AttentiveEventTracker.instance.optOut(email, phoneNumber)
+        return AttentiveEventTracker.instance.optOut(validEmail, validPhone)
     }
 
     @JvmStatic
@@ -390,10 +411,23 @@ object AttentiveSdk {
         var number = phoneNumber
         phoneNumber?.let {
             if (it.isPhoneNumber().not()) {
-                val msg = "Invalid phone number: $phoneNumber"
-                Timber.e(msg)
-                return Result.failure(IllegalArgumentException(msg))
+                Timber.e("Invalid phone number: $phoneNumber")
+                number = null
             }
+        }
+
+        var validatedEmail = email
+        email?.let {
+            if (it.isNotEmpty() && it.isEmail().not()) {
+                Timber.e("Invalid email: $email")
+                validatedEmail = null
+            }
+        }
+
+        if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
+            val msg = "No valid email or phone number provided after validation."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         val domain = config.domain
