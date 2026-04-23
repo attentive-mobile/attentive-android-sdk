@@ -216,8 +216,20 @@ object AttentiveSdk {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
+    }
+
+    suspend fun recordEventSuspend(event: Event): Result<Unit> {
+        return AttentiveEventTracker.instance.recordEventSuspend(event)
+    }
+
+    @JvmStatic
+    fun recordEventWithCallback(event: Event, callback: AttentiveCallback) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(recordEventSuspend(event), callback)
+        }
     }
 
     /**
@@ -241,28 +253,69 @@ object AttentiveSdk {
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
         }
+        var validEmail = email
         if (email.isNotBlank() && email.isEmail().not()) {
             Timber.e("Invalid email: $email")
+            validEmail = ""
+        }
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
-        AttentiveEventTracker.instance.optIn(email, phoneNumber)
+        return AttentiveEventTracker.instance.optIn(validEmail, validPhone)
+    }
+
+    @JvmStatic
+    fun optUserIntoMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserIntoMarketingSubscription(email, phoneNumber), callback)
+        }
     }
 
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
         }
+        var validEmail = email
         if (email.isNotBlank() && email.isEmail().not()) {
             Timber.e("Invalid email: $email")
+            validEmail = ""
         }
-        AttentiveEventTracker.instance.optOut(email, phoneNumber)
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
+        }
+
+        return AttentiveEventTracker.instance.optOut(validEmail, validPhone)
+    }
+
+    @JvmStatic
+    fun optUserOutOfMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserOutOfMarketingSubscription(email, phoneNumber), callback)
+        }
     }
 
     /**
@@ -331,9 +384,28 @@ object AttentiveSdk {
         email: String? = null,
         phoneNumber: String? = null,
     ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = updateUserSuspend(email, phoneNumber)
+            if (result.isFailure) {
+                Timber.e("updateUser failed: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    suspend fun updateUserSuspend(
+        email: String? = null,
+        phoneNumber: String? = null,
+    ): Result<Unit> {
+        if (_config == null) {
+            val msg = "AttentiveSdk must be initialized before calling updateUserSuspend"
+            Timber.e(msg)
+            return Result.failure(IllegalStateException(msg))
+        }
+
         if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
-            Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
-            return
+            val msg = "Both email and phone number are empty or null. At least one must be provided to update the user."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         var number = phoneNumber
@@ -353,13 +425,23 @@ object AttentiveSdk {
         }
 
         if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
-            Timber.e("No valid email or phone number provided after validation.")
-            return
+            val msg = "No valid email or phone number provided after validation."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         val domain = config.domain
+        return config.attentiveApi.sendUserUpdate(domain, email, number)
+    }
+
+    @JvmStatic
+    fun updateUserWithCallback(
+        email: String? = null,
+        phoneNumber: String? = null,
+        callback: AttentiveCallback,
+    ) {
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, validatedEmail, number)
+            dispatchResult(updateUserSuspend(email, phoneNumber), callback)
         }
     }
 
@@ -367,6 +449,19 @@ object AttentiveSdk {
         fun onSuccess(result: TokenFetchResult)
 
         fun onFailure(exception: Exception)
+    }
+
+    interface AttentiveCallback {
+        fun onSuccess()
+
+        fun onFailure(exception: Exception)
+    }
+
+    private fun dispatchResult(result: Result<Unit>, callback: AttentiveCallback) {
+        result.fold(
+            onSuccess = { callback.onSuccess() },
+            onFailure = { callback.onFailure(it as? Exception ?: Exception(it)) },
+        )
     }
 
     fun isPushPermissionGranted(context: Context): Boolean {

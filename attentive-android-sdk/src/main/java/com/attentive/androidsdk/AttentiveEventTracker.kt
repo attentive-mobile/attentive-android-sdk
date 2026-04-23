@@ -66,7 +66,10 @@ class AttentiveEventTracker private constructor() {
     )
     fun recordEvent(event: Event) {
         CoroutineScope(Dispatchers.IO).launch {
-            recordEventSuspend(event)
+            val result = recordEventSuspend(event)
+            if (result.isFailure) {
+                Timber.e("recordEvent failed: ${result.exceptionOrNull()?.message}")
+            }
         }
     }
 
@@ -87,11 +90,12 @@ class AttentiveEventTracker private constructor() {
      *
      * @param event The event to record
      */
-    internal suspend fun recordEventSuspend(event: Event) {
-        verifyInitialized()
+    internal suspend fun recordEventSuspend(event: Event): Result<Unit> {
+        if (!::config.isInitialized) {
+            return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
+        }
 
-        if (config.apiVersion == ApiVersion.OLD) {
-            // Wrap the callback-based old API in a suspend function
+        return if (config.apiVersion == ApiVersion.OLD) {
             suspendCancellableCoroutine { continuation ->
                 config.attentiveApi.sendEvent(
                     event,
@@ -101,14 +105,14 @@ class AttentiveEventTracker private constructor() {
                         override fun onSuccess() {
                             Timber.i("Event recorded successfully")
                             if (continuation.isActive) {
-                                continuation.resume(Unit)
+                                continuation.resume(Result.success(Unit))
                             }
                         }
 
                         override fun onFailure(message: String?) {
                             Timber.e("Failed to record event: $message")
                             if (continuation.isActive) {
-                                continuation.resume(Unit) // Resume anyway, don't throw
+                                continuation.resume(Result.failure(Exception(message ?: "Unknown error")))
                             }
                         }
                     },
@@ -185,42 +189,52 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun optIn(
         email: String = "",
         phoneNumber: String = "",
-    ) {
-        verifyInitialized()
+    ): Result<Unit> {
+        if (!::config.isInitialized) {
+            return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
+        }
         if (phoneNumber.isEmpty() && email.isEmpty()) {
-            Timber.e("At least one of phone number or email must be provided to opt in.")
-            return
+            val msg = "At least one of phone number or email must be provided to opt in."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
-        TokenProvider.getInstance().getToken(config.applicationContext).let {
-            if (it.isSuccess) {
-                config.attentiveApi.sendOptInSubscriptionStatus(
-                    phoneNumber,
-                    email,
-                    it.getOrNull()?.token,
-                )
-            }
+        val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
+        if (tokenResult.isFailure) {
+            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
+            Timber.e(msg)
+            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
         }
+        return config.attentiveApi.sendOptInSubscriptionStatus(
+            phoneNumber,
+            email,
+            tokenResult.getOrNull()?.token,
+        )
     }
 
     internal suspend fun optOut(
         email: String = "",
         phoneNumber: String = "",
-    ) {
-        verifyInitialized()
+    ): Result<Unit> {
+        if (!::config.isInitialized) {
+            return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
+        }
         if (phoneNumber.isEmpty() && email.isEmpty()) {
-            Timber.e("At least one of phone number or email must be provided to opt out.")
-            return
+            val msg = "At least one of phone number or email must be provided to opt out."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
-        TokenProvider.getInstance().getToken(config.applicationContext).let {
-            if (it.isSuccess) {
-                config.attentiveApi.sendOptOutSubscriptionStatus(
-                    email,
-                    phoneNumber,
-                    config.domain,
-                    it.getOrNull()?.token,
-                )
-            }
+        val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
+        if (tokenResult.isFailure) {
+            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
+            Timber.e(msg)
+            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
         }
+        return config.attentiveApi.sendOptOutSubscriptionStatus(
+            email,
+            phoneNumber,
+            config.domain,
+            tokenResult.getOrNull()?.token,
+        )
     }
 
     private fun verifyInitialized() {

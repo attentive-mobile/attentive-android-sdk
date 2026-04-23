@@ -1,5 +1,6 @@
 package com.attentive.androidsdk
 
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.annotation.VisibleForTesting
 import com.attentive.androidsdk.events.AddToCartEvent
 import com.attentive.androidsdk.events.CustomEvent
@@ -103,18 +104,18 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     val eventsApi: RetrofitEventsApiService = retrofitEvents.create(RetrofitEventsApiService::class.java)
 
-    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
+    internal suspend fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?): Result<Unit> {
         AttentiveEventTracker.instance.config.clearUser()
 
         val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
         if (visitorId == null) {
             Timber.e("No visitorId available, cannot send user update")
-            return
+            return Result.failure(IllegalStateException("No visitorId available"))
         }
         val pushToken = TokenProvider.getInstance().token
         if (pushToken == null) {
             Timber.e("No push token available, cannot send user update")
-            return
+            return Result.failure(IllegalStateException("No push token available"))
         }
 
         val contactInfo = ContactInfo().apply {
@@ -136,31 +137,31 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
         AttentiveEventTracker.instance.config.identify(builder.build())
 
-        api.updateUser(
-            UserUpdateRequest(
-                company = domain,
-                userId = visitorId,
-                pushToken = pushToken,
-                tokenProvider = "fcm",
-                sdkVersion = "mobile-app-${AppInfo.attentiveSDKVersion}",
-                metadata = contactInfo
+        return try {
+            val response = api.updateUserSuspend(
+                UserUpdateRequest(
+                    company = domain,
+                    userId = visitorId,
+                    pushToken = pushToken,
+                    tokenProvider = "fcm",
+                    sdkVersion = "mobile-app-${AppInfo.attentiveSDKVersion}",
+                    metadata = contactInfo
+                )
             )
-        ).enqueue(object : retrofit2.Callback<Unit> {
-            override fun onResponse(
-                call: retrofit2.Call<Unit>,
-                response: retrofit2.Response<Unit>
-            ) {
-                if(response.isSuccessful) {
-                    Timber.i("Successfully sent user update")
-                } else {
-                    Timber.e("Failed to send user update: ${response.code()}")
-                }
+            if (response.isSuccessful) {
+                Timber.i("Successfully sent user update")
+                Result.success(Unit)
+            } else {
+                val msg = "Failed to send user update: ${response.code()}"
+                Timber.e(msg)
+                Result.failure(Exception(msg))
             }
-
-            override fun onFailure(call: retrofit2.Call<kotlin.Unit?>, t: kotlin.Throwable) {
-               Timber.e("Failed to send user update: ${t.message}")
-            }
-        })
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e("Failed to send user update: ${e.message}")
+            Result.failure(e)
+        }
     }
 
             /**
@@ -177,39 +178,46 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
         event: Event,
         userIdentifiers: UserIdentifiers,
         domain: String
-    ) {
+    ): Result<Unit> {
         Timber.i("recordEvent called with event: %s", event.javaClass.name)
 
-        // Validate that we have a visitorId
         if (userIdentifiers.visitorId.isNullOrEmpty()) {
-            Timber.e("Cannot send event: visitorId is required but is null or empty")
-            return
+            val msg = "Cannot send event: visitorId is required but is null or empty"
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
-        // Map the event to BaseEventRequest(s)
         val baseEventRequests = getBaseEventRequestsFromEvent(event, userIdentifiers, domain)
 
         if (baseEventRequests.isEmpty()) {
-            Timber.w("No event requests generated for event: ${event.javaClass.name}")
-            return
+            val msg = "No event requests generated for event: ${event.javaClass.name}"
+            Timber.w(msg)
+            return Result.failure(IllegalStateException(msg))
         }
 
-        // Send each request
         for (request in baseEventRequests) {
             try {
-                // Serialize the BaseEventRequest to JSON string for the -d parameter
                 val eventDataJson = baseEventRequestJson.encodeToString(
                     BaseEventRequest.serializer(),
                     request
                 )
                 Timber.d("Sending event JSON: $eventDataJson")
-                api.sendEvent(eventDataJson)
-                Timber.i("Successfully sent ${request.eventType} event")
+                val response = api.sendEventSuspend(eventDataJson)
+                if (response.isSuccessful) {
+                    Timber.i("Successfully sent ${request.eventType} event")
+                } else {
+                    val msg = "Failed to send ${request.eventType} event: HTTP ${response.code()}"
+                    Timber.e(msg)
+                    return Result.failure(Exception(msg))
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.e("Failed to send ${request.eventType} event: ${e.message}")
-                e.printStackTrace()
+                return Result.failure(e)
             }
         }
+        return Result.success(Unit)
     }
 
     /**
@@ -993,20 +1001,22 @@ private fun sendDirectOpenStatusInternal(
 }
 
 
-internal fun sendOptInSubscriptionStatus(
+internal suspend fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
     pushToken: String?
-) {
+): Result<Unit> {
     if (pushToken == null) {
-        Timber.e("Invalid push token, cannot send opt-in subscription status")
-        return
+        val msg = "Invalid push token, cannot send opt-in subscription status"
+        Timber.e(msg)
+        return Result.failure(IllegalStateException(msg))
     }
     val domain = AttentiveEventTracker.instance.config.domain
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
-        Timber.e("No visitorId available, cannot send opt-in subscription")
-        return
+        val msg = "No visitorId available, cannot send opt-in subscription"
+        Timber.e(msg)
+        return Result.failure(IllegalStateException(msg))
     }
     val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
 
@@ -1020,32 +1030,41 @@ internal fun sendOptInSubscriptionStatus(
         phone = phoneNumber,
     )
 
-    api.optInSubscription(request).enqueue(object : retrofit2.Callback<Unit> {
-        override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
-            Timber.i("Opt-in subscription request success: ${response.message()}")
+    return try {
+        val response = api.optInSubscriptionSuspend(request)
+        if (response.isSuccessful) {
+            Timber.i("Opt-in subscription request success")
+            Result.success(Unit)
+        } else {
+            val msg = "Opt-in subscription request failed: HTTP ${response.code()}"
+            Timber.e(msg)
+            Result.failure(Exception(msg))
         }
-
-        override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
-            Timber.e("Opt-in subscription request failed: ${t.message}")
-        }
-    })
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e("Opt-in subscription request failed: ${e.message}")
+        Result.failure(e)
+    }
 }
 
 
-internal fun sendOptOutSubscriptionStatus(
+internal suspend fun sendOptOutSubscriptionStatus(
     email: String?,
     phoneNumber: String?,
     domain: String,
     pushToken: String?
-) {
+): Result<Unit> {
     if (pushToken == null) {
-        Timber.e("Invalid push token, cannot send opt-out subscription status")
-        return
+        val msg = "Invalid push token, cannot send opt-out subscription status"
+        Timber.e(msg)
+        return Result.failure(IllegalStateException(msg))
     }
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
-        Timber.e("No visitorId available, cannot send opt-out subscription")
-        return
+        val msg = "No visitorId available, cannot send opt-out subscription"
+        Timber.e(msg)
+        return Result.failure(IllegalStateException(msg))
     }
     val externalVendorIdsJson = buildExternalVendorIdsJson(userIdentifiers)
 
@@ -1059,15 +1078,22 @@ internal fun sendOptOutSubscriptionStatus(
         phone = phoneNumber,
     )
 
-    api.optOutSubscription(request).enqueue(object : retrofit2.Callback<Unit> {
-        override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
-            Timber.i("Opt-out subscription request success: ${response.message()}")
+    return try {
+        val response = api.optOutSubscriptionSuspend(request)
+        if (response.isSuccessful) {
+            Timber.i("Opt-out subscription request success")
+            Result.success(Unit)
+        } else {
+            val msg = "Opt-out subscription request failed: HTTP ${response.code()}"
+            Timber.e(msg)
+            Result.failure(Exception(msg))
         }
-
-        override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
-            Timber.e("Opt-out subscription request failed: ${t.message}")
-        }
-    })
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e("Opt-out subscription request failed: ${e.message}")
+        Result.failure(e)
+    }
 }
 
 // Test helper functions - marked as @VisibleForTesting internal so tests can access them
