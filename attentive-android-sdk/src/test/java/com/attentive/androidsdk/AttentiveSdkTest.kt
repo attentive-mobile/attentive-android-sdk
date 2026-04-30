@@ -85,7 +85,7 @@ class AttentiveSdkTest {
         Thread.sleep(100)
 
         verify(factoryMocks.attentiveApi).sendUserUpdate(
-            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any()
+            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any(), any()
         )
     }
 
@@ -100,14 +100,14 @@ class AttentiveSdkTest {
     fun updateUser_withWhitespaceOnlyEmail_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = "   ")
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any())
+        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
     }
 
     @Test
     fun updateUser_withBothNullParams_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = null, phoneNumber = null)
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any())
+        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
     }
 
     companion object {
