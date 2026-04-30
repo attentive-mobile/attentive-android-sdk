@@ -103,20 +103,14 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     val eventsApi: RetrofitEventsApiService = retrofitEvents.create(RetrofitEventsApiService::class.java)
 
-    internal fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?) {
-        AttentiveEventTracker.instance.config.clearUser()
-
-        val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
-        if (visitorId == null) {
-            Timber.e("No visitorId available, cannot send user update")
-            return
-        }
-        val pushToken = TokenProvider.getInstance().token
-        if (pushToken == null) {
-            Timber.e("No push token available, cannot send user update")
-            return
-        }
-
+    internal fun sendUserUpdate(
+        domain: String,
+        email: String?,
+        phoneNumber: String?,
+        visitorId: String,
+        pushToken: String,
+        logLabel: String = "user update",
+    ) {
         val contactInfo = ContactInfo().apply {
             if (email != null) {
                 this.email = email
@@ -126,15 +120,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             }
         }
 
-        val builder = UserIdentifiers.Builder()
-        email?.let {
-            builder.withEmail(it)
+        if (email != null || phoneNumber != null) {
+            val builder = UserIdentifiers.Builder()
+            email?.let { builder.withEmail(it) }
+            phoneNumber?.let { builder.withPhone(it) }
+            AttentiveEventTracker.instance.config.identify(builder.build())
         }
-        phoneNumber?.let {
-            builder.withPhone(it)
-        }
-
-        AttentiveEventTracker.instance.config.identify(builder.build())
 
         api.updateUser(
             UserUpdateRequest(
@@ -151,14 +142,14 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 response: retrofit2.Response<Unit>
             ) {
                 if(response.isSuccessful) {
-                    Timber.i("Successfully sent user update")
+                    Timber.i("Successfully sent $logLabel")
                 } else {
-                    Timber.e("Failed to send user update: ${response.code()}")
+                    Timber.e("Failed to send $logLabel: ${response.code()}")
                 }
             }
 
             override fun onFailure(call: retrofit2.Call<kotlin.Unit?>, t: kotlin.Throwable) {
-               Timber.e("Failed to send user update: ${t.message}")
+               Timber.e("Failed to send $logLabel: ${t.message}")
             }
         })
     }

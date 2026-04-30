@@ -64,10 +64,19 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         sendUserIdentifiersCollectedEvent()
     }
 
-    override fun clearUser() {
-        Timber.i("clearUser called")
+    internal fun resetIdentifiers() {
+        Timber.i("Resetting user identifiers with new visitor ID")
         val newVisitorId = visitorService.createNewVisitorId()
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
+    }
+
+    @Deprecated(
+        message = "Use AttentiveSdk.clearUser() instead. It properly detaches the push token from the logged-out user.",
+        replaceWith = ReplaceWith("AttentiveSdk.clearUser()")
+    )
+    override fun clearUser() {
+        Timber.i("clearUser called")
+        resetIdentifiers()
     }
 
     override fun changeDomain(domain: String) {
