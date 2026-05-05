@@ -29,6 +29,7 @@ internal class AppLaunchTracker(
 
     val launchEvents = mutableListOf<AttentiveApi.LaunchType>()
     var dataMap = mutableMapOf<String, String>()
+    private var hasSentLaunchEvent = false
 
 
     override fun onCreate(owner: LifecycleOwner) {
@@ -51,6 +52,11 @@ internal class AppLaunchTracker(
         Timber.d("onResume")
     }
 
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        hasSentLaunchEvent = false
+    }
+
     fun registerAppLaunchTracker() {
         Timber.d("Adding lifecycle observer")
         lifecycle.addObserver(this)
@@ -69,11 +75,22 @@ internal class AppLaunchTracker(
 
             override fun onActivityStarted(activity: Activity) {
                 Timber.d("onActivityStarted")
+            }
 
-                // Check for notification launch flag here (not in onActivityCreated) to support
-                // singleTask launch mode used by React Native apps. With singleTask, onActivityCreated
-                // is not called when the app is brought from background via notification tap.
-                // Note: Apps using singleTask must call setIntent(intent) in onNewIntent() for this to work.
+
+            override fun onActivityStopped(activity: Activity) {
+                launchEvents.clear()
+            }
+
+            override fun onActivityResumed(activity: Activity) {
+                if (hasSentLaunchEvent) return
+                hasSentLaunchEvent = true
+
+                Timber.d("onActivityResumed")
+
+                // Check in onActivityResumed (not onActivityStarted) because onResume always fires
+                // after onNewIntent. This ensures activity.intent is up to date for singleTop/singleTask
+                // activities that call setIntent(intent) in onNewIntent().
                 val wasLaunchedFromNotification = activity.intent?.extras?.run {
                     getBoolean(LAUNCHED_FROM_NOTIFICATION, false)
                 } == true
@@ -115,13 +132,6 @@ internal class AppLaunchTracker(
                     }
                 }
             }
-
-
-            override fun onActivityStopped(activity: Activity) {
-                launchEvents.clear()
-            }
-
-            override fun onActivityResumed(activity: Activity) {}
             override fun onActivityPaused(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}

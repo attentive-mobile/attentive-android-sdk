@@ -37,7 +37,7 @@ val attentiveConfig = AttentiveConfig.Builder()
         .applicationContext(getApplicationContext())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
-        // Add a notification icon drawable id if using push
+        // Optional: only needed if using push notifications (see Step 4)
         .notificationIconId(R.drawable.your_notification_icon)
         .build()
 
@@ -336,6 +336,15 @@ creative.trigger()
 ```
 See [CreativeTriggerCallback.java](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/attentive-android-sdk/src/main/java/com/attentive/androidsdk/creatives/CreativeTriggerCallback.java) for more information on the callback handler methods.
 
+#### Trigger a Specific Creative
+
+You can display a specific sign-up unit by passing its creative ID to the `trigger` method. This is useful when you want to show different creatives based on where the user is in your app (e.g., a different sign-up unit on the home screen vs. a product page).
+
+```kotlin
+// Trigger a specific creative by ID
+creative.trigger(creativeId = "YOUR_CREATIVE_ID")
+```
+
 #### 3. Destroy the Creative
 ```kotlin
 // Destroy the creative and it's associated WebView.
@@ -357,7 +366,23 @@ val attentiveConfig = AttentiveConfig.Builder()
     .build()
 ```
 
-## Step 4 - Integrate With Push
+## Step 4 (optional) - Integrate With Push
+
+Push notification support is **optional**. The core SDK functionality — event tracking, creatives, and user identification — works without any push setup. Only follow this section if you want to send push notifications to your users via Attentive.
+
+If you are **not** using push notifications, add the following to your `AndroidManifest.xml` to remove the SDK's Firebase messaging service:
+
+```xml
+<service
+    android:name="com.attentive.androidsdk.push.AttentiveFirebaseMessagingService"
+    tools:node="remove" />
+```
+
+Make sure the `tools` namespace is declared in your `<manifest>` tag:
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+```
 
 The conditions for your users to receive push notifications are as follows:
 1. You have initialized the Attentive SDK with a valid domain and a notification icon resource id.
