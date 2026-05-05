@@ -120,13 +120,6 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             }
         }
 
-        if (email != null || phoneNumber != null) {
-            val builder = UserIdentifiers.Builder()
-            email?.let { builder.withEmail(it) }
-            phoneNumber?.let { builder.withPhone(it) }
-            AttentiveEventTracker.instance.config.identify(builder.build())
-        }
-
         api.updateUser(
             UserUpdateRequest(
                 company = domain,
@@ -986,14 +979,14 @@ private fun sendDirectOpenStatusInternal(
 internal fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
-    pushToken: String?
+    pushToken: String?,
+    domain: String,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
         Timber.e("Invalid push token, cannot send opt-in subscription status")
         return
     }
-    val domain = AttentiveEventTracker.instance.config.domain
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         Timber.e("No visitorId available, cannot send opt-in subscription")
         return
@@ -1026,13 +1019,13 @@ internal fun sendOptOutSubscriptionStatus(
     email: String?,
     phoneNumber: String?,
     domain: String,
-    pushToken: String?
+    pushToken: String?,
+    userIdentifiers: UserIdentifiers
 ) {
     if (pushToken == null) {
         Timber.e("Invalid push token, cannot send opt-out subscription status")
         return
     }
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         Timber.e("No visitorId available, cannot send opt-out subscription")
         return
