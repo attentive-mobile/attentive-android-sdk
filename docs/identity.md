@@ -2,6 +2,8 @@
 
 This document describes the identity-related SDK methods, when they fire, what the backend does with them, and when an integrator needs to call them manually.
 
+See [`identity-ios.md`](./identity-ios.md) for the iOS companion.
+
 ## Overview
 
 Every identity call reads from or writes to `AttentiveConfig.userIdentifiers`, an in-memory object holding:
