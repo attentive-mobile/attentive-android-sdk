@@ -98,6 +98,8 @@ sequenceDiagram
 
 ### `AttentiveSdk.updateUser(email, phoneNumber)`
 
+**Also known as "switch user".** There is no separate `switchUser` SDK method — `updateUser()` is the call that performs a user switch. The bonni demo app exposes it as "Switch User with email" / "Switch User with phone".
+
 **Purpose:** Declare that the current device is now a different user (multi-user apps).
 
 **Fires:**
