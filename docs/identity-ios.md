@@ -115,8 +115,6 @@ sequenceDiagram
 
 **Required?** Only for multi-user apps.
 
-> ⚠️ **Known limitation:** `/user-update` is silently dropped by the backend (204) if the push token is blank. Under review — see [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345).
-
 ---
 
 ### `ATTNSDK.clearUser()`
@@ -135,8 +133,6 @@ sequenceDiagram
 **Changes visitor ID?** **Yes.**
 
 **Required?** Strongly recommended on logout.
-
-> ⚠️ **Known limitation:** Same as `updateUser` — silent no-op on backend if push token is blank. See [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345).
 
 ---
 
@@ -235,4 +231,4 @@ The iOS naming is generally tighter. The proposed Android renames in [`identity.
 
 ## Known limitations / follow-ups
 
-- **[MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)** — `/user-update` requires a non-blank push token or is silently discarded. Affects `updateUser()` and `clearUser()` on iOS the same way as Android. Note that iOS has already adopted a client-side workaround (queueing) for opt-in/out — the same pattern could be applied to `/user-update` on both platforms if the backend can't be changed.
+None currently tracked for iOS. The tokenless `/user-update` behavior flagged on Android as [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345) has the same underlying backend behavior on iOS, but iOS mitigates it through the opt-in/out queueing pattern (the queue holds requests until a token arrives, then flushes). If MSDK-345 results in a client-side fix, the same queueing approach could be extended to `/user-update` on iOS.

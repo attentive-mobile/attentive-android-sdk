@@ -197,6 +197,7 @@ sequenceDiagram
 ## Known limitations / follow-ups
 
 - **[MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)** — `/user-update` requires a non-blank FCM push token or it is silently discarded. Affects `updateUser()` and `clearUser()` for apps without Firebase or with `pushEnabled = false`. Under review.
+  - For reference, the iOS SDK already handles the analogous tokenless case for `/opt-in-subscriptions` and `/opt-out-subscriptions` by **queueing the request in memory for up to 60 seconds** and flushing it as soon as a push token arrives (`ATTNSDK.swift:730–757`). If MSDK-345 lands as a client-side fix, the same queueing pattern is a natural template for Android and could also be extended to `/user-update` on both platforms.
 - **Deprecated `AttentiveConfig.clearUser()`** — will be removed in a future release. Use `AttentiveSdk.clearUser()`.
 
 ## Naming proposal
