@@ -196,3 +196,47 @@ sequenceDiagram
 
 - **[MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)** — `/user-update` requires a non-blank FCM push token or it is silently discarded. Affects `updateUser()` and `clearUser()` for apps without Firebase or with `pushEnabled = false`. Under review.
 - **Deprecated `AttentiveConfig.clearUser()`** — will be removed in a future release. Use `AttentiveSdk.clearUser()`.
+
+## Naming proposal
+
+The current method names bury the semantics under implementation language. The following is a proposed renaming to be discussed and tracked — not yet agreed.
+
+### SDK public API
+
+| Current | Proposed | Why |
+| --- | --- | --- |
+| `AttentiveConfig.identify(userIdentifiers)` | `setUserIdentifiers(...)` or `addUserIdentifiers(...)` | "Identify" is overloaded jargon from other analytics SDKs (Segment, Amplitude, Mixpanel) and doesn't signal what it does. "Add" emphasizes the merge semantic. |
+| `AttentiveSdk.updateUser(email, phone)` | `loginUser(email, phone)` or `setCurrentUser(...)` | "Update" suggests modifying the existing user. This call *replaces* the user — new visitor ID, detaches token from prior user. "Login" captures the intent. |
+| `AttentiveSdk.clearUser()` | `logoutUser()` | "Clear" is vague. This is specifically a logout — it's the symmetric pair to `loginUser`. |
+| `AttentiveSdk.optUserIntoMarketingSubscription(...)` | `subscribe(email, phone)` or `subscribeToMarketing(...)` | Current name is five words for one concept. "Opt in to marketing subscription" reads as bureaucratic compliance language; "subscribe" is the verb the backend actually uses (`ACTION_TYPE_SUBSCRIBE`). |
+| `AttentiveSdk.optUserOutOfMarketingSubscription(...)` | `unsubscribe(email, phone)` | Same. |
+| `AttentiveSdk.updatePushPermissionStatus(context)` | `refreshPushPermission(context)` | "Update" makes it sound like you're *setting* the permission. You're not — you're re-registering so the backend learns what the OS now says. |
+| `AttentiveConfig.clearUser()` (deprecated) | delete | Already deprecated. Don't rename, just remove. |
+
+### Bonni settings labels
+
+The bonni debug screen currently mixes "action you're performing" with "field you're editing" in a confusing way. Proposed grouping:
+
+**Current user (edit-in-place fields):**
+
+- "Change current domain" → keep
+- "Change current email" → **"Email"** (it's just a field)
+- "Change current phone number" → **"Phone"**
+
+**User lifecycle actions:**
+
+- "Switch User with email" / "Switch User with phone" → **"Log in as different user"** (single button, uses whichever fields are populated)
+- "Identify User" → **"Attach identifiers to current user"** (or remove entirely — it does the same thing as editing the email/phone field above)
+- "Clear Users" → **"Log out"**
+
+**Marketing subscription:**
+
+- "Opt-In User email" / "Opt-In User Phone Number" → **"Subscribe email" / "Subscribe SMS"**
+- "Opt-Out User email" / "Opt-Out User Phone Number" → **"Unsubscribe email" / "Unsubscribe SMS"**
+
+### Things to flag before renaming
+
+1. **`identify()` is the oldest public API.** Renaming it is a breaking change. Would need a deprecation cycle: add `setUserIdentifiers()` that delegates to `identify()`, mark `identify()` deprecated, remove in a major version.
+2. **"Login/logout" vs. "update/clear" is opinionated.** `updateUser()` technically doesn't require a "login" concept — an app could call it to correct a typo'd email too. But the fact that it *resets the visitor ID* means it's semantically a login, even if you call it for other reasons. Worth discussing with the team.
+3. **Bonni's "Identify User" button currently does the same thing as saving the email field.** That's a UX bug, not a naming issue. Worth deleting that button entirely.
+4. **iOS SDK parity.** If the iOS SDK has matching names, renames should happen in both to keep the cross-platform surface consistent.
