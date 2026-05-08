@@ -234,12 +234,28 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Records an analytics event with Attentive.
+     *
+     * Fire-and-forget: errors are logged but not surfaced to the caller. For coroutine-aware
+     * error handling, use [AttentiveEventTracker.instance] APIs directly.
+     *
+     * @param event The [Event] to record (e.g. [com.attentive.androidsdk.events.ProductViewEvent],
+     *   [com.attentive.androidsdk.events.AddToCartEvent], [com.attentive.androidsdk.events.PurchaseEvent]).
+     */
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
     }
 
     /**
-     * Determines whether the given Firebase RemoteMessage is from Attentive.
+     * Determines whether the given Firebase [RemoteMessage] was sent by Attentive.
+     *
+     * Use this in your [com.google.firebase.messaging.FirebaseMessagingService.onMessageReceived]
+     * implementation to route Attentive messages to [sendNotification] while leaving other
+     * push messages to your own handling.
+     *
+     * @param remoteMessage The message received from Firebase Cloud Messaging.
+     * @return `true` if the message originated from Attentive, `false` otherwise.
      */
     fun isAttentiveFirebaseMessage(remoteMessage: RemoteMessage): Boolean {
         Timber.d(
@@ -256,6 +272,16 @@ object AttentiveSdk {
         return isAttentiveMessage
     }
 
+    /**
+     * Opts the user into Attentive marketing subscriptions on email and/or SMS.
+     *
+     * Unlike [updateUser] and [clearUser], this call does not change the visitor ID. It
+     * creates a subscription record on the backend idempotently. At least one of [email]
+     * or [phoneNumber] must be provided.
+     *
+     * @param email The user's email address. Optional if [phoneNumber] is provided.
+     * @param phoneNumber The user's phone number in E.164 format. Optional if [email] is provided.
+     */
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
@@ -267,6 +293,14 @@ object AttentiveSdk {
         AttentiveEventTracker.instance.optIn(email, phoneNumber)
     }
 
+    /**
+     * Opts the user out of Attentive marketing subscriptions on email and/or SMS.
+     *
+     * Idempotent. At least one of [email] or [phoneNumber] must be provided.
+     *
+     * @param email The user's email address. Optional if [phoneNumber] is provided.
+     * @param phoneNumber The user's phone number in E.164 format. Optional if [email] is provided.
+     */
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
@@ -278,7 +312,12 @@ object AttentiveSdk {
     }
 
     /**
-     * Forwards a push message to the SDK to display the notification.
+     * Forwards an Attentive push message to the SDK to build and display the notification.
+     *
+     * Typically called from your [com.google.firebase.messaging.FirebaseMessagingService.onMessageReceived]
+     * after [isAttentiveFirebaseMessage] returns `true`.
+     *
+     * @param remoteMessage The Attentive push message received from Firebase Cloud Messaging.
      */
     fun sendNotification(remoteMessage: RemoteMessage) {
         AttentivePush.getInstance().sendNotification(remoteMessage)
@@ -302,7 +341,13 @@ object AttentiveSdk {
     }
 
     /**
-     * Fetches the push token from Firebase, requesting permission if needed.
+     * Fetches the current FCM push token, optionally prompting the user for notification
+     * permission first.
+     *
+     * @param application The application context, used to request permission if needed.
+     * @param requestPermission If `true`, prompts the user for `POST_NOTIFICATIONS` permission
+     *   on Android 13+ before fetching the token. If `false`, fetches without prompting.
+     * @return A [Result] wrapping a [TokenFetchResult] on success, or an exception on failure.
      */
     suspend fun getPushToken(
         application: Application,
@@ -311,8 +356,14 @@ object AttentiveSdk {
         return AttentivePush.getInstance().fetchPushToken(application, requestPermission)
     }
 
-    /***
-     * Does the same as [getPushToken] but uses a callback instead of coroutines for Java interop.
+    /**
+     * Callback-based variant of [getPushToken] for Java interop.
+     *
+     * @param application The application context.
+     * @param requestPermission If `true`, prompts the user for `POST_NOTIFICATIONS` permission
+     *   on Android 13+ before fetching the token.
+     * @param callback Invoked on success with the [TokenFetchResult], or on failure with the
+     *   thrown exception.
      */
     @JvmStatic
     fun getPushTokenWithCallback(
@@ -339,6 +390,26 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Switches the current device identity to a different user.
+     *
+     * Semantically this is a "login as different user" operation (Bonni surfaces it as
+     * "Switch User with email/phone"). The SDK will:
+     *
+     * 1. Reset local identifiers and generate a new visitor ID.
+     * 2. Fire `POST /user-update` with the new visitor ID + push token + email/phone, which
+     *    detaches the push token from the prior user and re-associates it with the new user.
+     * 3. Fire `POST /e?t=idn` (identity event) merging the new email/phone into the new visitor.
+     *
+     * At least one of [email] or [phoneNumber] must be non-null and non-blank after validation.
+     * Invalid phone numbers are dropped.
+     *
+     * **Requires an FCM push token** — if none is available, the network call is skipped
+     * (see [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
+     *
+     * @param email The new user's email address, or `null`.
+     * @param phoneNumber The new user's phone number in E.164 format, or `null`.
+     */
     fun updateUser(email: String? = null, phoneNumber: String? = null) {
         val trimmedEmail = email?.trim()?.ifBlank { null }
         val trimmedPhone = phoneNumber?.trim()?.ifBlank { null }
@@ -375,6 +446,25 @@ object AttentiveSdk {
     }
 
 
+    /**
+     * Logs the current user out. Resets local visitor identity and tells the backend to
+     * detach the push token from the prior user.
+     *
+     * The SDK will:
+     * 1. Reset local identifiers and generate a new visitor ID.
+     * 2. Fire `POST /user-update` with empty metadata, which detaches the push token from
+     *    the previous user and re-associates it with the new anonymous visitor.
+     *
+     * **Strongly recommended on logout.** Without this, the push token remains associated
+     * with the logged-out user on the backend, and they may continue to receive targeted
+     * marketing on this device.
+     *
+     * **Requires an FCM push token** — if none is available, the network call is skipped
+     * (see [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
+     *
+     * **Prefer this over the deprecated `AttentiveConfig.clearUser()`**, which only clears
+     * local state without notifying the backend.
+     */
     fun clearUser() {
         config.resetIdentifiers()
         val domain = config.domain
@@ -389,16 +479,44 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Callback interface for [getPushTokenWithCallback] (Java interop).
+     */
     interface PushTokenCallback {
+        /**
+         * Invoked when the push token has been successfully fetched.
+         *
+         * @param result The [TokenFetchResult] containing the fetched token and permission state.
+         */
         fun onSuccess(result: TokenFetchResult)
 
+        /**
+         * Invoked when fetching the push token fails.
+         *
+         * @param exception The exception thrown while fetching the token.
+         */
         fun onFailure(exception: Exception)
     }
 
+    /**
+     * Checks whether the user has granted notification permission to the app.
+     *
+     * @param context A context used to query permission state.
+     * @return `true` if notifications are permitted, `false` otherwise.
+     */
     fun isPushPermissionGranted(context: Context): Boolean {
         return AttentivePush.getInstance().checkPushPermission(context)
     }
 
+    /**
+     * Re-registers the current push token with Attentive to reflect the latest permission state.
+     *
+     * Call this after the user changes notification permission (e.g., returning from system
+     * settings). This is also called automatically when the app is brought to the foreground,
+     * so manual invocation is only needed when you want immediate sync.
+     *
+     * @param context A context used to register the push token.
+     */
     fun updatePushPermissionStatus(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             AttentiveEventTracker.instance.registerPushToken(context)
