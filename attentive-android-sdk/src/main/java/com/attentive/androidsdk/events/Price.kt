@@ -11,6 +11,9 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Currency
 
+/**
+ * Kotlinx.serialization serializer that encodes [BigDecimal] as its plain string representation.
+ */
 object BigDecimalSerializer : KSerializer<BigDecimal> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
@@ -27,6 +30,9 @@ object BigDecimalSerializer : KSerializer<BigDecimal> {
     }
 }
 
+/**
+ * Kotlinx.serialization serializer that encodes [Currency] as its ISO 4217 currency code.
+ */
 object CurrencySerializer : KSerializer<Currency> {
 // Custom serializer for Currency
     override val descriptor: SerialDescriptor =
@@ -44,6 +50,14 @@ object CurrencySerializer : KSerializer<Currency> {
     }
 }
 
+/**
+ * A monetary price: amount + currency.
+ *
+ * The amount is normalized to two decimal places, rounded down, at construction.
+ *
+ * @property price The price amount. Rounded to 2 decimal places with [RoundingMode.DOWN] at init.
+ * @property currency The currency.
+ */
 @Serializable
 data class Price(
     @Serializable(with = BigDecimalSerializer::class)
@@ -55,6 +69,9 @@ data class Price(
         this.price = this.price.setScale(2, RoundingMode.DOWN)
     }
 
+    /**
+     * Builder for [Price]. Both [price] and [currency] are required.
+     */
     @Serializable
     class Builder {
         @Serializable(with = BigDecimalSerializer::class)
@@ -63,16 +80,31 @@ data class Price(
         @Serializable(with = CurrencySerializer::class)
         var currency: Currency? = null
 
+        /**
+         * Sets the price amount. Required.
+         *
+         * @param price The price as a [BigDecimal].
+         */
         fun price(price: BigDecimal): Builder {
             this.price = price
             return this
         }
 
+        /**
+         * Sets the currency. Required.
+         *
+         * @param currency The [Currency].
+         */
         fun currency(currency: Currency): Builder {
             this.currency = currency
             return this
         }
 
+        /**
+         * Builds the [Price].
+         *
+         * @throws IllegalArgumentException if [price] or [currency] was not set.
+         */
         fun build(): Price {
             val price = this.price ?: throw IllegalArgumentException("Price must not be null")
             val currency = this.currency ?: throw IllegalArgumentException("Currency must not be null")

@@ -3,6 +3,17 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * A product item within a [PurchaseEvent], [AddToCartEvent], or [ProductViewEvent].
+ *
+ * @property productId Your canonical product identifier. Required, non-empty.
+ * @property productVariantId The variant identifier (e.g. size/color SKU). Required, non-empty.
+ * @property price The price (with currency). Required.
+ * @property productImage URL of a product image. Optional.
+ * @property name The product display name. Optional.
+ * @property quantity The quantity. Defaults to 1.
+ * @property category The product category. Optional.
+ */
 @Serializable
 data class Item(
     val productId: String,
@@ -19,6 +30,13 @@ data class Item(
         ParameterValidation.verifyNotNull(price, "price")
     }
 
+    /**
+     * Builder for [Item]. Required fields are provided via the constructor.
+     *
+     * @param productId Canonical product identifier. Required, non-empty.
+     * @param productVariantId Variant identifier. Required, non-empty.
+     * @param price The price. Required.
+     */
     @Serializable
     class Builder(
         private val productId: String,
@@ -36,26 +54,31 @@ data class Item(
             ParameterValidation.verifyNotNull(price, "price")
         }
 
+        /** Sets the product image URL. */
         fun productImage(`val`: String?): Builder {
             productImage = `val`
             return this
         }
 
+        /** Sets the product display name. */
         fun name(`val`: String?): Builder {
             name = `val`
             return this
         }
 
+        /** Sets the quantity. Defaults to 1. */
         fun quantity(`val`: Int): Builder {
             quantity = `val`
             return this
         }
 
+        /** Sets the product category. */
         fun category(`val`: String?): Builder {
             category = `val`
             return this
         }
 
+        /** Builds the [Item]. */
         fun build(): Item {
             return Item(
                 productId = productId,
