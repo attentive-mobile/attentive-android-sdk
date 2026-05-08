@@ -1,17 +1,30 @@
 package com.attentive.androidsdk.creatives
 
+/**
+ * Callback for [Creative.trigger] lifecycle events. Implement any subset of methods you care
+ * about — all defaults are no-ops.
+ */
 interface CreativeTriggerCallback {
-    // Called when the Creative has been triggered but it is not opened successfully.
-    // This can happen if there is no available mobile app creative, if the creative is fatigued,
-    // if the creative call has been timed out, or if an unknown exception occurs.
+    /**
+     * Invoked when [Creative.trigger] was called but the creative did not open successfully.
+     * This can happen if no creative is configured for the app, the creative was fatigued,
+     * the load timed out (5 seconds), or an unknown exception occurred.
+     */
     fun onCreativeNotOpened() {}
 
-    // Called when the Creative is opened successfully
+    /**
+     * Invoked when the creative has opened and is visible to the user.
+     */
     fun onOpen() {}
 
-    // Called when the creative is not closed successfully due to an unknown exception
+    /**
+     * Invoked when the creative did not close successfully (e.g. [WebView] was null at
+     * close time).
+     */
     fun onCreativeNotClosed() {}
 
-    // Called when the Creative is closed successfully
+    /**
+     * Invoked when the creative has closed successfully.
+     */
     fun onClose() {}
 }
