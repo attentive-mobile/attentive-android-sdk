@@ -69,9 +69,6 @@ data class Price(
         this.price = this.price.setScale(2, RoundingMode.DOWN)
     }
 
-    /**
-     * Builder for [Price]. Both [price] and [currency] are required.
-     */
     @Serializable
     class Builder {
         @Serializable(with = BigDecimalSerializer::class)
@@ -80,29 +77,17 @@ data class Price(
         @Serializable(with = CurrencySerializer::class)
         var currency: Currency? = null
 
-        /**
-         * Sets the price amount. Required.
-         *
-         * @param price The price as a [BigDecimal].
-         */
         fun price(price: BigDecimal): Builder {
             this.price = price
             return this
         }
 
-        /**
-         * Sets the currency. Required.
-         *
-         * @param currency The [Currency].
-         */
         fun currency(currency: Currency): Builder {
             this.currency = currency
             return this
         }
 
         /**
-         * Builds the [Price].
-         *
          * @throws IllegalArgumentException if [price] or [currency] was not set.
          */
         fun build(): Price {

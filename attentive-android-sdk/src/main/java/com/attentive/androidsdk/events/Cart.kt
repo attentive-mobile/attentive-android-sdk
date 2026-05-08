@@ -18,37 +18,22 @@ data class Cart(
         ParameterValidation.verifyNotEmpty(cartId, "cartId")
     }
 
-    /**
-     * Builder for [Cart].
-     */
     @Serializable
     class Builder {
         lateinit var cartId: String
         private var cartCoupon: String? = null
 
-        /**
-         * Sets the cart ID. Required.
-         *
-         * @param id A non-empty cart identifier.
-         */
         fun cartId(id: String): Builder {
             cartId = id
             return this
         }
 
-        /**
-         * Sets an applied coupon code.
-         *
-         * @param id The coupon code, or `null`.
-         */
         fun cartCoupon(id: String?): Builder {
             cartCoupon = id
             return this
         }
 
         /**
-         * Builds the [Cart].
-         *
          * @throws UninitializedPropertyAccessException if [cartId] was not set.
          */
         fun build(): Cart {

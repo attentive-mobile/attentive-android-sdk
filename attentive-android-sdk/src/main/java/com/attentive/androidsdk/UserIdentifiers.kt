@@ -45,10 +45,7 @@ data class UserIdentifiers(
         private var customIdentifiers: Map<String, String> = emptyMap()
 
         /**
-         * Sets the device-scoped anonymous visitor ID. Typically only used internally —
-         * the SDK generates and manages the visitor ID automatically.
-         *
-         * @param visitorId The visitor ID.
+         * Typically only used internally — the SDK generates and manages the visitor ID automatically.
          */
         fun withVisitorId(visitorId: String): Builder =
             apply {
@@ -56,80 +53,41 @@ data class UserIdentifiers(
                 this.visitorId = visitorId
             }
 
-        /**
-         * Sets the user's ID in your own system.
-         *
-         * @param clientUserId A non-empty identifier from your backend.
-         * @throws IllegalArgumentException if [clientUserId] is empty.
-         */
         fun withClientUserId(clientUserId: String): Builder =
             apply {
                 ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
                 this.clientUserId = clientUserId
             }
 
-        /**
-         * Sets the user's phone number.
-         *
-         * @param phone The phone number in E.164 format (e.g. `"+15551234567"`).
-         */
+        /** @param phone E.164 format (e.g. `"+15551234567"`). */
         fun withPhone(phone: String): Builder =
             apply {
                 this.phone = phone
             }
 
-        /**
-         * Sets the user's email address.
-         *
-         * @param email The email address.
-         */
         fun withEmail(email: String): Builder =
             apply {
                 this.email = email
             }
 
-        /**
-         * Sets the user's Shopify customer ID.
-         *
-         * @param shopifyId A non-empty Shopify customer ID.
-         * @throws IllegalArgumentException if [shopifyId] is empty.
-         */
         fun withShopifyId(shopifyId: String): Builder =
             apply {
                 ParameterValidation.verifyNotEmpty(shopifyId, "shopifyId")
                 this.shopifyId = shopifyId
             }
 
-        /**
-         * Sets the user's Klaviyo profile ID.
-         *
-         * @param klaviyoId A non-empty Klaviyo ID.
-         * @throws IllegalArgumentException if [klaviyoId] is empty.
-         */
         fun withKlaviyoId(klaviyoId: String): Builder =
             apply {
                 ParameterValidation.verifyNotEmpty(klaviyoId, "klaviyoId")
                 this.klaviyoId = klaviyoId
             }
 
-        /**
-         * Sets additional custom identifiers (vendor IDs, etc.) keyed by identifier name.
-         *
-         * The map is defensively copied to preserve immutability.
-         *
-         * @param customIdentifiers A map of identifier name to value.
-         */
         fun withCustomIdentifiers(customIdentifiers: Map<String, String>): Builder =
             apply {
                 ParameterValidation.verifyNotNull(customIdentifiers, "customIdentifiers")
                 this.customIdentifiers = customIdentifiers.toMap() // Ensures immutability
             }
 
-        /**
-         * Builds the configured [UserIdentifiers].
-         *
-         * @return A new immutable [UserIdentifiers] instance.
-         */
         fun build(): UserIdentifiers =
             UserIdentifiers(
                 visitorId,

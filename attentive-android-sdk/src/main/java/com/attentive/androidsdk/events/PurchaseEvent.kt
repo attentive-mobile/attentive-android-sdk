@@ -19,12 +19,6 @@ data class PurchaseEvent(
     val order: Order,
     val cart: Cart? = null,
 ) : Event() {
-    /**
-     * Builder for [PurchaseEvent].
-     *
-     * @param items The items in the order. Required.
-     * @param order The order identifier. Required.
-     */
     @Serializable
     class Builder(
         private val items: List<Item>,
@@ -32,19 +26,11 @@ data class PurchaseEvent(
     ) {
         private var cart: Cart? = null
 
-        /**
-         * Sets the cart state at checkout.
-         *
-         * @param `val` The cart, or `null` if unavailable.
-         */
         fun cart(`val`: Cart?): Builder {
             cart = `val`
             return this
         }
 
-        /**
-         * Builds the [PurchaseEvent].
-         */
         fun build(): PurchaseEvent {
             Timber.d("PurchaseEvent: items: $items, order: $order, cart: $cart")
             return PurchaseEvent(items, order, cart)

@@ -483,18 +483,8 @@ object AttentiveSdk {
      * Callback interface for [getPushTokenWithCallback] (Java interop).
      */
     interface PushTokenCallback {
-        /**
-         * Invoked when the push token has been successfully fetched.
-         *
-         * @param result The [TokenFetchResult] containing the fetched token and permission state.
-         */
         fun onSuccess(result: TokenFetchResult)
 
-        /**
-         * Invoked when fetching the push token fails.
-         *
-         * @param exception The exception thrown while fetching the token.
-         */
         fun onFailure(exception: Exception)
     }
 

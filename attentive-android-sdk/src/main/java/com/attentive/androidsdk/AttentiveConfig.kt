@@ -219,64 +219,34 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
-        /**
-         * Sets the host application context used by the SDK for lifecycle observation,
-         * permission checks, and persistent storage. Required.
-         *
-         * @param context The host [Application] instance.
-         */
         fun applicationContext(context: Application) =
             apply {
                 ParameterValidation.verifyNotNull(context, "context")
                 _context = context
             }
 
-        /**
-         * Deprecated alias for [applicationContext]. Will be removed in a future release.
-         *
-         * @param context The host [Application] instance.
-         */
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
         fun context(context: Application) = apply {
             _context = context
         }
 
-        /**
-         * Sets the SDK runtime mode. Required.
-         *
-         * @param mode [Mode.PRODUCTION] for release builds, [Mode.DEBUG] for development.
-         */
         fun mode(mode: Mode) = apply {
             _mode = mode
         }
 
         /**
-         * Sets the Attentive domain. Required.
-         *
-         * @param domain Your Attentive domain (e.g. `"mybrand"`). Must not contain `attn.tv`,
-         *   `:`, or `/` — pass only the domain identifier, not a URL.
-         * @throws IllegalArgumentException if [domain] is empty or malformed.
+         * @throws IllegalArgumentException if [domain] is empty or contains `attn.tv`, `:`, or `/`.
          */
         fun domain(domain: String) = apply {
             domain.verifyValidAttentiveDomain()
             _domain = domain
         }
 
-        /**
-         * Sets the drawable resource used as the small icon for Attentive push notifications.
-         *
-         * @param notificationIconId A drawable resource ID. Default is `0` (no custom icon).
-         */
         fun notificationIconId(notificationIconId: Int) =
             apply {
                 _notificationIconId = notificationIconId
             }
 
-        /**
-         * Sets the background color used behind the notification small icon.
-         *
-         * @param colorResourceId A color resource ID. Default is `0` (no custom color).
-         */
         fun notificationIconBackgroundColor(
             @ColorRes colorResourceId: Int,
         ) = apply {
@@ -286,10 +256,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         private val allowApiVersionOverride = false
 
         /**
-         * Overrides the event-API version. Internal/testing use only — the override is
-         * currently gated behind a private flag and is a no-op for integrators.
-         *
-         * @param apiVersion The [ApiVersion] to use.
+         * Currently a no-op for integrators — the override is gated behind a private flag.
          */
         fun apiVersion(apiVersion: ApiVersion) =
             apply {
@@ -299,41 +266,21 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
 
-        /**
-         * Supplies a custom [OkHttpClient] for the SDK's HTTP traffic. Optional — the SDK
-         * constructs a default client if none is provided.
-         *
-         * @param okHttpClient A pre-configured [OkHttpClient].
-         */
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             this.okHttpClient = okHttpClient
         }
 
-        /**
-         * Controls whether creatives bypass frequency-capping / fatigue rules. Useful for
-         * internal testing apps that want to display creatives on demand.
-         *
-         * @param skipFatigueOnCreatives `true` to skip fatigue checks, `false` (default) to respect them.
-         */
         fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
             apply {
                 this.skipFatigueOnCreatives = skipFatigueOnCreatives
             }
 
-        /**
-         * Sets the SDK log level. Default is [AttentiveLogLevel.STANDARD].
-         *
-         * @param logLevel The [AttentiveLogLevel] to use.
-         */
         fun logLevel(logLevel: AttentiveLogLevel) =
             apply {
                 this.logLevel = logLevel
             }
 
         /**
-         * Builds the configured [AttentiveConfig].
-         *
-         * @return A new [AttentiveConfig] instance.
          * @throws IllegalStateException if [applicationContext], [mode], or [domain] was not set.
          */
         fun build(): AttentiveConfig {

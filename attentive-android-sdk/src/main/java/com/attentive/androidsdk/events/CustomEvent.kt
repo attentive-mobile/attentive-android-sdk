@@ -47,38 +47,22 @@ data class CustomEvent(
         }
     }
 
-    /**
-     * Builder for [CustomEvent].
-     */
     @Serializable
     class Builder(
         private var type: String? = null,
         private var properties: Map<String, String> = emptyMap(),
     ) {
-        /**
-         * Sets the event type (aka name). Required. The type is case-sensitive —
-         * `"User Logged In"` and `"User logged in"` are different events.
-         *
-         * @param type The event name.
-         */
         fun type(type: String): Builder {
             this.type = type
             return this
         }
 
-        /**
-         * Sets the event properties. Keys and values are case-sensitive.
-         *
-         * @param properties Event metadata.
-         */
         fun properties(properties: Map<String, String>): Builder {
             this.properties = properties
             return this
         }
 
         /**
-         * Builds the [CustomEvent].
-         *
          * @throws IllegalStateException if [type] was not set.
          * @throws IllegalArgumentException if [type] or any property key contains an invalid character.
          */

@@ -20,11 +20,6 @@ data class AddToCartEvent(
     }
 
     companion object {
-        /**
-         * Deprecated factory method. Use [Builder] instead.
-         *
-         * @param items The items added to the cart.
-         */
         @Deprecated(
             "As of release 1.0.0-beta01, replaced by standard builder methods",
             ReplaceWith("AddToCartEvent.Builder().items(items).build()"),
@@ -35,9 +30,6 @@ data class AddToCartEvent(
         }
     }
 
-    /**
-     * Builder for [AddToCartEvent].
-     */
     @Serializable
     class Builder {
         var items: List<Item> = emptyList()
@@ -45,29 +37,17 @@ data class AddToCartEvent(
         var deeplink: String? = null
             private set
 
-        /**
-         * Sets the items added to the cart. Required.
-         *
-         * @param items A non-empty list of [Item]s.
-         */
         fun items(items: List<Item>): Builder {
             this.items = items
             return this
         }
 
-        /**
-         * Sets an optional deeplink for the event.
-         *
-         * @param deeplink A deeplink URL, or `null`.
-         */
         fun deeplink(deeplink: String?): Builder {
             this.deeplink = deeplink
             return this
         }
 
         /**
-         * Builds the [AddToCartEvent].
-         *
          * @throws IllegalArgumentException if [items] is empty.
          */
         fun build(): AddToCartEvent {
