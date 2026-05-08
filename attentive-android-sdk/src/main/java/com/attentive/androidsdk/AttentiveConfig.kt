@@ -11,6 +11,15 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
+/**
+ * SDK-wide configuration created via [Builder] and passed to [AttentiveSdk.initialize].
+ *
+ * Holds the Attentive domain, runtime mode, notification styling, log level, and the
+ * current [UserIdentifiers]. Exactly one instance should exist per process. Construct
+ * with [Builder] and hand it to [AttentiveSdk.initialize] during `Application.onCreate()`.
+ *
+ * On construction the SDK fires an `InfoEvent` to the Attentive backend as a ping.
+ */
 class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
@@ -48,16 +57,41 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         sendInfoEvent()
     }
 
+    /**
+     * Whether creatives should bypass frequency-capping / fatigue rules.
+     *
+     * @return `true` if fatigue is skipped for creatives, `false` otherwise.
+     */
     override fun skipFatigueOnCreatives(): Boolean {
         return skipFatigueOnCreatives
     }
 
+    /**
+     * Associates a client-provided user ID with the current visitor.
+     *
+     * Merges a new [UserIdentifiers] containing the given [clientUserId] into the existing
+     * identifiers. Use this when you know the user's account ID in your own system.
+     *
+     * @param clientUserId The user's ID in your system. Must not be empty.
+     * @throws IllegalArgumentException if [clientUserId] is empty.
+     */
     override fun identify(clientUserId: String) {
         Timber.i("identify called with clientUserId: %s", clientUserId)
         ParameterValidation.verifyNotEmpty(clientUserId, "clientUserId")
         identify(UserIdentifiers.Builder().withClientUserId(clientUserId).build())
     }
 
+    /**
+     * Merges the given identifiers into the current visitor and notifies the backend.
+     *
+     * Does not change the visitor ID. Identifiers accumulate across calls — the second
+     * overwrites the first only for fields it explicitly sets. Fires `POST /e?t=idn` to
+     * the Attentive backend.
+     *
+     * Call this whenever you learn more about the user (email, phone, vendor IDs).
+     *
+     * @param userIdentifiers The identifiers to merge into the current visitor.
+     */
     override fun identify(userIdentifiers: UserIdentifiers) {
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
@@ -70,6 +104,13 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
     }
 
+    /**
+     * Clears local user identifiers and generates a new visitor ID.
+     *
+     * Does **not** notify the backend — the push token remains associated with the prior
+     * user server-side. For a full logout that detaches the push token on the backend, use
+     * [AttentiveSdk.clearUser] instead.
+     */
     @Deprecated(
         message = "Use AttentiveSdk.clearUser() instead. It properly detaches the push token from the logged-out user.",
         replaceWith = ReplaceWith("AttentiveSdk.clearUser()")
@@ -79,6 +120,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         resetIdentifiers()
     }
 
+    /**
+     * Changes the Attentive domain at runtime. Fires a fresh `InfoEvent` if the domain changed.
+     *
+     * @param domain The new Attentive domain. Must pass the standard domain validation
+     *   (no `attn.tv`, no colons, no slashes).
+     */
     override fun changeDomain(domain: String) {
         domain.verifyValidAttentiveDomain()
         if (domain != this.domain) {
@@ -87,6 +134,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
+    /**
+     * Changes the event-API version at runtime. Debug/testing use.
+     *
+     * @param apiVersion The new [ApiVersion] to use for subsequent event requests.
+     */
     fun changeApiVersion(apiVersion: ApiVersion) {
         Timber.d("Changing API version from ${this@AttentiveConfig.apiVersion} to $apiVersion")
         this@AttentiveConfig.apiVersion = apiVersion
@@ -140,6 +192,20 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
+    /**
+     * Builder for [AttentiveConfig]. Required fields: [applicationContext], [mode], [domain].
+     * All other fields are optional.
+     *
+     * Example:
+     * ```
+     * val config = AttentiveConfig.Builder()
+     *     .applicationContext(application)
+     *     .mode(AttentiveConfig.Mode.PRODUCTION)
+     *     .domain("mybrand")
+     *     .build()
+     * AttentiveSdk.initialize(config)
+     * ```
+     */
     class Builder {
         internal lateinit var _context: Application
         internal lateinit var _mode: Mode
@@ -153,31 +219,64 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
+        /**
+         * Sets the host application context used by the SDK for lifecycle observation,
+         * permission checks, and persistent storage. Required.
+         *
+         * @param context The host [Application] instance.
+         */
         fun applicationContext(context: Application) =
             apply {
                 ParameterValidation.verifyNotNull(context, "context")
                 _context = context
             }
 
+        /**
+         * Deprecated alias for [applicationContext]. Will be removed in a future release.
+         *
+         * @param context The host [Application] instance.
+         */
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
         fun context(context: Application) = apply {
             _context = context
         }
 
+        /**
+         * Sets the SDK runtime mode. Required.
+         *
+         * @param mode [Mode.PRODUCTION] for release builds, [Mode.DEBUG] for development.
+         */
         fun mode(mode: Mode) = apply {
             _mode = mode
         }
 
+        /**
+         * Sets the Attentive domain. Required.
+         *
+         * @param domain Your Attentive domain (e.g. `"mybrand"`). Must not contain `attn.tv`,
+         *   `:`, or `/` — pass only the domain identifier, not a URL.
+         * @throws IllegalArgumentException if [domain] is empty or malformed.
+         */
         fun domain(domain: String) = apply {
             domain.verifyValidAttentiveDomain()
             _domain = domain
         }
 
+        /**
+         * Sets the drawable resource used as the small icon for Attentive push notifications.
+         *
+         * @param notificationIconId A drawable resource ID. Default is `0` (no custom icon).
+         */
         fun notificationIconId(notificationIconId: Int) =
             apply {
                 _notificationIconId = notificationIconId
             }
 
+        /**
+         * Sets the background color used behind the notification small icon.
+         *
+         * @param colorResourceId A color resource ID. Default is `0` (no custom color).
+         */
         fun notificationIconBackgroundColor(
             @ColorRes colorResourceId: Int,
         ) = apply {
@@ -186,6 +285,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         private val allowApiVersionOverride = false
 
+        /**
+         * Overrides the event-API version. Internal/testing use only — the override is
+         * currently gated behind a private flag and is a no-op for integrators.
+         *
+         * @param apiVersion The [ApiVersion] to use.
+         */
         fun apiVersion(apiVersion: ApiVersion) =
             apply {
                 if (allowApiVersionOverride) {
@@ -194,20 +299,43 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
 
+        /**
+         * Supplies a custom [OkHttpClient] for the SDK's HTTP traffic. Optional — the SDK
+         * constructs a default client if none is provided.
+         *
+         * @param okHttpClient A pre-configured [OkHttpClient].
+         */
         fun okHttpClient(okHttpClient: OkHttpClient) = apply {
             this.okHttpClient = okHttpClient
         }
 
+        /**
+         * Controls whether creatives bypass frequency-capping / fatigue rules. Useful for
+         * internal testing apps that want to display creatives on demand.
+         *
+         * @param skipFatigueOnCreatives `true` to skip fatigue checks, `false` (default) to respect them.
+         */
         fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
             apply {
                 this.skipFatigueOnCreatives = skipFatigueOnCreatives
             }
 
+        /**
+         * Sets the SDK log level. Default is [AttentiveLogLevel.STANDARD].
+         *
+         * @param logLevel The [AttentiveLogLevel] to use.
+         */
         fun logLevel(logLevel: AttentiveLogLevel) =
             apply {
                 this.logLevel = logLevel
             }
 
+        /**
+         * Builds the configured [AttentiveConfig].
+         *
+         * @return A new [AttentiveConfig] instance.
+         * @throws IllegalStateException if [applicationContext], [mode], or [domain] was not set.
+         */
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {
                 throw IllegalStateException("A valid context must be provided.")
@@ -228,8 +356,14 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     }
 
 
+    /**
+     * SDK runtime mode.
+     */
     enum class Mode {
+        /** Debug mode — verbose logging by default, intended for development. */
         DEBUG,
+
+        /** Production mode — standard logging, intended for release builds. */
         PRODUCTION,
     }
 }
