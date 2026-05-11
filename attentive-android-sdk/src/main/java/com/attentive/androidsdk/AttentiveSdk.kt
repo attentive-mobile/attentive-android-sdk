@@ -6,12 +6,19 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import androidx.annotation.RestrictTo
+import android.content.pm.PackageManager
+import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.inbox.InboxState
+import com.attentive.androidsdk.inbox.Message
+import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
@@ -26,7 +33,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.OkHttpClient
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
@@ -44,7 +56,6 @@ object AttentiveSdk {
             )
 
     // Inbox state management
-    @Suppress("DEPRECATION")
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**
@@ -59,27 +70,68 @@ object AttentiveSdk {
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
+    // Inbox server API (created from manifest meta-data if present)
+    private var inboxApi: RetrofitInboxApiService? = null
+
+    private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
+
     // Pagination management
     private val paginationLock = Mutex()
     private const val INBOX_PAGE_SIZE = 20
 
     /**
-     * Initializes the inbox with mock messages for local testing.
-     * Starts with original 4 messages, then generates 16 more for a total of 20 (first page).
-     * TODO: Remove this function once the backend API is ready.
+     * Initializes the inbox by fetching the first page from the server if configured,
+     * otherwise falls back to mock data.
      */
-    @Suppress("DEPRECATION")
     @SuppressLint("DefaultLocale")
     @VisibleForTesting
-    internal fun initializeMockInbox() {
-        // Original 4 messages
+    internal fun initializeInbox() {
+        val context = config.applicationContext
+        val appInfo = context.packageManager.getApplicationInfo(
+            context.packageName, PackageManager.GET_META_DATA,
+        )
+        val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
+        if (inboxBaseUrl != null) {
+            inboxApi = Retrofit.Builder()
+                .baseUrl(inboxBaseUrl)
+                .client(OkHttpClient())
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(RetrofitInboxApiService::class.java)
+            Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
+        }
+
+        val inboxApi = this.inboxApi
+        if (inboxApi != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val response = inboxApi.getMessages(0, INBOX_PAGE_SIZE)
+                    _inboxState.value = InboxState(
+                        messages = response.messages,
+                        unreadCount = response.unreadCount,
+                        currentOffset = response.messages.size,
+                        hasMoreMessages = response.hasMoreMessages,
+                    )
+                    Timber.d("Initialized inbox from server with ${response.messages.size} messages")
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to fetch inbox from server, falling back to mock data")
+                    initializeMockInbox()
+                }
+            }
+        } else {
+            initializeMockInbox()
+        }
+    }
+
+    @SuppressLint("DefaultLocale")
+    private fun initializeMockInbox() {
         val originalMessages =
             listOf(
                 Message(
                     id = "msg_001",
                     title = "Welcome to Attentive!",
                     body = "Thanks for joining us. Check out our latest offers.",
-                    timestamp = System.currentTimeMillis() - 86400000, // 1 day ago
+                    timestamp = System.currentTimeMillis() - 86400000,
                     isRead = false,
                     actionUrl = "https://example.com/offers",
                     style = Style.Small,
@@ -88,7 +140,7 @@ object AttentiveSdk {
                     id = "msg_002",
                     title = "New Sale Alert",
                     body = "50% off on all items this weekend!",
-                    timestamp = System.currentTimeMillis() - 172800000, // 2 days ago
+                    timestamp = System.currentTimeMillis() - 172800000,
                     isRead = true,
                     imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
                     actionUrl = "https://example.com/sale",
@@ -98,7 +150,7 @@ object AttentiveSdk {
                     id = "msg_003",
                     title = "Your Order Has Shipped",
                     body = "Your order #12345 is on its way!",
-                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                    timestamp = System.currentTimeMillis() - 259200000,
                     isRead = false,
                     actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
                     imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
@@ -108,17 +160,16 @@ object AttentiveSdk {
                     id = "msg_004",
                     title = "Your cart is waiting",
                     body = "Pickup where you left off!",
-                    timestamp = System.currentTimeMillis() - 259200000, // 3 days ago
+                    timestamp = System.currentTimeMillis() - 259200000,
                     isRead = false,
                     actionUrl = "bonni://cart",
                     style = Style.Small,
                 ),
             )
 
-        // Generate 16 additional messages to complete the first page (total 20)
         val generatedMessages =
             List(16) { index ->
-                val messageNumber = index + 5 // Start from 5 since we have 4 original
+                val messageNumber = index + 5
                 Message(
                     id = "msg_${String.format("%03d", messageNumber)}",
                     title = "Message $messageNumber",
@@ -136,8 +187,8 @@ object AttentiveSdk {
             InboxState(
                 messages = mockMessages,
                 unreadCount = mockMessages.count { !it.isRead },
-                currentOffset = mockMessages.size, // Start offset = 20
-                hasMoreMessages = true, // More messages available to load
+                currentOffset = mockMessages.size,
+                hasMoreMessages = true,
             )
 
         Timber.d("Initialized inbox with ${mockMessages.size} mock messages (4 original + 16 generated)")
@@ -146,7 +197,7 @@ object AttentiveSdk {
     /**
      * Loads more inbox messages (pagination).
      * Call this when the user scrolls near the end of the message list.
-     * This function uses mock data until the backend API is ready.
+     * Uses the server API when configured, otherwise falls back to mock data.
      */
     @Suppress("DEPRECATION")
     @Deprecated(
@@ -158,7 +209,6 @@ object AttentiveSdk {
         paginationLock.withLock {
             val currentState = _inboxState.value
 
-            // Guard: already loading or no more messages
             if (currentState.isLoadingMore || !currentState.hasMoreMessages) {
                 Timber.d(
                     "Skipping loadMoreInboxMessages - isLoadingMore: ${currentState.isLoadingMore}, hasMoreMessages: ${currentState.hasMoreMessages}",
@@ -170,47 +220,53 @@ object AttentiveSdk {
             _inboxState.value = currentState.copy(isLoadingMore = true)
 
             try {
-                // Capture offset before suspending - this determines which page to fetch
                 val offsetToFetch = currentState.currentOffset
+                val inboxApi = inboxApi
 
-                // Simulate network delay
-                delay(5000)
+                if (inboxApi != null) {
+                    val response = inboxApi.getMessages(offsetToFetch, INBOX_PAGE_SIZE)
+                    val latestState = _inboxState.value
+                    val updatedMessages = latestState.messages + response.messages
 
-                // Generate mock messages based on the offset we requested
-                val mockMessages =
-                    List(INBOX_PAGE_SIZE) { index ->
-                        Message(
-                            id = "msg_${offsetToFetch + index}",
-                            title = "Message ${offsetToFetch + index + 1}",
-                            body = "This is the content of message number ${offsetToFetch + index + 1}",
-                            timestamp = System.currentTimeMillis() - (offsetToFetch + index) * 3600000L,
-                            isRead = (offsetToFetch + index) % 3 == 0,
-                            imageUrl = if ((offsetToFetch + index) % 5 == 0) "https://picsum.photos/200/300?random=${offsetToFetch + index}" else null,
-                            style = if ((offsetToFetch + index) % 5 == 0) Style.Large else Style.Small,
-                        )
-                    }
+                    _inboxState.value = InboxState(
+                        messages = updatedMessages,
+                        unreadCount = response.unreadCount,
+                        isLoadingMore = false,
+                        hasMoreMessages = response.hasMoreMessages,
+                        currentOffset = offsetToFetch + response.messages.size,
+                    )
+                    Timber.d("Loaded ${response.messages.size} more messages from server. Total: ${updatedMessages.size}")
+                } else {
+                    delay(5000)
 
-                // Merge with the CURRENT state to preserve
-                // any changes to the made during the network call
-                // like deletions
-                val latestState = _inboxState.value
-                val updatedMessages = latestState.messages + mockMessages
-                val totalMockMessages = 100 // Mock total
-                // todo hasMore pagination value should come from backend
-                val hasMore = updatedMessages.size < totalMockMessages
+                    val mockMessages =
+                        List(INBOX_PAGE_SIZE) { index ->
+                            Message(
+                                id = "msg_${offsetToFetch + index}",
+                                title = "Message ${offsetToFetch + index + 1}",
+                                body = "This is the content of message number ${offsetToFetch + index + 1}",
+                                timestamp = System.currentTimeMillis() - (offsetToFetch + index) * 3600000L,
+                                isRead = (offsetToFetch + index) % 3 == 0,
+                                imageUrl = if ((offsetToFetch + index) % 5 == 0) "https://picsum.photos/200/300?random=${offsetToFetch + index}" else null,
+                                style = if ((offsetToFetch + index) % 5 == 0) Style.Large else Style.Small,
+                            )
+                        }
 
-                _inboxState.value =
-                    InboxState(
+                    val latestState = _inboxState.value
+                    val updatedMessages = latestState.messages + mockMessages
+                    val totalMockMessages = 100
+                    val hasMore = updatedMessages.size < totalMockMessages
+
+                    _inboxState.value = InboxState(
                         messages = updatedMessages,
                         unreadCount = updatedMessages.count { !it.isRead },
                         isLoadingMore = false,
                         hasMoreMessages = hasMore,
                         currentOffset = offsetToFetch + mockMessages.size,
                     )
-
-                Timber.d("Loaded ${mockMessages.size} more messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
+                    Timber.d("Loaded ${mockMessages.size} more mock messages. Total: ${updatedMessages.size}, hasMore: $hasMore")
+                }
             } finally {
-                // Clear isLoadingMore when loading fails via cancellation or exception
                 if (_inboxState.value.isLoadingMore) {
                     _inboxState.value = _inboxState.value.copy(isLoadingMore = false)
                 }
@@ -230,12 +286,24 @@ object AttentiveSdk {
         synchronized(AttentiveSdk::class.java) {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
-            initializeMockInbox()
+            initializeInbox()
         }
     }
 
+    @Suppress("DEPRECATION")
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
+    }
+
+    suspend fun recordEventSuspend(event: Event): Result<Unit> {
+        return AttentiveEventTracker.instance.recordEventSuspend(event)
+    }
+
+    @JvmStatic
+    fun recordEventWithCallback(event: Event, callback: AttentiveCallback) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(recordEventSuspend(event), callback)
+        }
     }
 
     /**
@@ -259,22 +327,69 @@ object AttentiveSdk {
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
+        }
+        var validEmail = email
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
+            validEmail = ""
+        }
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
-        AttentiveEventTracker.instance.optIn(email, phoneNumber)
+        return AttentiveEventTracker.instance.optIn(validEmail, validPhone)
+    }
+
+    @JvmStatic
+    fun optUserIntoMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserIntoMarketingSubscription(email, phoneNumber), callback)
+        }
     }
 
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-    ) {
+    ): Result<Unit> {
+        var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
             Timber.e("Invalid phone number: $phoneNumber")
+            validPhone = ""
         }
-        AttentiveEventTracker.instance.optOut(email, phoneNumber)
+        var validEmail = email
+        if (email.isNotBlank() && email.isEmail().not()) {
+            Timber.e("Invalid email: $email")
+            validEmail = ""
+        }
+        if (validPhone.isBlank() && validEmail.isBlank()) {
+            val msg = "No valid email or phone number provided."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
+        }
+
+        return AttentiveEventTracker.instance.optOut(validEmail, validPhone)
+    }
+
+    @JvmStatic
+    fun optUserOutOfMarketingSubscriptionWithCallback(
+        email: String = "",
+        phoneNumber: String = "",
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(optUserOutOfMarketingSubscription(email, phoneNumber), callback)
+        }
     }
 
     /**
@@ -339,13 +454,35 @@ object AttentiveSdk {
         }
     }
 
-    fun updateUser(email: String? = null, phoneNumber: String? = null) {
+    fun updateUser(
+        email: String? = null,
+        phoneNumber: String? = null,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = updateUserSuspend(email, phoneNumber)
+            if (result.isFailure) {
+                Timber.e("updateUser failed: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    suspend fun updateUserSuspend(
+        email: String? = null,
+        phoneNumber: String? = null,
+    ): Result<Unit> {
+        if (_config == null) {
+            val msg = "AttentiveSdk must be initialized before calling updateUserSuspend"
+            Timber.e(msg)
+            return Result.failure(IllegalStateException(msg))
+        }
+
         val trimmedEmail = email?.trim()?.ifBlank { null }
         val trimmedPhone = phoneNumber?.trim()?.ifBlank { null }
 
-        if (trimmedEmail == null && trimmedPhone == null) {
-            Timber.e("Both email and phone number are empty or null. At least one must be provided to update the user.")
-            return
+        if (trimmedEmail.isNullOrEmpty() && trimmedPhone.isNullOrEmpty()) {
+            val msg = "Both email and phone number are empty or null. At least one must be provided to update the user."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         var number = trimmedPhone
@@ -356,9 +493,18 @@ object AttentiveSdk {
             }
         }
 
-        if(trimmedEmail == null && number == null){
-            Timber.e("No valid identifiers to update. Email is null and phone number failed validation.")
-            return
+        var validatedEmail = email
+        email?.let {
+            if (it.isNotEmpty() && it.isEmail().not()) {
+                Timber.e("Invalid email: $email")
+                validatedEmail = null
+            }
+        }
+
+        if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
+            val msg = "No valid email or phone number provided after validation."
+            Timber.e(msg)
+            return Result.failure(IllegalArgumentException(msg))
         }
 
         config.resetIdentifiers()
@@ -367,13 +513,23 @@ object AttentiveSdk {
         val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
-            return
+            return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
         CoroutineScope(Dispatchers.IO).launch {
             config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
         }
     }
 
+    @JvmStatic
+    fun updateUserWithCallback(
+        email: String? = null,
+        phoneNumber: String? = null,
+        callback: AttentiveCallback,
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dispatchResult(updateUserSuspend(email, phoneNumber), callback)
+        }
+    }
 
     fun clearUser() {
         config.resetIdentifiers()
@@ -393,6 +549,19 @@ object AttentiveSdk {
         fun onSuccess(result: TokenFetchResult)
 
         fun onFailure(exception: Exception)
+    }
+
+    interface AttentiveCallback {
+        fun onSuccess()
+
+        fun onFailure(exception: Exception)
+    }
+
+    private fun dispatchResult(result: Result<Unit>, callback: AttentiveCallback) {
+        result.fold(
+            onSuccess = { callback.onSuccess() },
+            onFailure = { callback.onFailure(it as? Exception ?: Exception(it)) },
+        )
     }
 
     fun isPushPermissionGranted(context: Context): Boolean {
@@ -468,6 +637,12 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId marked as read")
+        inboxApi?.also { api ->
+            CoroutineScope(Dispatchers.IO).launch {
+                try { api.updateMessage(messageId, mapOf("isRead" to true)) }
+                catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
+            }
+        }
     }
 
     /**
@@ -498,6 +673,12 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId marked as unread")
+        inboxApi?.also { api ->
+            CoroutineScope(Dispatchers.IO).launch {
+                try { api.updateMessage(messageId, mapOf("isRead" to false)) }
+                catch (e: Exception) { Timber.e(e, "Failed to sync markUnread to server") }
+            }
+        }
     }
 
     /**
@@ -524,5 +705,12 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId deleted from inbox")
+        val inboxApi = inboxApi
+        if (inboxApi != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try { inboxApi.deleteMessage(messageId) }
+                catch (e: Exception) { Timber.e(e, "Failed to sync deleteMessage to server") }
+            }
+        }
     }
 }

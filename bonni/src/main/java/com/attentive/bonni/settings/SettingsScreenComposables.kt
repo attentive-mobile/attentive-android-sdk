@@ -430,13 +430,69 @@ fun SwitchUserWithEmailSetting(
     settingItem: SettingItem,
     viewModel: SettingsViewModel = viewModel(),
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
-    SwitchUserSetting(
-        settingItem = settingItem,
-        value = email,
-        displayLabel = "Switch user with email",
-        onValueChange = { viewModel.updateEmail(it) },
-    )
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        viewModel.updateEmail(it)
+                        isError = false
+                    },
+                    label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid email address") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
+                    singleLine = true,
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BonniPink,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedTextColor = Color.Black,
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (viewModel.saveEmail()) {
+                                isError = false
+                                isEditing = false
+                                viewModel.switchUser()
+                            } else {
+                                isError = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink,
+                            )
+                        }
+                    },
+                )
+            }
+        } else {
+            Text(
+                text =
+                    buildAnnotatedString {
+                        append("Switch user with email: ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(email)
+                        }
+                    },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier =
+                    Modifier
+                        .padding(8.dp)
+                        .clickable { isEditing = true },
+            )
+        },
+    }
 }
 
 @Composable
@@ -444,13 +500,69 @@ fun SwitchUserWithPhoneSetting(
     settingItem: SettingItem,
     viewModel: SettingsViewModel = viewModel(),
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
-    SwitchUserSetting(
-        settingItem = settingItem,
-        value = phone,
-        displayLabel = "Switch user with phone",
-        onValueChange = { viewModel.updatePhone(it) },
-    )
+
+    AnimatedContent(targetState = isEditing) { editing ->
+        if (editing) {
+            Row(modifier = Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = {
+                        viewModel.updatePhone(it)
+                        isError = false
+                    },
+                    label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid phone number (E.164 format, e.g. +14155551234)") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
+                    singleLine = true,
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BonniPink,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedTextColor = Color.Black,
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (viewModel.savePhoneNumber()) {
+                                isError = false
+                                isEditing = false
+                                viewModel.switchUser()
+                            } else {
+                                isError = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Submit",
+                                tint = BonniPink,
+                            )
+                        }
+                    },
+                )
+            }
+        } else {
+            Text(
+                text =
+                    buildAnnotatedString {
+                        append("Switch user with phone: ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(phone)
+                        }
+                    },
+                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+                modifier =
+                    Modifier
+                        .padding(8.dp)
+                        .clickable { isEditing = true },
+            )
+        },
+    }
 }
 
 @Composable
@@ -511,6 +623,7 @@ fun EditableEmailSetting(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
 
     AnimatedContent(targetState = isEditing) { editing ->
@@ -518,8 +631,17 @@ fun EditableEmailSetting(
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { viewModel.updateEmail(it) },
+                    onValueChange = {
+                        viewModel.updateEmail(it)
+                        isError = false
+                    },
                     label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid email address") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
@@ -529,8 +651,12 @@ fun EditableEmailSetting(
                         ),
                     trailingIcon = {
                         IconButton(onClick = {
-                            settingItem.onClick(email)
-                            isEditing = false
+                            if (viewModel.saveEmail()) {
+                                isError = false
+                                isEditing = false
+                            } else {
+                                isError = true
+                            }
                         }) {
                             Icon(
                                 Icons.Filled.Check,
@@ -566,16 +692,36 @@ fun EditablePhoneNumberSetting(
     viewModel: SettingsViewModel = viewModel(),
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
-    var updatedNumber = phone
+
+    fun attemptSave(): Boolean {
+        return if (viewModel.savePhoneNumber()) {
+            isError = false
+            isEditing = false
+            true
+        } else {
+            isError = true
+            false
+        }
+    }
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
             Row(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { viewModel.updatePhone(it) },
+                    onValueChange = {
+                        viewModel.updatePhone(it)
+                        isError = false
+                    },
                     label = { Text(settingItem.title) },
+                    supportingText = if (isError) {
+                        { Text("Please enter a valid phone number (E.164 format, e.g. +14155551234)") }
+                    } else {
+                        null
+                    },
+                    isError = isError,
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
@@ -584,10 +730,7 @@ fun EditablePhoneNumberSetting(
                             focusedTextColor = Color.Black,
                         ),
                     trailingIcon = {
-                        IconButton(onClick = {
-                            settingItem.onClick(updatedNumber)
-                            isEditing = false
-                        }) {
+                        IconButton(onClick = { attemptSave() }) {
                             Icon(
                                 Icons.Filled.Check,
                                 contentDescription = "Submit",
@@ -770,8 +913,8 @@ fun changeEmail(viewModel: SettingsViewModel) {
     viewModel.saveEmail()
 }
 
-fun changePhoneNumber(viewModel: SettingsViewModel) {
-    viewModel.savePhoneNumber()
+fun changePhoneNumber(viewModel: SettingsViewModel): Boolean {
+    return viewModel.savePhoneNumber()
 }
 
 suspend fun sharePushToken(activity: Activity) {

@@ -26,9 +26,9 @@ class TokenProvider {
                                 TokenFetchResult(
                                     resultToken,
                                     permissionGranted = AttentivePush.getInstance()
-                                        .checkPushPermission(context)
-                                )
-                            )
+                                        .checkPushPermission(context),
+                                ),
+                            ),
                         )
                     } else {
                         continuation.resume(Result.failure(Exception("Token fetch failed: ${task.exception?.message}")))

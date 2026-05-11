@@ -45,14 +45,14 @@ class RecordEventCallbackTest {
 
     @Test
     fun oldApi_bothCallbacksInvoked_doesNotCrash() =
-        runBlocking {
-            // Arrange - Create a tracker instance with our mock config
+
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
 
-            // Mock sendEvent to call BOTH onSuccess AND onFailure (buggy behavior)
+
             doAnswer { invocation ->
                 val callback = invocation.getArgument<AttentiveApiCallback>(3)
-                // Simulate buggy behavior: call both callbacks
+
                 callback.onSuccess()
                 callback.onFailure("Some error")
                 null
@@ -65,23 +65,15 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            // Act - This should not throw "Already resumed" exception thanks to our fix
-            try {
+            val result =
                 tracker.recordEventSuspend(event)
-                // If we get here without exception, the fix worked
-                assertTrue("Expected to complete without crashing", true)
-            } catch (e: IllegalStateException) {
-                if (e.message?.contains("Already resumed") == true) {
-                    throw AssertionError("Got 'Already resumed' crash - fix didn't work!", e)
-                }
-                throw e
-            }
+
+                assertTrue("First callback (success) should win", result.isSuccess)
         }
 
     @Test
-    fun oldApi_onlyFailureCalled_completesNormally() =
-        runBlocking {
-            // Arrange
+    fun oldApi_onlyFailureCalled_returnsFailure() =
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
 
             doAnswer { invocation ->
@@ -97,17 +89,17 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            // Act
+            val result =
             tracker.recordEventSuspend(event)
 
-            // Assert - completed without exception
+            assertTrue("Should return failure when callback reports error", result.isFailure)
+            assertEquals("Network error", result.exceptionOrNull()?.message)
             verify(mockApi, times(1)).sendEvent(any(), any(), any(), any())
         }
 
     @Test
-    fun oldApi_onlySuccessCalled_completesNormally() =
-        runBlocking {
-            // Arrange
+    fun oldApi_onlySuccessCalled_returnsSuccess() =
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
 
             doAnswer { invocation ->
@@ -123,23 +115,23 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            // Act
+            val result =
             tracker.recordEventSuspend(event)
 
-            // Assert - completed without exception
+            assertTrue("Should return success when callback reports success", result.isSuccess)
             verify(mockApi, times(1)).sendEvent(any(), any(), any(), any())
         }
 
     @Test
     fun oldApi_callbackInvokedMultipleTimes_onlyResumesOnce() =
-        runBlocking {
-            // Arrange
+
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
             val callbackInvokeCount = AtomicInteger(0)
 
             doAnswer { invocation ->
                 val callback = invocation.getArgument<AttentiveApiCallback>(3)
-                // Try to invoke callback multiple times
+
                 callback.onSuccess()
                 callbackInvokeCount.incrementAndGet()
                 callback.onFailure("error 1")
@@ -156,11 +148,30 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            // Act
+            val result =
             tracker.recordEventSuspend(event)
 
-            // Assert - all callbacks were called but no crash occurred
+
             assertEquals(3, callbackInvokeCount.get())
+        assertTrue("First callback (success) should win", result.isSuccess)
+        }
+
+    @Test
+    fun oldApi_notInitialized_returnsFailure() =
+        runBlocking {
+            val tracker =
+                AttentiveEventTracker::class.java.getDeclaredConstructor().apply {
+                    isAccessible = true
+                }.newInstance()
+
+            val event = CustomEvent("test-event", emptyMap())
+
+            val result = tracker.recordEventSuspend(event)
+
+            assertTrue("Should fail when not initialized", result.isFailure)
+            assertTrue(
+                result.exceptionOrNull() is IllegalStateException,
+            )
         }
 
     /**
