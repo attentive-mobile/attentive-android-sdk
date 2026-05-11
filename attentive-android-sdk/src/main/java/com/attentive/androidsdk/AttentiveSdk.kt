@@ -5,7 +5,6 @@ package com.attentive.androidsdk
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import androidx.annotation.RestrictTo
 import android.content.pm.PackageManager
 import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
@@ -14,9 +13,6 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
-import com.attentive.androidsdk.inbox.InboxState
-import com.attentive.androidsdk.inbox.Message
-import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
@@ -34,8 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -515,9 +509,7 @@ object AttentiveSdk {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
-        }
+        return config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
     }
 
     @JvmStatic

@@ -61,18 +61,6 @@ interface RetrofitApiService {
         @Body request: OptOutSubscriptionRequest,
     ): Call<Unit>
 
-    @Headers("Content-Type: application/json")
-    @POST("opt-in-subscriptions")
-    fun optInSubscription(
-        @Body request: OptInSubscriptionRequest,
-    ): Call<Unit>
-
-    @Headers("Content-Type: application/json")
-    @POST("opt-out-subscriptions")
-    fun optOutSubscription(
-        @Body request: OptOutSubscriptionRequest,
-    ): Call<Unit>
-
     @Headers(
         "x-datadog-sampling-priority: 1",
         "Content-Type: application/json",
