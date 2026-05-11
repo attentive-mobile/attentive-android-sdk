@@ -7,6 +7,7 @@ import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -84,9 +85,11 @@ class AttentiveSdkTest {
         // sendUserUpdate is launched on Dispatchers.IO; give it time to execute
         Thread.sleep(100)
 
-        verify(factoryMocks.attentiveApi).sendUserUpdate(
-            eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any(), any()
-        )
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
     }
 
     @Test
@@ -100,14 +103,18 @@ class AttentiveSdkTest {
     fun updateUser_withWhitespaceOnlyEmail_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = "   ")
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
     }
 
     @Test
     fun updateUser_withBothNullParams_doesNotCallSendUserUpdate() {
         AttentiveSdk.updateUser(email = null, phoneNumber = null)
 
-        verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
     }
 
     companion object {
