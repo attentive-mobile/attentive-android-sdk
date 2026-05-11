@@ -276,8 +276,9 @@ object AttentiveSdk {
      * Opts the user into Attentive marketing subscriptions on email and/or SMS.
      *
      * Unlike [updateUser] and [clearUser], this call does not change the visitor ID. It
-     * creates a subscription record on the backend idempotently. At least one of [email]
-     * or [phoneNumber] must be provided.
+     * creates a subscription record on the backend; repeated calls with the same email or
+     * phone are safe and will not create duplicates. At least one of [email] or [phoneNumber]
+     * must be provided.
      *
      * @param email The user's email address. Optional if [phoneNumber] is provided.
      * @param phoneNumber The user's phone number in E.164 format. Optional if [email] is provided.
@@ -296,7 +297,8 @@ object AttentiveSdk {
     /**
      * Opts the user out of Attentive marketing subscriptions on email and/or SMS.
      *
-     * Idempotent. At least one of [email] or [phoneNumber] must be provided.
+     * Safe to call repeatedly with the same identifier. At least one of [email] or
+     * [phoneNumber] must be provided.
      *
      * @param email The user's email address. Optional if [phoneNumber] is provided.
      * @param phoneNumber The user's phone number in E.164 format. Optional if [email] is provided.
