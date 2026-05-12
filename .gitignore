@@ -110,3 +110,6 @@ tags
 github.properties
 
 .DS_Store
+
+# Local dev tooling (mock server, scripts). Lives on develop but not intended for main.
+tools/

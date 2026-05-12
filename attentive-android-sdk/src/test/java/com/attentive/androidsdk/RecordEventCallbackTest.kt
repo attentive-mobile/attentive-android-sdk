@@ -45,11 +45,14 @@ class RecordEventCallbackTest {
 
     @Test
     fun oldApi_bothCallbacksInvoked_doesNotCrash() =
-        runBlocking {
+
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
+
 
             doAnswer { invocation ->
                 val callback = invocation.getArgument<AttentiveApiCallback>(3)
+
                 callback.onSuccess()
                 callback.onFailure("Some error")
                 null
@@ -62,13 +65,15 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            val result = tracker.recordEventSuspend(event)
-            assertTrue("First callback (success) should win", result.isSuccess)
+            val result =
+                tracker.recordEventSuspend(event)
+
+                assertTrue("First callback (success) should win", result.isSuccess)
         }
 
     @Test
     fun oldApi_onlyFailureCalled_returnsFailure() =
-        runBlocking {
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
 
             doAnswer { invocation ->
@@ -84,7 +89,8 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            val result = tracker.recordEventSuspend(event)
+            val result =
+            tracker.recordEventSuspend(event)
 
             assertTrue("Should return failure when callback reports error", result.isFailure)
             assertEquals("Network error", result.exceptionOrNull()?.message)
@@ -93,7 +99,7 @@ class RecordEventCallbackTest {
 
     @Test
     fun oldApi_onlySuccessCalled_returnsSuccess() =
-        runBlocking {
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
 
             doAnswer { invocation ->
@@ -109,7 +115,8 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            val result = tracker.recordEventSuspend(event)
+            val result =
+            tracker.recordEventSuspend(event)
 
             assertTrue("Should return success when callback reports success", result.isSuccess)
             verify(mockApi, times(1)).sendEvent(any(), any(), any(), any())
@@ -117,12 +124,14 @@ class RecordEventCallbackTest {
 
     @Test
     fun oldApi_callbackInvokedMultipleTimes_onlyResumesOnce() =
-        runBlocking {
+
+            runBlocking {
             val tracker = createTrackerWithConfig(mockConfig)
             val callbackInvokeCount = AtomicInteger(0)
 
             doAnswer { invocation ->
                 val callback = invocation.getArgument<AttentiveApiCallback>(3)
+
                 callback.onSuccess()
                 callbackInvokeCount.incrementAndGet()
                 callback.onFailure("error 1")
@@ -139,10 +148,12 @@ class RecordEventCallbackTest {
 
             val event = CustomEvent("test-event", emptyMap())
 
-            val result = tracker.recordEventSuspend(event)
+            val result =
+            tracker.recordEventSuspend(event)
+
 
             assertEquals(3, callbackInvokeCount.get())
-            assertTrue("First callback (success) should win", result.isSuccess)
+        assertTrue("First callback (success) should win", result.isSuccess)
         }
 
     @Test

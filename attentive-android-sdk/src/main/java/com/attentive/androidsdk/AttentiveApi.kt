@@ -104,20 +104,14 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     val eventsApi: RetrofitEventsApiService = retrofitEvents.create(RetrofitEventsApiService::class.java)
 
-    internal suspend fun sendUserUpdate(domain: String, email: String?, phoneNumber: String?): Result<Unit> {
-        AttentiveEventTracker.instance.config.clearUser()
-
-        val visitorId = AttentiveEventTracker.instance.config.userIdentifiers.visitorId
-        if (visitorId == null) {
-            Timber.e("No visitorId available, cannot send user update")
-            return Result.failure(IllegalStateException("No visitorId available"))
-        }
-        val pushToken = TokenProvider.getInstance().token
-        if (pushToken == null) {
-            Timber.e("No push token available, cannot send user update")
-            return Result.failure(IllegalStateException("No push token available"))
-        }
-
+    internal suspend fun sendUserUpdate (
+        domain: String,
+        email: String?,
+        phoneNumber: String?,
+        visitorId: String,
+        pushToken: String,
+        logLabel: String = "user update",
+    ) : Result<Unit> {
         val contactInfo = ContactInfo().apply {
             if (email != null) {
                 this.email = email
@@ -127,15 +121,12 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             }
         }
 
-        val builder = UserIdentifiers.Builder()
-        email?.let {
-            builder.withEmail(it)
+        if (email != null || phoneNumber != null) {
+            val builder = UserIdentifiers.Builder()
+            email?.let { builder.withEmail(it) }
+            phoneNumber?.let { builder.withPhone(it) }
+            AttentiveEventTracker.instance.config.identify(builder.build())
         }
-        phoneNumber?.let {
-            builder.withPhone(it)
-        }
-
-        AttentiveEventTracker.instance.config.identify(builder.build())
 
         return try {
             val response = api.updateUserSuspend(
@@ -149,17 +140,17 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
                 )
             )
             if (response.isSuccessful) {
-                Timber.i("Successfully sent user update")
+                Timber.i("Successfully sent $logLabel")
                 Result.success(Unit)
             } else {
-                val msg = "Failed to send user update: ${response.code()}"
+                val msg = "Failed to send $logLabel: ${response.code()}"
                 Timber.e(msg)
                 Result.failure(Exception(msg))
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.e("Failed to send user update: ${e.message}")
+            Timber.e("Failed to send $logLabel: ${e.message}")
             Result.failure(e)
         }
     }
@@ -195,6 +186,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             return Result.failure(IllegalStateException(msg))
         }
 
+        // Send each request - the interceptor will handle geo-domain adjustment
         for (request in baseEventRequests) {
             try {
                 val eventDataJson = baseEventRequestJson.encodeToString(

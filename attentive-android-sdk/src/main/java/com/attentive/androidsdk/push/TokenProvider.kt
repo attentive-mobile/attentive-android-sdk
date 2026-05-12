@@ -25,9 +25,8 @@ class TokenProvider {
                             Result.success(
                                 TokenFetchResult(
                                     resultToken,
-                                    permissionGranted =
-                                        AttentivePush.getInstance()
-                                            .checkPushPermission(context),
+                                    permissionGranted = AttentivePush.getInstance()
+                                        .checkPushPermission(context),
                                 ),
                             ),
                         )

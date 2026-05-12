@@ -1,9 +1,12 @@
+@file:Suppress("DEPRECATION")
+
 package com.attentive.androidsdk
 
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
@@ -15,6 +18,7 @@ import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenFetchResult
+import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +56,12 @@ object AttentiveSdk {
      * Subscribe to the inbox state stream to receive updates when messages change.
      * This StateFlow emits a new InboxState whenever messages are updated.
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
     // Inbox server API (created from manifest meta-data if present)
@@ -183,6 +193,12 @@ object AttentiveSdk {
      * Call this when the user scrolls near the end of the message list.
      * Uses the server API when configured, otherwise falls back to mock data.
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     suspend fun loadMoreInboxMessages() {
         paginationLock.withLock {
             val currentState = _inboxState.value
@@ -258,6 +274,7 @@ object AttentiveSdk {
      *
      * @param config The AttentiveConfig containing domain, mode, and other SDK settings
      */
+    @Suppress("DEPRECATION")
     @JvmStatic
     fun initialize(config: AttentiveConfig) {
         synchronized(AttentiveSdk::class.java) {
@@ -453,36 +470,46 @@ object AttentiveSdk {
             return Result.failure(IllegalStateException(msg))
         }
 
-        if (email.isNullOrEmpty() && phoneNumber.isNullOrEmpty()) {
+        val trimmedEmail = email?.trim()?.ifBlank { null }
+        val trimmedPhone = phoneNumber?.trim()?.ifBlank { null }
+
+        if (trimmedEmail.isNullOrEmpty() && trimmedPhone.isNullOrEmpty()) {
             val msg = "Both email and phone number are empty or null. At least one must be provided to update the user."
             Timber.e(msg)
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        var number = phoneNumber
-        phoneNumber?.let {
+        var validatedNumber = trimmedPhone
+        trimmedPhone?.let {
             if (it.isPhoneNumber().not()) {
-                Timber.e("Invalid phone number: $phoneNumber")
-                number = null
+                Timber.e("Invalid phone number: $trimmedPhone")
+                validatedNumber = null
             }
         }
 
-        var validatedEmail = email
-        email?.let {
-            if (it.isNotEmpty() && it.isEmail().not()) {
-                Timber.e("Invalid email: $email")
+        var validatedEmail = trimmedEmail
+        trimmedEmail?.let {
+            if (it.isEmail().not()) {
+                Timber.e("Invalid email: $trimmedEmail")
                 validatedEmail = null
             }
         }
 
-        if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
+        if (validatedEmail.isNullOrEmpty() && validatedNumber.isNullOrEmpty()) {
             val msg = "No valid email or phone number provided after validation."
             Timber.e(msg)
             return Result.failure(IllegalArgumentException(msg))
         }
 
+        config.resetIdentifiers()
         val domain = config.domain
-        return config.attentiveApi.sendUserUpdate(domain, email, number)
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
+            return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
+        }
+        return config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
     }
 
     @JvmStatic
@@ -493,6 +520,20 @@ object AttentiveSdk {
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             dispatchResult(updateUserSuspend(email, phoneNumber), callback)
+        }
+    }
+
+    fun clearUser() {
+        config.resetIdentifiers()
+        val domain = config.domain
+        val visitorId = config.userIdentifiers.visitorId
+        val pushToken = TokenProvider.getInstance().token
+        if (visitorId == null || pushToken == null) {
+            Timber.w("Skipping clear user: visitorId=$visitorId, pushToken=$pushToken")
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken, logLabel = "clear user")
         }
     }
 
@@ -534,6 +575,12 @@ object AttentiveSdk {
      *
      * @return List of all messages in the inbox
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getAllMessages(): List<Message> {
         return inboxState.value.messages
     }
@@ -544,6 +591,12 @@ object AttentiveSdk {
      *
      * @return The number of unread messages
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getUnreadCount(): Int {
         return inboxState.value.unreadCount
     }
@@ -554,6 +607,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to mark as read
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markRead(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -584,6 +643,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to mark as unread
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markUnread(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -614,6 +679,12 @@ object AttentiveSdk {
      *
      * @param messageId The ID of the message to delete
      */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun deleteMessage(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =

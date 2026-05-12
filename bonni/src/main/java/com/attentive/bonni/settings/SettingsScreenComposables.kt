@@ -148,6 +148,7 @@ fun SettingsList(
             title = "Change Email",
             enabled = true,
             editable = true,
+            onClick = { email -> changeEmail(viewModel) },
         )
 
     val changePhoneNumberSetting =
@@ -155,6 +156,7 @@ fun SettingsList(
             title = "Change Phone Number",
             enabled = true,
             editable = true,
+            onClick = { phone -> changePhoneNumber(viewModel) },
         )
 
     val switchUserWithEmailSetting =
@@ -162,6 +164,10 @@ fun SettingsList(
             title = "Switch User with email",
             enabled = true,
             editable = true,
+            onClick = {
+                viewModel.saveEmail()
+                viewModel.switchUser()
+            },
         )
 
     val switchUserWithPhoneSetting =
@@ -169,6 +175,10 @@ fun SettingsList(
             title = "Switch User with phone",
             enabled = true,
             editable = true,
+            onClick = {
+                viewModel.savePhoneNumber()
+                viewModel.switchUser()
+            },
         )
 
     val apiVersionSetting =
@@ -880,7 +890,7 @@ fun clearUsers(viewModel: SettingsViewModel) {
     Timber.d("Clearing users")
     viewModel.clearPhone()
     viewModel.clearEmail()
-    AttentiveEventTracker.instance.config.clearUser()
+    AttentiveSdk.clearUser()
     BonniApp
         .getInstance()
         .getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
