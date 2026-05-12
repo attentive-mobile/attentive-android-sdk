@@ -56,6 +56,7 @@ espresso = "3.6.1"
 mockito = "5.2.0"
 mockitoKotlin = "5.4.0"
 mockitoAndroid = "5.5.0"
+leakcanary = "2.14"
 
 # Lint
 lintApi = "31.8.0"
@@ -149,6 +150,7 @@ mockito-android = { group = "org.mockito", name = "mockito-android", version.ref
 roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+leakcanary = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
 
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-ui-graphics", "androidx-compose-material3"]
