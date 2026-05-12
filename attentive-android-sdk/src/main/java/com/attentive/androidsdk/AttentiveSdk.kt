@@ -284,15 +284,29 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
+     * logged but not surfaced to the caller. For coroutine-aware error handling, use
+     * [recordEventSuspend].
+     *
+     * @param event The [Event] to record (e.g. [com.attentive.androidsdk.events.ProductViewEvent],
+     *   [com.attentive.androidsdk.events.AddToCartEvent], [com.attentive.androidsdk.events.PurchaseEvent]).
+     */
     @Suppress("DEPRECATION")
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
     }
 
+    /**
+     * Records an analytics event with Attentive and suspends until the request completes.
+     */
     suspend fun recordEventSuspend(event: Event): Result<Unit> {
         return AttentiveEventTracker.instance.recordEventSuspend(event)
     }
 
+    /**
+     * Callback-based variant of [recordEventSuspend] for Java interop.
+     */
     @JvmStatic
     fun recordEventWithCallback(event: Event, callback: AttentiveCallback) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -301,7 +315,9 @@ object AttentiveSdk {
     }
 
     /**
-     * Determines whether the given Firebase RemoteMessage is from Attentive.
+     * Determines whether the given Firebase [RemoteMessage] was sent by Attentive.
+     * Use this in your FirebaseMessagingService to route messages to [sendNotification]
+     * while leaving other push messages to your own handling.
      */
     fun isAttentiveFirebaseMessage(remoteMessage: RemoteMessage): Boolean {
         Timber.d(
@@ -318,6 +334,17 @@ object AttentiveSdk {
         return isAttentiveMessage
     }
 
+    /**
+     * Subscribes the user to Attentive marketing on email and/or SMS.
+     *
+     * Unlike [updateUser] and [clearUser], this does not change the visitor ID. It creates
+     * a subscription record on the backend; repeated calls with the same identifier are
+     * safe and will not create duplicates. Invalid email/phone values are dropped; if both
+     * become blank after validation the call returns a failure.
+     *
+     * @param email Email address. Optional if [phoneNumber] is provided.
+     * @param phoneNumber Phone number in E.164 format. Optional if [email] is provided.
+     */
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
@@ -341,6 +368,9 @@ object AttentiveSdk {
         return AttentiveEventTracker.instance.optIn(validEmail, validPhone)
     }
 
+    /**
+     * Callback-based variant of [optUserIntoMarketingSubscription] for Java interop.
+     */
     @JvmStatic
     fun optUserIntoMarketingSubscriptionWithCallback(
         email: String = "",
@@ -352,6 +382,11 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Unsubscribes the user from Attentive marketing on email and/or SMS. Safe to call
+     * repeatedly with the same identifier. At least one of [email] or [phoneNumber] must
+     * be provided.
+     */
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
@@ -375,6 +410,9 @@ object AttentiveSdk {
         return AttentiveEventTracker.instance.optOut(validEmail, validPhone)
     }
 
+    /**
+     * Callback-based variant of [optUserOutOfMarketingSubscription] for Java interop.
+     */
     @JvmStatic
     fun optUserOutOfMarketingSubscriptionWithCallback(
         email: String = "",
@@ -387,7 +425,9 @@ object AttentiveSdk {
     }
 
     /**
-     * Forwards a push message to the SDK to display the notification.
+     * Forwards an Attentive push message to the SDK to build and display the notification.
+     * Typically called from your FirebaseMessagingService after [isAttentiveFirebaseMessage]
+     * returns `true`.
      */
     fun sendNotification(remoteMessage: RemoteMessage) {
         AttentivePush.getInstance().sendNotification(remoteMessage)
@@ -411,7 +451,12 @@ object AttentiveSdk {
     }
 
     /**
-     * Fetches the push token from Firebase, requesting permission if needed.
+     * Fetches the current FCM push token, optionally prompting the user for notification
+     * permission first.
+     *
+     * @param application Application context, used to request permission if needed.
+     * @param requestPermission If `true`, prompts for `POST_NOTIFICATIONS` on Android 13+
+     *   before fetching.
      */
     suspend fun getPushToken(
         application: Application,
@@ -420,8 +465,8 @@ object AttentiveSdk {
         return AttentivePush.getInstance().fetchPushToken(application, requestPermission)
     }
 
-    /***
-     * Does the same as [getPushToken] but uses a callback instead of coroutines for Java interop.
+    /**
+     * Callback-based variant of [getPushToken] for Java interop.
      */
     @JvmStatic
     fun getPushTokenWithCallback(
@@ -448,6 +493,18 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Switches the current device identity to a different user (fire-and-forget variant).
+     *
+     * Semantically a "login as different user" operation. The SDK resets the local visitor
+     * ID and fires `POST /user-update` to detach the push token from the prior user and
+     * re-associate it with the new one. **Requires an FCM push token** — if none is
+     * available, the network call is skipped (see
+     * [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
+     *
+     * Errors are logged but not surfaced. Use [updateUserSuspend] for coroutine-aware
+     * error handling.
+     */
     fun updateUser(
         email: String? = null,
         phoneNumber: String? = null,
@@ -460,6 +517,10 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Suspend variant of [updateUser]. Returns success or wrapped failure once the network
+     * call completes.
+     */
     suspend fun updateUserSuspend(
         email: String? = null,
         phoneNumber: String? = null,
@@ -512,6 +573,9 @@ object AttentiveSdk {
         return config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
     }
 
+    /**
+     * Callback-based variant of [updateUserSuspend] for Java interop.
+     */
     @JvmStatic
     fun updateUserWithCallback(
         email: String? = null,
@@ -523,6 +587,18 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Logs the current user out. Resets local visitor identity and tells the backend to
+     * detach the push token from the prior user.
+     *
+     * Strongly recommended on logout — without this the push token remains associated with
+     * the logged-out user on the backend and they may continue to receive targeted marketing
+     * on this device. **Requires an FCM push token**; if none is available the network call
+     * is skipped (see [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
+     *
+     * Prefer this over the deprecated `AttentiveConfig.clearUser()`, which only clears local
+     * state.
+     */
     fun clearUser() {
         config.resetIdentifiers()
         val domain = config.domain
@@ -537,12 +613,18 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * Callback for [getPushTokenWithCallback] (Java interop).
+     */
     interface PushTokenCallback {
         fun onSuccess(result: TokenFetchResult)
 
         fun onFailure(exception: Exception)
     }
 
+    /**
+     * Generic success/failure callback used by `*WithCallback` variants for Java interop.
+     */
     interface AttentiveCallback {
         fun onSuccess()
 
@@ -556,10 +638,19 @@ object AttentiveSdk {
         )
     }
 
+    /**
+     * Whether the user has granted notification permission to the app.
+     */
     fun isPushPermissionGranted(context: Context): Boolean {
         return AttentivePush.getInstance().checkPushPermission(context)
     }
 
+    /**
+     * Re-registers the current push token with Attentive to reflect the latest permission
+     * state. Call this after the user changes notification permission (e.g. returning from
+     * system settings). Also called automatically when the app is brought to the foreground,
+     * so manual invocation is only needed when you want immediate sync.
+     */
     fun updatePushPermissionStatus(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             AttentiveEventTracker.instance.registerPushToken(context)
