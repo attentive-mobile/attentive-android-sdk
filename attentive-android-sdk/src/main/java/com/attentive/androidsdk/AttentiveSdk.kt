@@ -487,10 +487,10 @@ object AttentiveSdk {
             }
         }
 
-        var validatedEmail = email
-        email?.let {
-            if (it.isNotEmpty() && it.isEmail().not()) {
-                Timber.e("Invalid email: $email")
+        var validatedEmail = trimmedEmail
+        trimmedEmail?.let {
+            if (it.isEmail().not()) {
+                Timber.e("Invalid email: $trimmedEmail")
                 validatedEmail = null
             }
         }
@@ -509,7 +509,7 @@ object AttentiveSdk {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        return config.attentiveApi.sendUserUpdate(domain, trimmedEmail, number, visitorId, pushToken)
+        return config.attentiveApi.sendUserUpdate(domain, validatedEmail, number, visitorId, pushToken)
     }
 
     @JvmStatic
