@@ -43,7 +43,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -110,7 +109,7 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        SimpleToolbar(title = "", {}, navHostController)
+        SimpleToolbar(title = "Settings", {}, navHostController)
         Box(
             modifier =
                 Modifier
@@ -329,15 +328,6 @@ fun SettingsList(
 
     LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
         items(count = 1) {
-            Text(
-                "Settings",
-                modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth(),
-                textAlign = TextAlign.Start,
-                fontSize = 20.sp,
-            )
             EditableDomainSetting(changeDomainSetting)
             EditableEmailSetting(changeEmailSetting)
             EditablePhoneNumberSetting(changePhoneNumberSetting)
