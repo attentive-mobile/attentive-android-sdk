@@ -479,11 +479,11 @@ object AttentiveSdk {
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        var number = trimmedPhone
+        var validatedNumber = trimmedPhone
         trimmedPhone?.let {
             if (it.isPhoneNumber().not()) {
                 Timber.e("Invalid phone number: $trimmedPhone")
-                number = null
+                validatedNumber = null
             }
         }
 
@@ -495,7 +495,7 @@ object AttentiveSdk {
             }
         }
 
-        if (validatedEmail.isNullOrEmpty() && number.isNullOrEmpty()) {
+        if (validatedEmail.isNullOrEmpty() && validatedNumber.isNullOrEmpty()) {
             val msg = "No valid email or phone number provided after validation."
             Timber.e(msg)
             return Result.failure(IllegalArgumentException(msg))
@@ -509,7 +509,7 @@ object AttentiveSdk {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        return config.attentiveApi.sendUserUpdate(domain, validatedEmail, number, visitorId, pushToken)
+        return config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
     }
 
     @JvmStatic
