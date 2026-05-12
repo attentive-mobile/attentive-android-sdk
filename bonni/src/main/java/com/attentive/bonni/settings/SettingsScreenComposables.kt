@@ -54,7 +54,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.attentive.androidsdk.AttentiveEventTracker
 import com.attentive.androidsdk.AttentiveSdk
-import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.creatives.Creative
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.bonni.BonniApp
@@ -145,7 +144,7 @@ fun SettingsList(
 
     val changeEmailSetting =
         SettingItem(
-            title = "Change Email",
+            title = "Email",
             enabled = true,
             editable = true,
             onClick = { email -> changeEmail(viewModel) },
@@ -153,32 +152,10 @@ fun SettingsList(
 
     val changePhoneNumberSetting =
         SettingItem(
-            title = "Change Phone Number",
+            title = "Phone",
             enabled = true,
             editable = true,
             onClick = { phone -> changePhoneNumber(viewModel) },
-        )
-
-    val switchUserWithEmailSetting =
-        SettingItem(
-            title = "Switch User with email",
-            enabled = true,
-            editable = true,
-            onClick = {
-                viewModel.saveEmail()
-                viewModel.switchUser()
-            },
-        )
-
-    val switchUserWithPhoneSetting =
-        SettingItem(
-            title = "Switch User with phone",
-            enabled = true,
-            editable = true,
-            onClick = {
-                viewModel.savePhoneNumber()
-                viewModel.switchUser()
-            },
         )
 
     val apiVersionSetting =
@@ -255,9 +232,19 @@ fun SettingsList(
         },
     )
 
-    val userSettings = mutableListOf<Pair<String, () -> Unit>>()
-    userSettings.add(
-        "Opt-In User email" to {
+    val lifecycleSettings = mutableListOf<Pair<String, () -> Unit>>()
+    lifecycleSettings.add(
+        "Log in as different user" to {
+            viewModel.saveEmail()
+            viewModel.savePhoneNumber()
+            viewModel.switchUser()
+        },
+    )
+    lifecycleSettings.add("Log out" to { clearUsers(viewModel) })
+
+    val subscriptionSettings = mutableListOf<Pair<String, () -> Unit>>()
+    subscriptionSettings.add(
+        "Subscribe email" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val email = AttentiveEventTracker.instance.config.userIdentifiers.email
                 email?.let {
@@ -266,11 +253,11 @@ fun SettingsList(
 
                 withContext(Dispatchers.Main) {
                     if (email == null) {
-                        Toast.makeText(context, "No email, can't opt in", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "No email, can't subscribe", Toast.LENGTH_SHORT)
                             .show()
                         return@withContext
                     } else {
-                        Toast.makeText(context, "Opted in user with email: $email", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "Subscribed email: $email", Toast.LENGTH_SHORT)
                             .show()
                     }
                 }
@@ -278,8 +265,8 @@ fun SettingsList(
         },
     )
 
-    userSettings.add(
-        "Opt-Out User email" to {
+    subscriptionSettings.add(
+        "Unsubscribe email" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val email = AttentiveEventTracker.instance.config.userIdentifiers.email
                 email?.let {
@@ -287,11 +274,11 @@ fun SettingsList(
                 }
                 withContext(Dispatchers.Main) {
                     if (email == null) {
-                        Toast.makeText(context, "No email, can't opt out", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "No email, can't unsubscribe", Toast.LENGTH_SHORT)
                             .show()
                         return@withContext
                     } else {
-                        Toast.makeText(context, "Opted out user with email: $email", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "Unsubscribed email: $email", Toast.LENGTH_SHORT)
                             .show()
                     }
                 }
@@ -299,8 +286,8 @@ fun SettingsList(
         },
     )
 
-    userSettings.add(
-        "Opt-In User Phone Number" to {
+    subscriptionSettings.add(
+        "Subscribe SMS" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
                 phone?.let {
@@ -308,10 +295,10 @@ fun SettingsList(
                 }
                 withContext(Dispatchers.Main) {
                     if (phone == null) {
-                        Toast.makeText(context, "No number, can't opt in", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "No number, can't subscribe", Toast.LENGTH_SHORT)
                             .show()
                     } else {
-                        Toast.makeText(context, "Opted in user with phone: $phone", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "Subscribed SMS: $phone", Toast.LENGTH_SHORT)
                             .show()
                     }
                 }
@@ -319,8 +306,8 @@ fun SettingsList(
         },
     )
 
-    userSettings.add(
-        "Opt-Out User Phone Number" to {
+    subscriptionSettings.add(
+        "Unsubscribe SMS" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
                 phone?.let {
@@ -328,19 +315,16 @@ fun SettingsList(
                 }
                 withContext(Dispatchers.Main) {
                     if (phone == null) {
-                        Toast.makeText(context, "No number, can't opt out", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "No number, can't unsubscribe", Toast.LENGTH_SHORT)
                             .show()
                     } else {
-                        Toast.makeText(context, "Opted out user with phone: $phone", Toast.LENGTH_SHORT)
+                        Toast.makeText(context, "Unsubscribed SMS: $phone", Toast.LENGTH_SHORT)
                             .show()
                     }
                 }
             }
         },
     )
-
-    userSettings.add("Identify User" to { identifyUser() })
-    userSettings.add("Clear Users" to { clearUsers(viewModel) })
 
     LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
         items(count = 1) {
@@ -356,211 +340,14 @@ fun SettingsList(
             EditableDomainSetting(changeDomainSetting)
             EditableEmailSetting(changeEmailSetting)
             EditablePhoneNumberSetting(changePhoneNumberSetting)
-            SwitchUserWithEmailSetting(switchUserWithEmailSetting)
-            SwitchUserWithPhoneSetting(switchUserWithPhoneSetting)
-            SettingGroup(userSettings)
+            SettingGroup(lifecycleSettings)
+            SettingGroup(subscriptionSettings)
             ApiVersionSetting(apiVersionSetting)
             SettingGroup(creativeSettings)
             PushPermissionRequest()
             SettingGroup(pushSettings)
             SettingGroup(deepLinkSettings)
             Spacer(modifier = Modifier.padding(8.dp))
-        }
-    }
-}
-
-@Composable
-private fun SwitchUserSetting(
-    settingItem: SettingItem,
-    value: String,
-    displayLabel: String,
-    onValueChange: (String) -> Unit,
-) {
-    var isEditing by remember { mutableStateOf(false) }
-
-    AnimatedContent(targetState = isEditing) { editing ->
-        if (editing) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    label = { Text(settingItem.title) },
-                    singleLine = true,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,
-                            unfocusedBorderColor = Color.Gray,
-                            focusedTextColor = Color.Black,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            settingItem.onClick(value)
-                            isEditing = false
-                        }) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Submit",
-                                tint = BonniPink,
-                            )
-                        }
-                    },
-                )
-            }
-        } else {
-            Text(
-                text =
-                    buildAnnotatedString {
-                        append("$displayLabel: ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(value)
-                        }
-                    },
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .clickable { isEditing = true },
-            )
-        }
-    }
-}
-
-@Composable
-fun SwitchUserWithEmailSetting(
-    settingItem: SettingItem,
-    viewModel: SettingsViewModel = viewModel(),
-) {
-    var isEditing by remember { mutableStateOf(false) }
-    var isError by remember { mutableStateOf(false) }
-    val email by viewModel.email.collectAsState()
-
-    AnimatedContent(targetState = isEditing) { editing ->
-        if (editing) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        viewModel.updateEmail(it)
-                        isError = false
-                    },
-                    label = { Text(settingItem.title) },
-                    supportingText = if (isError) {
-                        { Text("Please enter a valid email address") }
-                    } else {
-                        null
-                    },
-                    isError = isError,
-                    singleLine = true,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,
-                            unfocusedBorderColor = Color.Gray,
-                            focusedTextColor = Color.Black,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            if (viewModel.saveEmail()) {
-                                isError = false
-                                isEditing = false
-                                viewModel.switchUser()
-                            } else {
-                                isError = true
-                            }
-                        }) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Submit",
-                                tint = BonniPink,
-                            )
-                        }
-                    },
-                )
-            }
-        } else {
-            Text(
-                text =
-                    buildAnnotatedString {
-                        append("Switch user with email: ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(email)
-                        }
-                    },
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .clickable { isEditing = true },
-            )
-        }
-    }
-}
-
-@Composable
-fun SwitchUserWithPhoneSetting(
-    settingItem: SettingItem,
-    viewModel: SettingsViewModel = viewModel(),
-) {
-    var isEditing by remember { mutableStateOf(false) }
-    var isError by remember { mutableStateOf(false) }
-    val phone by viewModel.phone.collectAsState()
-
-    AnimatedContent(targetState = isEditing) { editing ->
-        if (editing) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = {
-                        viewModel.updatePhone(it)
-                        isError = false
-                    },
-                    label = { Text(settingItem.title) },
-                    supportingText = if (isError) {
-                        { Text("Please enter a valid phone number (E.164 format, e.g. +14155551234)") }
-                    } else {
-                        null
-                    },
-                    isError = isError,
-                    singleLine = true,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,
-                            unfocusedBorderColor = Color.Gray,
-                            focusedTextColor = Color.Black,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            if (viewModel.savePhoneNumber()) {
-                                isError = false
-                                isEditing = false
-                                viewModel.switchUser()
-                            } else {
-                                isError = true
-                            }
-                        }) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Submit",
-                                tint = BonniPink,
-                            )
-                        }
-                    },
-                )
-            }
-        } else {
-            Text(
-                text =
-                    buildAnnotatedString {
-                        append("Switch user with phone: ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(phone)
-                        }
-                    },
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .clickable { isEditing = true },
-            )
         }
     }
 }
@@ -671,7 +458,7 @@ fun EditableEmailSetting(
             Text(
                 text =
                     buildAnnotatedString {
-                        append("Change current email: ")
+                        append("Email: ")
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                             append(email)
                         }
@@ -744,64 +531,9 @@ fun EditablePhoneNumberSetting(
             Text(
                 text =
                     buildAnnotatedString {
-                        append("Change current phone number: ")
+                        append("Phone: ")
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                             append(phone)
-                        }
-                    },
-                fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-                modifier =
-                    Modifier
-                        .padding(8.dp)
-                        .clickable { isEditing = true },
-            )
-        }
-    }
-}
-
-@Composable
-fun EditableSwitchUserSetting(
-    settingItem: SettingItem,
-    viewModel: SettingsViewModel = viewModel(),
-) {
-    var isEditing by remember { mutableStateOf(false) }
-    val email by viewModel.email.collectAsState()
-
-    AnimatedContent(targetState = isEditing) { editing ->
-        if (editing) {
-            Row(modifier = Modifier.padding(8.dp)) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { viewModel.updateEmail(it) },
-                    label = { Text(settingItem.title) },
-                    singleLine = true,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,
-                            unfocusedBorderColor = Color.Gray,
-                            focusedTextColor = Color.Black,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            settingItem.onClick(email)
-                            isEditing = false
-                        }) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Submit",
-                                tint = BonniPink,
-                            )
-                        }
-                    },
-                )
-            }
-        } else {
-            Text(
-                text =
-                    buildAnnotatedString {
-                        append("Change current email: ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(email)
                         }
                     },
                 fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
@@ -870,20 +602,6 @@ fun triggerMockDeepLinkNotification(
             BonniApp.getInstance(),
         )
     }
-}
-
-fun identifyUser() {
-    BonniApp
-        .getInstance()
-        .getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
-        .getString(ATTENTIVE_EMAIL_PREFS, "")
-        ?.let {
-            val identifiers =
-                UserIdentifiers.Builder()
-                    .withEmail(it).build()
-            AttentiveEventTracker.instance.config.identify(identifiers)
-            Toast.makeText(BonniApp.getInstance(), "User identified", Toast.LENGTH_SHORT).show()
-        }
 }
 
 fun clearUsers(viewModel: SettingsViewModel) {
