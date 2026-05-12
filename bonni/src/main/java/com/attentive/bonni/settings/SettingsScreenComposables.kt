@@ -491,7 +491,7 @@ fun SwitchUserWithEmailSetting(
                         .padding(8.dp)
                         .clickable { isEditing = true },
             )
-        },
+        }
     }
 }
 
@@ -561,7 +561,7 @@ fun SwitchUserWithPhoneSetting(
                         .padding(8.dp)
                         .clickable { isEditing = true },
             )
-        },
+        }
     }
 }
 
