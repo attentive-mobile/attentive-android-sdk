@@ -61,6 +61,7 @@ import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PREFS
 import com.attentive.bonni.R
+import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -347,8 +348,46 @@ fun SettingsList(
             PushPermissionRequest()
             SettingGroup(pushSettings)
             SettingGroup(deepLinkSettings)
+            AboutSection()
             Spacer(modifier = Modifier.padding(8.dp))
         }
+    }
+}
+
+@Composable
+fun AboutSection() {
+    val context = LocalContext.current
+    val packageInfo = remember(context) {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    }
+    val appVersion = packageInfo.versionName ?: "?"
+    val buildNumber =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode.toString()
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toString()
+        }
+    val sdkVersion = AppInfo.attentiveSDKVersion
+
+    Column(modifier = Modifier.padding(8.dp)) {
+        Text(
+            "About",
+            fontSize = 16.sp,
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        )
+        Text(
+            "Bonni $appVersion ($buildNumber)",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        )
+        Text(
+            "Attentive SDK $sdkVersion",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        )
     }
 }
 
