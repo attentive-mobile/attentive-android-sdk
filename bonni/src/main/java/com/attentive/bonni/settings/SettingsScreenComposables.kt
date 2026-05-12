@@ -206,9 +206,10 @@ fun SettingsList(
     pushSettings.add(
         "Update push permission status" to {
             AttentiveSdk.updatePushPermissionStatus(context)
+            val granted = AttentiveSdk.isPushPermissionGranted(context)
             Toast.makeText(
                 context,
-                "Updating push permission status: ${AttentiveSdk.isPushPermissionGranted(context)}",
+                "Re-registered push token. Permission: ${if (granted) "granted" else "denied"}",
                 Toast.LENGTH_SHORT,
             ).show()
         },
@@ -238,6 +239,15 @@ fun SettingsList(
             viewModel.saveEmail()
             viewModel.savePhoneNumber()
             viewModel.switchUser()
+            val email = viewModel.email.value.takeIf { it.isNotBlank() }
+            val phone = viewModel.phone.value.takeIf { it.isNotBlank() }
+            val identifier = listOfNotNull(email, phone).joinToString(", ")
+            val message = if (identifier.isBlank()) {
+                "No email or phone set, can't switch user"
+            } else {
+                "Logged in as $identifier"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         },
     )
     lifecycleSettings.add("Log out" to { clearUsers(viewModel) })
@@ -247,20 +257,12 @@ fun SettingsList(
         "Subscribe email" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-                email?.let {
-                    AttentiveSdk.optUserIntoMarketingSubscription(email = email)
+                if (email == null) {
+                    showOnMain(context, "No email, can't subscribe")
+                    return@launch
                 }
-
-                withContext(Dispatchers.Main) {
-                    if (email == null) {
-                        Toast.makeText(context, "No email, can't subscribe", Toast.LENGTH_SHORT)
-                            .show()
-                        return@withContext
-                    } else {
-                        Toast.makeText(context, "Subscribed email: $email", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
+                val result = AttentiveSdk.optUserIntoMarketingSubscription(email = email)
+                showOnMain(context, subscriptionResultMessage(result, "Subscribed email", email))
             }
         },
     )
@@ -269,19 +271,12 @@ fun SettingsList(
         "Unsubscribe email" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val email = AttentiveEventTracker.instance.config.userIdentifiers.email
-                email?.let {
-                    AttentiveSdk.optUserOutOfMarketingSubscription(email = it)
+                if (email == null) {
+                    showOnMain(context, "No email, can't unsubscribe")
+                    return@launch
                 }
-                withContext(Dispatchers.Main) {
-                    if (email == null) {
-                        Toast.makeText(context, "No email, can't unsubscribe", Toast.LENGTH_SHORT)
-                            .show()
-                        return@withContext
-                    } else {
-                        Toast.makeText(context, "Unsubscribed email: $email", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
+                val result = AttentiveSdk.optUserOutOfMarketingSubscription(email = email)
+                showOnMain(context, subscriptionResultMessage(result, "Unsubscribed email", email))
             }
         },
     )
@@ -290,18 +285,12 @@ fun SettingsList(
         "Subscribe SMS" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-                phone?.let {
-                    AttentiveSdk.optUserIntoMarketingSubscription(phoneNumber = it)
+                if (phone == null) {
+                    showOnMain(context, "No number, can't subscribe")
+                    return@launch
                 }
-                withContext(Dispatchers.Main) {
-                    if (phone == null) {
-                        Toast.makeText(context, "No number, can't subscribe", Toast.LENGTH_SHORT)
-                            .show()
-                    } else {
-                        Toast.makeText(context, "Subscribed SMS: $phone", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
+                val result = AttentiveSdk.optUserIntoMarketingSubscription(phoneNumber = phone)
+                showOnMain(context, subscriptionResultMessage(result, "Subscribed SMS", phone))
             }
         },
     )
@@ -310,18 +299,12 @@ fun SettingsList(
         "Unsubscribe SMS" to {
             CoroutineScope(Dispatchers.IO).launch {
                 val phone = AttentiveEventTracker.instance.config.userIdentifiers.phone
-                phone?.let {
-                    AttentiveSdk.optUserOutOfMarketingSubscription(phoneNumber = it)
+                if (phone == null) {
+                    showOnMain(context, "No number, can't unsubscribe")
+                    return@launch
                 }
-                withContext(Dispatchers.Main) {
-                    if (phone == null) {
-                        Toast.makeText(context, "No number, can't unsubscribe", Toast.LENGTH_SHORT)
-                            .show()
-                    } else {
-                        Toast.makeText(context, "Unsubscribed SMS: $phone", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
+                val result = AttentiveSdk.optUserOutOfMarketingSubscription(phoneNumber = phone)
+                showOnMain(context, subscriptionResultMessage(result, "Unsubscribed SMS", phone))
             }
         },
     )
@@ -645,7 +628,7 @@ fun clearUsers(viewModel: SettingsViewModel) {
             remove(ATTENTIVE_EMAIL_PREFS)
             remove(ATTENTIVE_PHONE_PREFS)
         }
-    Toast.makeText(BonniApp.getInstance(), "Users cleared", Toast.LENGTH_SHORT).show()
+    Toast.makeText(BonniApp.getInstance(), "Logged out", Toast.LENGTH_SHORT).show()
 }
 
 fun changeDomain(domain: String) {
@@ -808,5 +791,23 @@ private fun PushPermissionRequest() {
                         },
             )
         }
+    }
+}
+
+private suspend fun showOnMain(context: Context, message: String) {
+    withContext(Dispatchers.Main) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun subscriptionResultMessage(
+    result: Result<Unit>,
+    successPrefix: String,
+    identifier: String,
+): String {
+    return if (result.isSuccess) {
+        "$successPrefix: $identifier"
+    } else {
+        "Failed: ${result.exceptionOrNull()?.message ?: "unknown error"}"
     }
 }
