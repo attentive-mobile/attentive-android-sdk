@@ -110,7 +110,7 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        SimpleToolbar(title = "Debug Screen", {}, navHostController)
+        SimpleToolbar(title = "", {}, navHostController)
         Box(
             modifier =
                 Modifier
