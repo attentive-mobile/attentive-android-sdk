@@ -3,6 +3,13 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * A product view event. Fires when the user views one or more products (e.g. lands on a PDP).
+ *
+ * @property items The items viewed. Must be non-empty.
+ * @property deeplink Optional deeplink associated with the event. Propagated to the
+ *   backend so campaigns can re-target the user with the same URL.
+ */
 @Serializable
 data class ProductViewEvent(
     val items: List<Item>,
@@ -40,6 +47,9 @@ data class ProductViewEvent(
             return this
         }
 
+        /**
+         * @throws IllegalArgumentException if [items] is empty.
+         */
         fun build(): ProductViewEvent {
             return ProductViewEvent(items, deeplink)
         }

@@ -3,6 +3,17 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * A product item within a [PurchaseEvent], [AddToCartEvent], or [ProductViewEvent].
+ *
+ * @property productId Your canonical product identifier. Required, non-empty.
+ * @property productVariantId The variant identifier (e.g. size/color SKU). Required, non-empty.
+ * @property price The price (with currency). Required.
+ * @property productImage URL of a product image. Optional.
+ * @property name The product display name. Optional.
+ * @property quantity The quantity. Defaults to 1.
+ * @property category The product category. Optional.
+ */
 @Serializable
 data class Item(
     val productId: String,

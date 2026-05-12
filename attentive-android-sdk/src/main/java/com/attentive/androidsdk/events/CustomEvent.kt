@@ -3,6 +3,14 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * A custom, app-specific event. Use this when no built-in event type matches your use case.
+ *
+ * @property type The type/name of the event (e.g. `"User Logged In"`). Case-sensitive. Must
+ *   not contain any of: `"`, `'`, `(`, `)`, `{`, `}`, `[`, `]`, `\`, `|`, `,`.
+ * @property properties Metadata associated with the event. Keys and values are
+ *   case-sensitive. Keys must not contain any of: `"`, `{`, `}`, `[`, `]`, `\`, `|`.
+ */
 @Serializable
 data class CustomEvent(
     val type: String,
@@ -41,12 +49,6 @@ data class CustomEvent(
         private var type: String? = null,
         private var properties: Map<String, String> = emptyMap(),
     ) {
-        /**
-         * @param type The type (aka name) of the CustomEvent e.g. "User Logged In".
-         * The type is case-sensitive - "User Logged In" and "User logged in" are different events.
-         * @param properties Any metadata associated with the event.
-         * Keys and values are case-sensitive.
-         */
         fun type(type: String): Builder {
             this.type = type
             return this
@@ -57,6 +59,10 @@ data class CustomEvent(
             return this
         }
 
+        /**
+         * @throws IllegalStateException if [type] was not set.
+         * @throws IllegalArgumentException if [type] or any property key contains an invalid character.
+         */
         fun build(): CustomEvent {
             val type = this.type ?: throw IllegalStateException("Type must be set")
             return CustomEvent(type, properties)
