@@ -426,8 +426,12 @@ object AttentiveSdk {
 
     /**
      * Forwards an Attentive push message to the SDK to build and display the notification.
-     * Typically called from your FirebaseMessagingService after [isAttentiveFirebaseMessage]
-     * returns `true`.
+     * Call this from your own [com.google.firebase.messaging.FirebaseMessagingService] after
+     * [isAttentiveFirebaseMessage] returns `true`.
+     *
+     * If your app does not declare its own `FirebaseMessagingService` subclass, you do not
+     * need to call this — the SDK's built-in service receives Attentive messages and
+     * displays the notification automatically.
      */
     fun sendNotification(remoteMessage: RemoteMessage) {
         AttentivePush.getInstance().sendNotification(remoteMessage)
@@ -593,8 +597,7 @@ object AttentiveSdk {
      *
      * Strongly recommended on logout — without this the push token remains associated with
      * the logged-out user on the backend and they may continue to receive targeted marketing
-     * on this device. **Requires an FCM push token**; if none is available the network call
-     * is skipped (see [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
+     * on this device.
      *
      * Prefer this over the deprecated `AttentiveConfig.clearUser()`, which only clears local
      * state.

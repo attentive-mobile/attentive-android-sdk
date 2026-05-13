@@ -21,10 +21,6 @@ interface AttentiveConfigInterface {
 
     fun identify(userIdentifiers: UserIdentifiers)
 
-    /**
-     * Clears local user identifiers only. For full-logout semantics (including detaching
-     * the push token on the backend), prefer [com.attentive.androidsdk.AttentiveSdk.clearUser].
-     */
     fun clearUser()
 
     fun changeDomain(domain: String)
