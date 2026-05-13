@@ -341,7 +341,6 @@ fun SettingsList(
             SectionHeader("Push notifications")
             PushPermissionRequest()
             SettingGroup(pushSettings)
-            SectionHeader("Deep links")
             SettingGroup(deepLinkSettings)
             AboutSection()
             Spacer(modifier = Modifier.padding(8.dp))
