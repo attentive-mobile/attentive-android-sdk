@@ -326,7 +326,7 @@ fun SettingsList(
 
     LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
         items(count = 1) {
-            SectionHeader("Configuration")
+            SectionHeader("Configuration", showDivider = false)
             EditableDomainSetting(changeDomainSetting)
             SectionHeader("User")
             EditableEmailSetting(changeEmailSetting)
@@ -349,8 +349,10 @@ fun SettingsList(
 }
 
 @Composable
-fun SectionHeader(title: String) {
-    HorizontalLine(color = Color.Black, Modifier.padding(horizontal = 4.dp))
+fun SectionHeader(title: String, showDivider: Boolean = true) {
+    if (showDivider) {
+        HorizontalLine(color = Color.Black, Modifier.padding(horizontal = 4.dp))
+    }
     Text(
         text = title,
         fontSize = 14.sp,
