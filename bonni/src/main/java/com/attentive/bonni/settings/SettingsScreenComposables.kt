@@ -235,16 +235,16 @@ fun SettingsList(
 
     val lifecycleSettings = mutableListOf<Pair<String, () -> Unit>>()
     lifecycleSettings.add(
-        "Identify current user" to {
+        "Login current user" to {
             val savedEmail = viewModel.saveEmail()
             val savedPhone = viewModel.savePhoneNumber()
             val email = viewModel.email.value.takeIf { it.isNotBlank() && savedEmail }
             val phone = viewModel.phone.value.takeIf { it.isNotBlank() && savedPhone }
             val identifier = listOfNotNull(email, phone).joinToString(", ")
             val message = if (identifier.isBlank()) {
-                "No valid email or phone to identify"
+                "No valid email or phone to login"
             } else {
-                "Identified current user: $identifier"
+                "Logged in current user: $identifier"
             }
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         },
@@ -471,7 +471,7 @@ fun EditableEmailSetting(
                                 isEditing = false
                                 Toast.makeText(
                                     context,
-                                    "Identified current user: ${viewModel.email.value}",
+                                    "Logged in current user: ${viewModel.email.value}",
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             } else {
@@ -522,7 +522,7 @@ fun EditablePhoneNumberSetting(
             isEditing = false
             Toast.makeText(
                 context,
-                "Identified current user: ${viewModel.phone.value}",
+                "Logged in current user: ${viewModel.phone.value}",
                 Toast.LENGTH_SHORT,
             ).show()
             true
