@@ -200,9 +200,7 @@ class AttentiveEventTracker private constructor() {
         }
         val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
         if (tokenResult.isFailure) {
-            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
-            Timber.e(msg)
-            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
+            Timber.w("Failed to fetch push token, sending opt-in without it: ${tokenResult.exceptionOrNull()?.message}")
         }
         return config.attentiveApi.sendOptInSubscriptionStatus(
             phoneNumber,
@@ -225,9 +223,7 @@ class AttentiveEventTracker private constructor() {
         }
         val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
         if (tokenResult.isFailure) {
-            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
-            Timber.e(msg)
-            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
+            Timber.w("Failed to fetch push token, sending opt-out without it: ${tokenResult.exceptionOrNull()?.message}")
         }
         return config.attentiveApi.sendOptOutSubscriptionStatus(
             email,

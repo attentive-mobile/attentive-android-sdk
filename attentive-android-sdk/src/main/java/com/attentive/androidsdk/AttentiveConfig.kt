@@ -27,6 +27,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     override var notificationIconBackgroundColorResource: Int =
         builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
+    val pushEnabled: Boolean = builder._pushEnabled
 
     private val visitorService =
         ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
@@ -191,6 +192,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
+        internal var _pushEnabled: Boolean = true
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
@@ -256,6 +258,23 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
         /**
+         * Controls whether the Attentive SDK handles push notifications.
+         * Defaults to `true`. Set to `false` to disable the SDK's push pipeline — no push
+         * token will be fetched or registered, and incoming Attentive push messages will be
+         * ignored. The SDK's FirebaseMessagingService declaration already uses a negative
+         * intent-filter priority so a host app's own service wins FCM dispatch when declared;
+         * this flag is for clients who want to disable push handling entirely regardless.
+         *
+         * TODO: Before merging, decide whether pushEnabled=false should also skip token
+         * fetch/registration entirely, or still register the token without displaying
+         * notifications. See conversation with MSDK team.
+         */
+        fun pushEnabled(enabled: Boolean) =
+            apply {
+                this._pushEnabled = enabled
+            }
+
+        /**
          * @throws IllegalStateException if [applicationContext], [mode], or [domain] was not set.
          */
         fun build(): AttentiveConfig {
@@ -273,7 +292,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
+                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel, pushEnabled=$_pushEnabled)"
         }
     }
 

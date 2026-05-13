@@ -15,7 +15,7 @@ data class OptInSubscriptionRequest(
     @SerializedName("tp")
     val tokenProvider: String = "fcm",
     @SerializedName("pt")
-    val pushToken: String,
+    val pushToken: String?,
     @SerializedName("email")
     val email: String?,
     @SerializedName("phone")
@@ -36,7 +36,7 @@ data class OptOutSubscriptionRequest(
     @SerializedName("tp")
     val tokenProvider: String = "fcm",
     @SerializedName("pt")
-    val pushToken: String,
+    val pushToken: String?,
     @SerializedName("email")
     val email: String?,
     @SerializedName("phone")
