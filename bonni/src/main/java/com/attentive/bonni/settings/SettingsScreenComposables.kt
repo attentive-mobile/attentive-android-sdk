@@ -235,6 +235,21 @@ fun SettingsList(
 
     val lifecycleSettings = mutableListOf<Pair<String, () -> Unit>>()
     lifecycleSettings.add(
+        "Identify current user" to {
+            val savedEmail = viewModel.saveEmail()
+            val savedPhone = viewModel.savePhoneNumber()
+            val email = viewModel.email.value.takeIf { it.isNotBlank() && savedEmail }
+            val phone = viewModel.phone.value.takeIf { it.isNotBlank() && savedPhone }
+            val identifier = listOfNotNull(email, phone).joinToString(", ")
+            val message = if (identifier.isBlank()) {
+                "No valid email or phone to identify"
+            } else {
+                "Identified current user: $identifier"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        },
+    )
+    lifecycleSettings.add(
         "Log in as different user" to {
             viewModel.saveEmail()
             viewModel.savePhoneNumber()
@@ -424,6 +439,7 @@ fun EditableEmailSetting(
     var isEditing by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
     val email by viewModel.email.collectAsState()
+    val context = LocalContext.current
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
@@ -453,6 +469,11 @@ fun EditableEmailSetting(
                             if (viewModel.saveEmail()) {
                                 isError = false
                                 isEditing = false
+                                Toast.makeText(
+                                    context,
+                                    "Identified current user: ${viewModel.email.value}",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             } else {
                                 isError = true
                             }
@@ -493,11 +514,17 @@ fun EditablePhoneNumberSetting(
     var isEditing by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
     val phone by viewModel.phone.collectAsState()
+    val context = LocalContext.current
 
     fun attemptSave(): Boolean {
         return if (viewModel.savePhoneNumber()) {
             isError = false
             isEditing = false
+            Toast.makeText(
+                context,
+                "Identified current user: ${viewModel.phone.value}",
+                Toast.LENGTH_SHORT,
+            ).show()
             true
         } else {
             isError = true
