@@ -326,20 +326,42 @@ fun SettingsList(
 
     LazyColumn(modifier = Modifier.padding(bottom = 32.dp)) {
         items(count = 1) {
+            SectionHeader("Configuration")
             EditableDomainSetting(changeDomainSetting)
+            SectionHeader("User")
             EditableEmailSetting(changeEmailSetting)
             EditablePhoneNumberSetting(changePhoneNumberSetting)
             SettingGroup(lifecycleSettings)
+            SectionHeader("Marketing subscriptions")
             SettingGroup(subscriptionSettings)
+            SectionHeader("Debug")
             ApiVersionSetting(apiVersionSetting)
+            SectionHeader("Creatives")
             SettingGroup(creativeSettings)
+            SectionHeader("Push notifications")
             PushPermissionRequest()
             SettingGroup(pushSettings)
+            SectionHeader("Deep links")
             SettingGroup(deepLinkSettings)
             AboutSection()
             Spacer(modifier = Modifier.padding(8.dp))
         }
     }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        color = BonniPink,
+        fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+        modifier =
+            Modifier
+                .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 4.dp)
+                .fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -358,12 +380,8 @@ fun AboutSection() {
         }
     val sdkVersion = AppInfo.attentiveSDKVersion
 
-    Column(modifier = Modifier.padding(8.dp)) {
-        Text(
-            "About",
-            fontSize = 16.sp,
-            fontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
-        )
+    SectionHeader("About")
+    Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)) {
         Text(
             "Bonni $appVersion ($buildNumber)",
             fontSize = 12.sp,
