@@ -258,16 +258,18 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
         /**
-         * Controls whether the Attentive SDK handles push notifications.
-         * Defaults to `true`. Set to `false` to disable the SDK's push pipeline — no push
-         * token will be fetched or registered, and incoming Attentive push messages will be
-         * ignored. The SDK's FirebaseMessagingService declaration already uses a negative
-         * intent-filter priority so a host app's own service wins FCM dispatch when declared;
-         * this flag is for clients who want to disable push handling entirely regardless.
+         * Controls whether the Attentive SDK fetches and registers an FCM push token with
+         * the backend. Defaults to `true`. When set to `false`, the SDK will not fetch
+         * tokens or call `/token` — the host app is responsible for any push handling it
+         * still wants to do.
          *
-         * TODO: Before merging, decide whether pushEnabled=false should also skip token
-         * fetch/registration entirely, or still register the token without displaying
-         * notifications. See conversation with MSDK team.
+         * Marketing opt-in / opt-out calls remain functional with `pushEnabled = false`;
+         * they are sent without a push token in the payload.
+         *
+         * The SDK's FirebaseMessagingService declaration also uses a negative intent-filter
+         * priority so a host app's own service wins FCM dispatch when declared. This flag
+         * is the broader switch for clients who want to disable token registration entirely
+         * regardless of which service wins.
          */
         fun pushEnabled(enabled: Boolean) =
             apply {

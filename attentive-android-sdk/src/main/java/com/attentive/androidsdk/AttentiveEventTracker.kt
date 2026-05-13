@@ -126,6 +126,10 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun registerPushToken(context: Context) {
         Timber.i("registerPushToken")
         verifyInitialized()
+        if (!config.pushEnabled) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); skipping token registration")
+            return
+        }
         var token = ""
 
         TokenProvider.getInstance().getToken(context).run {
