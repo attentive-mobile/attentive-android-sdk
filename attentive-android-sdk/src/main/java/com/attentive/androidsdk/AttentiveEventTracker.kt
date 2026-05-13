@@ -166,6 +166,10 @@ class AttentiveEventTracker private constructor() {
         callbackMap: Map<String, String> = emptyMap(),
     ) {
         verifyInitialized()
+        if (!config.pushEnabled) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); skipping app launch event")
+            return
+        }
         config?.let { config ->
             TokenProvider.getInstance().getToken(config.applicationContext).let {
                 if (it.isSuccess) {
