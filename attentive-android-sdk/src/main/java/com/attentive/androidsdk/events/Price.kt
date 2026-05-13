@@ -11,6 +11,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Currency
 
+/** Encodes [BigDecimal] as its plain-string representation. */
 object BigDecimalSerializer : KSerializer<BigDecimal> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
@@ -27,6 +28,7 @@ object BigDecimalSerializer : KSerializer<BigDecimal> {
     }
 }
 
+/** Encodes [Currency] as its ISO 4217 currency code. */
 object CurrencySerializer : KSerializer<Currency> {
 // Custom serializer for Currency
     override val descriptor: SerialDescriptor =
@@ -44,6 +46,13 @@ object CurrencySerializer : KSerializer<Currency> {
     }
 }
 
+/**
+ * A monetary price: amount + currency. The amount is normalized to two decimal places,
+ * rounded down, at construction.
+ *
+ * @property price The price amount. Rounded to 2 decimal places with [RoundingMode.DOWN] at init.
+ * @property currency The currency.
+ */
 @Serializable
 data class Price(
     @Serializable(with = BigDecimalSerializer::class)
@@ -73,6 +82,9 @@ data class Price(
             return this
         }
 
+        /**
+         * @throws IllegalArgumentException if [price] or [currency] was not set.
+         */
         fun build(): Price {
             val price = this.price ?: throw IllegalArgumentException("Price must not be null")
             val currency = this.currency ?: throw IllegalArgumentException("Currency must not be null")

@@ -3,6 +3,13 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * An add-to-cart event. Fires when a user adds one or more items to their cart.
+ *
+ * @property items The items added to the cart. Must be non-empty.
+ * @property deeplink Optional deeplink associated with the event. Propagated to the
+ *   backend so campaigns can re-target the user with the same URL.
+ */
 @Serializable
 data class AddToCartEvent(
     val items: List<Item>,
@@ -40,6 +47,9 @@ data class AddToCartEvent(
             return this
         }
 
+        /**
+         * @throws IllegalArgumentException if [items] is empty.
+         */
         fun build(): AddToCartEvent {
             return AddToCartEvent(items, deeplink)
         }
