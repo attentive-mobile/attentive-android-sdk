@@ -340,7 +340,7 @@ fun SettingsList(
             SettingGroup(creativeSettings)
             SectionHeader("Push notifications")
             PushPermissionRequest()
-            SettingGroup(pushSettings, showDivider = false)
+            SettingGroup(pushSettings)
             SettingGroup(deepLinkSettings)
             AboutSection()
             Spacer(modifier = Modifier.padding(8.dp))
@@ -350,6 +350,7 @@ fun SettingsList(
 
 @Composable
 fun SectionHeader(title: String) {
+    HorizontalLine(color = Color.Black, Modifier.padding(horizontal = 4.dp))
     Text(
         text = title,
         fontSize = 14.sp,
@@ -729,7 +730,6 @@ fun SettingGroup(
     titlesToDestinations: List<Pair<String, () -> Unit>>,
     enabled: Boolean = true,
     editable: Boolean = false,
-    showDivider: Boolean = true,
 ) {
     Column {
         for (titleToDestination in titlesToDestinations) {
@@ -743,9 +743,6 @@ fun SettingGroup(
             )
         }
         // }
-    }
-    if (showDivider) {
-        HorizontalLine(color = Color.Black, Modifier.padding(4.dp))
     }
 }
 
