@@ -39,7 +39,7 @@ Before editing anything, determine:
 3. **Application class**: Does the app already have a custom `Application` subclass?
    - Look for `android:name=".SomeApp"` (or fully-qualified) on the `<application>` tag in `AndroidManifest.xml`.
    - If yes, edit that class.
-   - If no, create one (e.g. `MainApplication.kt` in the app's root package) and register it in the manifest.
+   - If no, **stop and ask the user**. Do not create an `Application` subclass on their behalf — adding one has app-wide implications (lifecycle, DI, ContentProvider init order) that the user should own. Tell them they need a custom `Application` class for SDK init and let them decide whether to add one.
 4. **Language**: Is the existing Application class Kotlin or Java? Match it.
 5. **`minSdk`**: Note the value. The SDK supports API 26+; on lower API levels it no-ops but still builds. If the user's `minSdk < 26`, mention this once — do not raise their `minSdk` without permission.
 
@@ -71,37 +71,11 @@ The SDK must be initialized as early as possible after process start so app-open
 
 ### If the client has no Application class
 
-Create `app/src/main/java/<their-package>/MainApplication.kt`:
+**Stop.** Do not create one. Tell the user:
 
-```kotlin
-package com.example.myapp
+> "The Attentive SDK needs to be initialized in `Application.onCreate()`, but this app doesn't have a custom `Application` subclass. Adding one has app-wide implications, so I'd like you to decide whether to add it. Once you've created an `Application` subclass and registered it in the manifest, I can wire up the Attentive init."
 
-import android.app.Application
-import com.attentive.androidsdk.AttentiveConfig
-import com.attentive.androidsdk.AttentiveSdk
-
-class MainApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-
-        val attentiveConfig = AttentiveConfig.Builder()
-            .applicationContext(this)
-            .domain("YOUR_ATTENTIVE_DOMAIN")
-            .mode(AttentiveConfig.Mode.DEBUG)
-            .build()
-
-        AttentiveSdk.initialize(attentiveConfig)
-    }
-}
-```
-
-Then register it in `AndroidManifest.xml` on the `<application>` tag:
-
-```xml
-<application
-    android:name=".MainApplication"
-    ...>
-```
+Wait for the user to either add the class themselves or explicitly ask you to create one. Do not proceed.
 
 ### If the client already has an Application class
 
@@ -139,6 +113,7 @@ Do not run the app on a device or emulator unless asked.
 - Do not touch Firebase, push permissions, or `google-services.json`.
 - Do not remove or add the `AttentiveFirebaseMessagingService` manifest entry.
 - Do not add `notificationIconId(...)` to the builder.
+- Do not create an `Application` subclass for the user. If one doesn't exist, ask them to add it themselves.
 - Do not bump the user's `minSdk`, `targetSdk`, AGP version, or Kotlin version.
 - Do not introduce DI frameworks (Hilt/Dagger/Koin) to wire this — direct construction in `onCreate` is correct here.
 - Do not write tests for the integration unless asked.
