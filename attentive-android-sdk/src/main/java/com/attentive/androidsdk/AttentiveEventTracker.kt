@@ -20,6 +20,8 @@ class AttentiveEventTracker private constructor() {
     lateinit var config: AttentiveConfig
     internal lateinit var launchTracker: AppLaunchTracker
 
+    internal fun isPushEnabled(): Boolean = ::config.isInitialized && config.pushEnabled
+
     @Deprecated(
         message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
         replaceWith =
