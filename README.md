@@ -27,6 +27,18 @@ for a sample of how the Attentive Android SDK is used.
 
 __*** NOTE: Please refrain from using any private or undocumented classes or methods as they may change between releases. ***__
 
+### Setup with an AI coding agent
+
+If you use Claude Code, Cursor, Copilot, Codex, or another AI coding agent, you can have the agent walk you through setup. Point it at [`AGENTS.md`](./AGENTS.md) in this repo — it's a step-by-step integration guide written for agents that handles dependency wiring, `Application` initialization, and an interactive push-setup flow (Firebase detection, `FirebaseMessagingService` forwarding, notification icon, and permission prompt).
+
+**What the agent flow intentionally does not do:**
+
+- **Identify / clearUser / updateUser wiring.** These hook into your login, logout, and account-switch flows, which are sensitive auth-adjacent code paths. You should decide where they go.
+- **Event recording (`PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`, `CustomEvent`).** Where and how you fire these is highly domain-specific (your checkout, cart, and PDP code is yours), so the agent leaves them to you.
+- **Showing Creatives.** Creatives are optional functionality, so the agent doesn't wire them up by default.
+
+For all of these, follow the relevant sections of this README.
+
 ## Step 1 - SDK initialization
 
 __*** NOTE: To function properly, the SDK must be initialized as soon as possible after application startup. This is required for us to properly track metrics (app open events, etc) ***__
