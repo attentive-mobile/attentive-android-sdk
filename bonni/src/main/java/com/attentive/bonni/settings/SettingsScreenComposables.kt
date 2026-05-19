@@ -251,15 +251,15 @@ fun SettingsList(
     )
     lifecycleSettings.add(
         "Log in as different user" to {
-            viewModel.saveEmail()
-            viewModel.savePhoneNumber()
-            viewModel.switchUser()
-            val email = viewModel.email.value.takeIf { it.isNotBlank() }
-            val phone = viewModel.phone.value.takeIf { it.isNotBlank() }
+            val savedEmail = viewModel.saveEmail()
+            val savedPhone = viewModel.savePhoneNumber()
+            val email = viewModel.email.value.takeIf { it.isNotBlank() && savedEmail }
+            val phone = viewModel.phone.value.takeIf { it.isNotBlank() && savedPhone }
             val identifier = listOfNotNull(email, phone).joinToString(", ")
             val message = if (identifier.isBlank()) {
-                "No email or phone set, can't switch user"
+                "No valid email or phone, can't switch user"
             } else {
+                viewModel.switchUser()
                 "Logged in as $identifier"
             }
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
