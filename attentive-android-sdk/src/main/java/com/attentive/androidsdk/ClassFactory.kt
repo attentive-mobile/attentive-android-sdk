@@ -2,6 +2,7 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
+import com.attentive.androidsdk.internal.network.RetryInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -29,7 +30,11 @@ object ClassFactory {
         } else if (logLevel == AttentiveLogLevel.STANDARD) {
             logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
         }
-        return OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(logging).build()
+        return OkHttpClient.Builder()
+            .addInterceptor(interceptor)
+            .addInterceptor(RetryInterceptor())
+            .addInterceptor(logging)
+            .build()
     }
 
     fun buildUserAgentInterceptor(context: Context?): Interceptor {
