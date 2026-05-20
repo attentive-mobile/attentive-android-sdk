@@ -10,7 +10,13 @@ Internal Attentive API documentation and instructions live in the private [`atte
 
 ```
 /plugin marketplace add attentive-mobile/claude-plugins
-/plugin install mobile-sdk-internal@attentive-mobile
+/plugin install mobile-sdk-internal@attentive-marketplace
+```
+
+If you've previously added the marketplace but don't see `mobile-sdk-internal`, refresh the local cache first:
+
+```
+/plugin marketplace update attentive-marketplace
 ```
 
 This keeps internal details out of the public SDK repo while letting Claude Code pull them in at runtime.
