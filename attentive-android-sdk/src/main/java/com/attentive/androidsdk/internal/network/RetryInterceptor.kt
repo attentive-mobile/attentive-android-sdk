@@ -94,10 +94,11 @@ class RetryInterceptor(
     }
 
     companion object {
-        private val retryAfterDateFormat = ThreadLocal.withInitial {
-            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("GMT")
-            }
+        private val retryAfterDateFormat = object : ThreadLocal<SimpleDateFormat>() {
+            override fun initialValue(): SimpleDateFormat =
+                SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("GMT")
+                }
         }
 
         // Exposed for tests that need a deterministic clock for RFC-1123 parsing.
