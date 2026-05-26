@@ -35,9 +35,10 @@ class RetryInterceptor(
             val response = outcome.getOrNull()
             val error = outcome.exceptionOrNull()
 
-            val isNetworkError = error is IOException
+            val isCanceled = chain.call().isCanceled()
+            val isNetworkError = error is IOException && !isCanceled
             val isRetryableHttp = response != null && (response.code == 429 || response.code in 500..599)
-            val shouldRetry = (isNetworkError || isRetryableHttp) && attempt < config.maxRetries
+            val shouldRetry = !isCanceled && (isNetworkError || isRetryableHttp) && attempt < config.maxRetries
 
             if (!shouldRetry) {
                 if (error != null) throw error

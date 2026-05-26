@@ -1,11 +1,14 @@
 package com.attentive.androidsdk.internal.network
 
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Timeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -178,6 +181,21 @@ class RetryInterceptorTest {
         assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L), sleeps)
     }
 
+    @Test
+    fun doesNotRetryWhenCallIsCanceled() {
+        val sleeps = mutableListOf<Long>()
+        val chain = throwingChain(IOException("Canceled"), times = Int.MAX_VALUE)
+        chain.fakeCall.cancel()
+        val interceptor = newInterceptor(
+            config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
+            sleeper = { sleeps.add(it) },
+        )
+
+        assertThrows(IOException::class.java) { interceptor.intercept(chain) }
+        assertEquals(1, chain.callCount)
+        assertEquals(0, sleeps.size)
+    }
+
     // ---- helpers ----
 
     private fun newInterceptor(
@@ -212,7 +230,8 @@ class RetryInterceptorTest {
         }
 
         override fun connection() = null
-        override fun call() = throw UnsupportedOperationException()
+        val fakeCall = StubCall()
+        override fun call() = fakeCall
         override fun connectTimeoutMillis() = 0
         override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
             throw UnsupportedOperationException()
@@ -246,7 +265,8 @@ class RetryInterceptorTest {
         }
 
         override fun connection() = null
-        override fun call() = throw UnsupportedOperationException()
+        val fakeCall = StubCall()
+        override fun call() = fakeCall
         override fun connectTimeoutMillis() = 0
         override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
             throw UnsupportedOperationException()
@@ -259,4 +279,16 @@ class RetryInterceptorTest {
     }
 
     private fun throwingChain(error: Throwable, times: Int) = ThrowingChain(error, times)
+
+    private class StubCall : Call {
+        var canceled: Boolean = false
+        override fun cancel() { canceled = true }
+        override fun isCanceled(): Boolean = canceled
+        override fun clone(): Call = this
+        override fun execute(): Response = throw UnsupportedOperationException()
+        override fun enqueue(responseCallback: Callback) = throw UnsupportedOperationException()
+        override fun isExecuted(): Boolean = false
+        override fun request(): Request = Request.Builder().url("https://example.test/").build()
+        override fun timeout(): Timeout = Timeout.NONE
+    }
 }
