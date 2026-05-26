@@ -79,6 +79,10 @@ android {
     testFixtures {
         enable = true
     }
+
+    publishing {
+        singleVariant('release')
+    }
     sourceSets {
         main {
             java {
