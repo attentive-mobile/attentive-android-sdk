@@ -311,18 +311,33 @@ jobs:
               echo "gradle.properties already at $RELEASE_VERSION; skipping release branch + PR. Publishing from current commit."
             else
               git commit -m "Set version to $RELEASE_VERSION"
-              git push origin "$BRANCH"
+              git push --force origin "$BRANCH"
 
-              curl -sf -X POST \
+              GH_API_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+              if [ -z "$GH_API_TOKEN" ]; then
+                echo "Neither GITHUB_TOKEN nor GH_TOKEN is set in this CircleCI context; cannot open PR." >&2
+                exit 1
+              fi
+
+              HTTP_STATUS=$(curl -s -o /tmp/pr-response.json -w "%{http_code}" \
+                -X POST \
                 "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
-                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Authorization: token $GH_API_TOKEN" \
                 -H "Content-Type: application/json" \
                 -d "{
                   \"title\": \"Release v$RELEASE_VERSION\",
                   \"body\": \"Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified.\",
                   \"head\": \"$BRANCH\",
                   \"base\": \"main\"
-                }"
+                }")
+
+              echo "GitHub PR API status: $HTTP_STATUS"
+              cat /tmp/pr-response.json
+              echo
+
+              if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+                exit 1
+              fi
             fi
       - run:
           name: Clean
