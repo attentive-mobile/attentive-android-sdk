@@ -7,10 +7,6 @@ on:
         description: 'Version to release (e.g. 2.1.3). Leave empty to use the version in gradle.properties.'
         required: false
         type: string
-      next_version:
-        description: 'Next development version (e.g. 2.1.4). Leave empty to auto-increment patch.'
-        required: false
-        type: string
 
 jobs:
   trigger-release:
@@ -28,7 +24,6 @@ jobs:
               "branch": "main",
               "parameters": {
                 "run_release": true,
-                "release_version": "${{ inputs.version }}",
-                "next_version": "${{ inputs.next_version }}"
+                "release_version": "${{ inputs.version }}"
               }
             }'
