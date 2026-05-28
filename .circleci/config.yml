@@ -314,9 +314,25 @@ jobs:
               git push --force origin "$BRANCH"
 
               GH_API_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-              if [ -z "$GH_API_TOKEN" ]; then
+              if [ -n "$GITHUB_TOKEN" ]; then
+                echo "Token source: GITHUB_TOKEN"
+              elif [ -n "$GH_TOKEN" ]; then
+                echo "Token source: GH_TOKEN"
+              else
                 echo "Neither GITHUB_TOKEN nor GH_TOKEN is set in this CircleCI context; cannot open PR." >&2
                 exit 1
+              fi
+
+              echo "--- Authenticated user ---"
+              GH_USER=$(curl -s -H "Authorization: token $GH_API_TOKEN" https://api.github.com/user)
+              echo "$GH_USER" | jq '{login, type, name}'
+              GH_LOGIN=$(echo "$GH_USER" | jq -r '.login // empty')
+
+              if [ -n "$GH_LOGIN" ]; then
+                echo "--- Permission on attentive-android-sdk for $GH_LOGIN ---"
+                curl -s -H "Authorization: token $GH_API_TOKEN" \
+                  "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/collaborators/$GH_LOGIN/permission" \
+                  | jq '{permission, role_name, message}'
               fi
 
               HTTP_STATUS=$(curl -s -o /tmp/pr-response.json -w "%{http_code}" \
