@@ -5,6 +5,7 @@ version: 2.1
 orbs:
   android: circleci/android@2.5.0
   slack: circleci/slack@6.1.3
+  attentive: attentive-mobile/circleci-orb@0.0.11
 
 # ========================
 # Constants
@@ -274,6 +275,17 @@ jobs:
     executor: android-executor
     steps:
       - checkout
+      - attentive/app-based-github-token:
+          github_app_client_id: ${GITHUB_APP_CLIENT_ID}
+          github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
+          github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
+      - run:
+          name: Switch git remote to HTTPS with App token
+          command: |
+            git remote set-url origin "https://github.com/attentive-mobile/attentive-android-sdk.git"
+            git config --local --replace-all \
+              "http.https://github.com/.extraheader" \
+              "Authorization: basic $(printf 'x-access-token:%s' "${GITHUB_TOKEN}" | base64 -w 0)"
       - restore_cache:
           keys:
             - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
@@ -313,32 +325,10 @@ jobs:
               git commit -m "Set version to $RELEASE_VERSION"
               git push --force origin "$BRANCH"
 
-              GH_API_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-              if [ -n "$GITHUB_TOKEN" ]; then
-                echo "Token source: GITHUB_TOKEN"
-              elif [ -n "$GH_TOKEN" ]; then
-                echo "Token source: GH_TOKEN"
-              else
-                echo "Neither GITHUB_TOKEN nor GH_TOKEN is set in this CircleCI context; cannot open PR." >&2
-                exit 1
-              fi
-
-              echo "--- Authenticated user ---"
-              GH_USER=$(curl -s -H "Authorization: token $GH_API_TOKEN" https://api.github.com/user)
-              echo "$GH_USER" | jq '{login, type, name}'
-              GH_LOGIN=$(echo "$GH_USER" | jq -r '.login // empty')
-
-              if [ -n "$GH_LOGIN" ]; then
-                echo "--- Permission on attentive-android-sdk for $GH_LOGIN ---"
-                curl -s -H "Authorization: token $GH_API_TOKEN" \
-                  "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/collaborators/$GH_LOGIN/permission" \
-                  | jq '{permission, role_name, message}'
-              fi
-
               HTTP_STATUS=$(curl -s -o /tmp/pr-response.json -w "%{http_code}" \
                 -X POST \
                 "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
-                -H "Authorization: token $GH_API_TOKEN" \
+                -H "Authorization: token $GITHUB_TOKEN" \
                 -H "Content-Type: application/json" \
                 -d "{
                   \"title\": \"Release v$RELEASE_VERSION\",
