@@ -65,7 +65,7 @@ Published to Maven Central via Sonatype:
 
 - **GitHub Actions** (`ci.yml`) — Runs unit tests and checkstyle on push/PR to main and feature branches
 - **CircleCI** (`.circleci/config.yml`) — Lint, unit tests, instrumented tests, snapshot tests, build, bonni distribution, and release pipeline
-- **Release workflow** — GitHub Action (`release.yml`) triggers CircleCI which publishes to Maven Central, creates GitHub Release, and opens version bump PR. Beta versions skip release/bump.
+- **Release workflow** — GitHub Action (`release.yml`) triggers CircleCI which pushes a `release/x.y.z` branch, opens a PR into `main`, then publishes to Maven Central and creates a GitHub Release tagged off the release branch. The PR is merged into `main` manually after the release is verified. Beta versions skip the GitHub Release.
 
 ## Git Push Policy
 
