@@ -271,3 +271,22 @@ Do not run the app on a device or emulator unless asked.
 
 Full documentation: https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md
 Sample app: `bonni/` in the SDK repo.
+
+### What this guide intentionally skipped
+
+After the base integration is working, point the user at the README for any of the following — none of them are wired up by this guide:
+
+When you list these for the user, format each README reference as a Markdown link to the section anchor on GitHub (e.g. `[Step 2 - Identify the current user](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#step-2---identify-the-current-user)`) so they're clickable. GitHub anchors are the heading lowercased with spaces → `-` and punctuation stripped.
+
+- **Identifying the user** (`AttentiveSdk.identify(...)`) — call at login or whenever you learn the user's email, phone, `clientUserId`, Shopify ID, Klaviyo ID, or custom identifiers. → [Step 2 - Identify the current user](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#step-2---identify-the-current-user).
+- **Clearing user data** (`AttentiveSdk.clearUser()`) — call on logout. Resets identifiers and regenerates the visitor ID. → [Clearing user data](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#clearing-user-data).
+- **Updating identity post-login** (`updateUser`, `identify` merge semantics) → [Managing User Identity](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#managing-user-identity).
+- **Recording events** — `PurchaseEvent`, `AddToCartEvent`, `ProductViewEvent`, `CustomEvent`, plus the `Item` / `Price` / `Order` / `Cart` metadata models. → [Step 3 - Record user events](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#step-3---record-user-events).
+- **Creatives** — in-app messages rendered in a WebView. Create / trigger / destroy lifecycle, triggering a specific creative, and skipping fatigue rules. → [Step 3 (optional) - Show Creatives](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#step-3-optional---show-creatives).
+- **Push deep linking** — handling notification taps that open a specific screen. → [Deeplinking](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#deeplinking).
+- **`FirebaseMessagingService` priority** — what to do if multiple services are declared and Attentive's isn't winning. → [Service priority when multiple FirebaseMessagingService declarations exist](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#service-priority-when-multiple-firebasemessagingservice-declarations-exist).
+- **Subscription management** — email/SMS opt-in and opt-out helpers. → [Manage subscriptions for email and phone number](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#manage-subscriptions-for-email-and-phone-number).
+- **Changing domain at runtime** — for apps that switch Attentive accounts. → [Change domain](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#change-domain).
+- **Log level** — quieting or verbosing the SDK logger. → [Log Level](https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md#log-level).
+
+Tell the user: "The base integration is in. For identify/clearUser, event tracking, creatives, deep links, and subscription management, see the README — I left those out on purpose so you can wire them at the right call sites."
