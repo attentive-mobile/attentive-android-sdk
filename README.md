@@ -31,6 +31,12 @@ __*** NOTE: Please refrain from using any private or undocumented classes or met
 
 If you use Claude Code, Cursor, Copilot, Codex, or another AI coding agent, you can have the agent walk you through setup. Point it at [`AGENTS.md`](./AGENTS.md) in this repo — it's a step-by-step integration guide written for agents that handles dependency wiring, `Application` initialization, and an interactive push-setup flow (Firebase detection, `FirebaseMessagingService` forwarding, notification icon, and permission prompt).
 
+**To trigger the flow**, open your project in your agent of choice and paste a prompt like:
+
+> Integrate the Attentive Android SDK into this app. Follow the guide at https://github.com/attentive-mobile/attentive-android-sdk/blob/main/AGENTS.md top-to-bottom and ask me any questions it tells you to ask before writing code.
+
+The agent will collect your Attentive domain, inspect the build setup, add the dependency, sync Gradle, wire up `AttentiveSdk.initialize` in your `Application` class, and then ask whether you want push notifications enabled before going further.
+
 **What the agent flow intentionally does not do:**
 
 - **Identify / clearUser / updateUser wiring.** These hook into your login, logout, and account-switch flows, which are sensitive auth-adjacent code paths. You should decide where they go.
