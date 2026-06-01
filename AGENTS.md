@@ -43,7 +43,6 @@ Before editing anything, determine:
 3. **Application class**: Does the app already have a custom `Application` subclass?
    - Look for `android:name=".SomeApp"` (or fully-qualified) on the `<application>` tag in `AndroidManifest.xml`.
    - If yes, edit that class.
-   - If no, **stop and ask the user**. Do not create an `Application` subclass on their behalf — adding one has app-wide implications (lifecycle, DI, ContentProvider init order) that the user should own. Tell them they need a custom `Application` class for SDK init and let them decide whether to add one.
 4. **Language**: Is the existing Application class Kotlin or Java? Match it.
 5. **`minSdk`**: Note the value. The SDK supports API 26+; on lower API levels it no-ops but still builds. If the user's `minSdk < 26`, mention this once — do not raise their `minSdk` without permission.
 
@@ -260,7 +259,6 @@ Do not run the app on a device or emulator unless asked.
 - Do not add `identify()`, `clearUser()`, `updateUser()`, `recordEvent()`, or `Creative` calls.
 - Do not install Firebase or create a `google-services.json` — only detect what's already there.
 - Do not add `<service tools:node="remove">` for `AttentiveFirebaseMessagingService`. Use `pushEnabled(false)` instead.
-- Do not create an `Application` subclass for the user. If one doesn't exist, ask them to add it themselves.
 - Do not bump the user's `minSdk`, `targetSdk`, AGP version, or Kotlin version.
 - Do not introduce DI frameworks (Hilt/Dagger/Koin) to wire this — direct construction in `onCreate` is correct here.
 - Do not write tests for the integration unless asked.
