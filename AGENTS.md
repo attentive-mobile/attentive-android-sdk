@@ -23,9 +23,14 @@ If the user asks for more after the base case is working, refer them to `README.
 
 ## Inputs you must collect from the user before writing code
 
-1. **Attentive domain** — a short string identifying their Attentive account (e.g. `myshop`). If unknown, insert `"YOUR_ATTENTIVE_DOMAIN"` and tell the user to replace it.
+1. **Attentive domain** — a short string identifying their Attentive account (e.g. `myshop`). Ask:
 
-Do not invent a domain. If the user has not provided one, leave a clearly-marked placeholder. Always initialize the SDK in `Mode.DEBUG`; tell the user to switch to `Mode.PRODUCTION` for release builds.
+   > "Do you know your Attentive domain? It's the short identifier for your account (e.g. `myshop`)."
+
+   - If the user says **yes**, immediately follow up with: "What is it?" Wait for their answer and use that exact string in the config. Do not proceed until they've given you the domain.
+   - If the user says **no** (or doesn't know), insert `"YOUR_ATTENTIVE_DOMAIN"` as a placeholder and tell them to replace it before shipping.
+
+Do not invent a domain. Always initialize the SDK in `Mode.DEBUG`; tell the user to switch to `Mode.PRODUCTION` for release builds.
 
 ---
 
@@ -61,6 +66,14 @@ implementation("com.attentive:attentive-android-sdk:2.1.7")
 > Use `2.1.7` as the default version. If the client uses a version catalog (`libs.versions.toml`), add an entry there instead and reference it via `libs.attentive.android.sdk`.
 
 Ensure `mavenCentral()` is in the authoritative repositories block. If `dependencyResolutionManagement` exists in `settings.gradle`(.kts), add it there; otherwise add to the root `build.gradle` `allprojects { repositories { ... } }`.
+
+After editing the build file, **sync Gradle** so the SDK classes resolve before you write any code that imports them. Run:
+
+```bash
+./gradlew :app:dependencies --configuration debugRuntimeClasspath
+```
+
+(adjust the module name if it isn't `app`). The IDE's "Sync Now" prompt does the same thing — if the user is driving the IDE, ask them to sync. Do not move on to Step 3 until the sync succeeds; otherwise the `AttentiveConfig` / `AttentiveSdk` imports you add next will fail to resolve.
 
 ---
 
