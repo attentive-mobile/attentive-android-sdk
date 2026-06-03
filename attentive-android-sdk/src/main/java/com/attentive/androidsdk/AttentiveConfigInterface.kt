@@ -2,6 +2,10 @@ package com.attentive.androidsdk
 
 import android.app.Application
 
+/**
+ * Public contract exposed by [AttentiveConfig]. Exists primarily so tests and alternate
+ * implementations can substitute for the real config.
+ */
 interface AttentiveConfigInterface {
     val mode: AttentiveConfig.Mode
     val domain: String

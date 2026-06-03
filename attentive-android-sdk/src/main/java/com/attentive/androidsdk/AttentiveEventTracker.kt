@@ -20,6 +20,8 @@ class AttentiveEventTracker private constructor() {
     lateinit var config: AttentiveConfig
     internal lateinit var launchTracker: AppLaunchTracker
 
+    internal fun isPushEnabled(): Boolean = ::config.isInitialized && config.pushEnabled
+
     @Deprecated(
         message = "Use AttentiveSdk.initialize(config) instead. AttentiveEventTracker should not be used directly.",
         replaceWith =
@@ -126,6 +128,10 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun registerPushToken(context: Context) {
         Timber.i("registerPushToken")
         verifyInitialized()
+        if (!config.pushEnabled) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); skipping token registration")
+            return
+        }
         var token = ""
 
         TokenProvider.getInstance().getToken(context).run {
@@ -162,6 +168,10 @@ class AttentiveEventTracker private constructor() {
         callbackMap: Map<String, String> = emptyMap(),
     ) {
         verifyInitialized()
+        if (!config.pushEnabled) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); skipping app launch event")
+            return
+        }
         config?.let { config ->
             TokenProvider.getInstance().getToken(config.applicationContext).let {
                 if (it.isSuccess) {
@@ -200,9 +210,7 @@ class AttentiveEventTracker private constructor() {
         }
         val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
         if (tokenResult.isFailure) {
-            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
-            Timber.e(msg)
-            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
+            Timber.w("Failed to fetch push token, sending opt-in without it: ${tokenResult.exceptionOrNull()?.message}")
         }
         return config.attentiveApi.sendOptInSubscriptionStatus(
             phoneNumber,
@@ -225,9 +233,7 @@ class AttentiveEventTracker private constructor() {
         }
         val tokenResult = TokenProvider.getInstance().getToken(config.applicationContext)
         if (tokenResult.isFailure) {
-            val msg = "Failed to fetch push token: ${tokenResult.exceptionOrNull()?.message}"
-            Timber.e(msg)
-            return Result.failure(tokenResult.exceptionOrNull() ?: Exception(msg))
+            Timber.w("Failed to fetch push token, sending opt-out without it: ${tokenResult.exceptionOrNull()?.message}")
         }
         return config.attentiveApi.sendOptOutSubscriptionStatus(
             email,

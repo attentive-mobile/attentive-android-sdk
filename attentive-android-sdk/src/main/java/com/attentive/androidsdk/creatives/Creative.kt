@@ -33,6 +33,19 @@ import timber.log.Timber
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Displays and controls an Attentive creative (a webview-based UI served from
+ * `creatives.attn.tv`). Host a single [Creative] per [parentView] and call [trigger] to
+ * display it.
+ *
+ * Lifecycle:
+ * 1. Instantiate — a hidden [WebView] is created and attached to [parentView].
+ * 2. Call [trigger] — the URL is loaded; [CreativeTriggerCallback.onOpen] fires when the
+ *    creative has rendered, or [CreativeTriggerCallback.onCreativeNotOpened] if it fails.
+ * 3. The user interacts or closes — [CreativeTriggerCallback.onClose] fires.
+ * 4. [destroy] — cleans up the [WebView]. On Android Q+ this is called automatically when
+ *    the host activity is destroyed; on older versions you must call it manually.
+ */
 class Creative internal constructor(
     private var attentiveConfig: AttentiveConfig,
     private var parentView: View,
@@ -175,9 +188,15 @@ class Creative internal constructor(
     }
 
     /**
-     * Triggers to show the creative.
-     * @param callback [CreativeTriggerCallback] to be called when the creative updates it's state.
-     * @param creativeId The creative ID to use. If not provided it will render the creative determined by online configuration.
+     * Triggers the creative to load and display.
+     *
+     * Safe to call before the underlying [WebView] has finished initializing — the trigger
+     * will be queued and fired once it's ready. Calling on a destroyed [Creative] is a
+     * no-op; [CreativeTriggerCallback.onCreativeNotOpened] is invoked.
+     *
+     * @param callback [CreativeTriggerCallback] to observe open/close state changes.
+     * @param creativeId Optional creative ID to render a specific creative. If `null`, the
+     *   creative served by online configuration is used.
      */
     fun trigger(
         callback: CreativeTriggerCallback? = null,

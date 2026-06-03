@@ -3,6 +3,12 @@ package com.attentive.androidsdk.events
 import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
+/**
+ * Cart state associated with a [PurchaseEvent].
+ *
+ * @property cartId Your canonical cart identifier. Required, non-empty.
+ * @property cartCoupon A promotion code applied to the cart, if any.
+ */
 @Serializable
 data class Cart(
     val cartId: String,
@@ -27,6 +33,9 @@ data class Cart(
             return this
         }
 
+        /**
+         * @throws UninitializedPropertyAccessException if [cartId] was not set.
+         */
         fun build(): Cart {
             return Cart(
                 cartId = cartId,

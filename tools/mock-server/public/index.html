@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attentive Inbox Mock Server</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #1a1a2e; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 20px; font-weight: 600; }
+    .stats { display: flex; gap: 16px; font-size: 14px; }
+    .stat { background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: opacity 0.2s; }
+    button:hover { opacity: 0.85; }
+    .btn-primary { background: #4361ee; color: white; }
+    .btn-danger { background: #e63946; color: white; }
+    .btn-secondary { background: #ddd; color: #333; }
+    .btn-small { padding: 4px 10px; font-size: 12px; }
+    .message-list { display: flex; flex-direction: column; gap: 8px; }
+    .message { background: white; border-radius: 8px; padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .message.unread { border-left: 4px solid #4361ee; }
+    .message.read { border-left: 4px solid transparent; opacity: 0.7; }
+    .message.deleted { border-left: 4px solid #e63946; opacity: 0.4; text-decoration: line-through; }
+    .message img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+    .message-content { flex: 1; min-width: 0; }
+    .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .message-title { font-weight: 600; font-size: 14px; }
+    .message-meta { font-size: 12px; color: #888; display: flex; gap: 8px; align-items: center; }
+    .message-body { font-size: 13px; color: #666; margin-top: 2px; }
+    .message-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+    .badge-style { background: #e8f4f8; color: #1a759f; }
+    .badge-unread { background: #eef0ff; color: #4361ee; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; }
+    .modal h2 { margin-bottom: 16px; font-size: 18px; }
+    .modal label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500; color: #555; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+    .modal textarea { resize: vertical; min-height: 60px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+    .empty { text-align: center; padding: 40px; color: #999; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Attentive Inbox Mock Server</h1>
+    <div class="stats">
+      <div class="stat" id="totalStat">Total: —</div>
+      <div class="stat" id="unreadStat">Unread: —</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="actions">
+      <button class="btn-primary" onclick="openAddModal()">+ Add Message</button>
+      <button class="btn-danger" onclick="resetInbox()">Reset Inbox</button>
+      <button class="btn-secondary" onclick="loadMessages()">Refresh</button>
+      <span style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#555;">
+        Delay:
+        <select id="delaySelect" onchange="setDelay(this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+          <option value="0">None</option>
+          <option value="500">500ms</option>
+          <option value="1000">1s</option>
+          <option value="2000">2s</option>
+          <option value="3000">3s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+        </select>
+      </span>
+    </div>
+    <div class="message-list" id="messageList"></div>
+  </div>
+
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h2>Add Message</h2>
+      <label>Title</label>
+      <input type="text" id="msgTitle" placeholder="Message title">
+      <label>Body</label>
+      <textarea id="msgBody" placeholder="Message body"></textarea>
+      <label>Image URL (optional)</label>
+      <input type="text" id="msgImage" placeholder="https://...">
+      <label>Action URL (optional)</label>
+      <input type="text" id="msgAction" placeholder="https://...">
+      <label>Style</label>
+      <select id="msgStyle">
+        <option value="small">Small</option>
+        <option value="large">Large</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+        <button class="btn-primary" onclick="addMessage()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allMessages = [];
+
+    async function loadMessages() {
+      const res = await fetch('/inbox/messages?offset=0&limit=200');
+      const data = await res.json();
+      allMessages = data.messages;
+      document.getElementById('totalStat').textContent = `Total: ${data.messages.length}`;
+      document.getElementById('unreadStat').textContent = `Unread: ${data.unreadCount}`;
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('messageList');
+      if (allMessages.length === 0) {
+        list.innerHTML = '<div class="empty">No messages. Click "+ Add Message" to create one.</div>';
+        return;
+      }
+      list.innerHTML = allMessages.map(m => `
+        <div class="message ${m.isRead ? 'read' : 'unread'}">
+          ${m.imageUrl ? `<img src="${m.imageUrl}" alt="">` : ''}
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-title">${esc(m.title)}</span>
+              <div class="message-meta">
+                <span class="badge badge-style">${m.style}</span>
+                ${!m.isRead ? '<span class="badge badge-unread">unread</span>' : ''}
+                <span>${timeAgo(m.timestamp)}</span>
+              </div>
+            </div>
+            <div class="message-body">${esc(m.body)}</div>
+            <div class="message-actions">
+              <button class="btn-small ${m.isRead ? 'btn-primary' : 'btn-secondary'}" onclick="toggleRead('${m.id}', ${!m.isRead})">
+                ${m.isRead ? 'Mark Unread' : 'Mark Read'}
+              </button>
+              <button class="btn-small btn-danger" onclick="deleteMsg('${m.id}')">Delete</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleRead(id, isRead) {
+      await fetch(`/inbox/messages/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead }),
+      });
+      loadMessages();
+    }
+
+    async function deleteMsg(id) {
+      await fetch(`/inbox/messages/${id}`, { method: 'DELETE' });
+      loadMessages();
+    }
+
+    async function resetInbox() {
+      if (!confirm('Reset all inbox data?')) return;
+      await fetch('/inbox/messages/reset', { method: 'POST' });
+      loadMessages();
+    }
+
+    async function loadDelay() {
+      const res = await fetch('/settings');
+      const data = await res.json();
+      document.getElementById('delaySelect').value = String(data.delayMs);
+    }
+
+    async function setDelay(ms) {
+      await fetch('/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delayMs: parseInt(ms) }),
+      });
+    }
+
+    function openAddModal() { document.getElementById('addModal').classList.add('active'); }
+    function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+
+    async function addMessage() {
+      const msg = {
+        title: document.getElementById('msgTitle').value,
+        body: document.getElementById('msgBody').value,
+        imageUrl: document.getElementById('msgImage').value || null,
+        actionUrl: document.getElementById('msgAction').value || null,
+        style: document.getElementById('msgStyle').value,
+      };
+      await fetch('/inbox/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      });
+      closeAddModal();
+      document.getElementById('msgTitle').value = '';
+      document.getElementById('msgBody').value = '';
+      document.getElementById('msgImage').value = '';
+      document.getElementById('msgAction').value = '';
+      loadMessages();
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function timeAgo(ts) {
+      const s = Math.floor((Date.now() - ts) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+      if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+      return `${Math.floor(s / 86400)}d ago`;
+    }
+
+    loadMessages();
+    loadDelay();
+  </script>
+</body>
+</html>

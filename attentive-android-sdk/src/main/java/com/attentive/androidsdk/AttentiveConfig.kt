@@ -11,6 +11,14 @@ import com.attentive.androidsdk.internal.util.VerboseTree
 import okhttp3.OkHttpClient
 import timber.log.Timber
 
+/**
+ * SDK-wide configuration created via [Builder] and passed to [AttentiveSdk.initialize].
+ *
+ * Holds the Attentive domain, runtime mode, notification styling, log level, and the
+ * current [UserIdentifiers]. Construct with [Builder] and hand to [AttentiveSdk.initialize]
+ * during `Application.onCreate()`. Construction fires an `InfoEvent` to the Attentive
+ * backend as a ping.
+ */
 class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInterface {
     override val mode = builder._mode
     override var domain: String = builder._domain
@@ -19,6 +27,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     override var notificationIconBackgroundColorResource: Int =
         builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
+    val pushEnabled: Boolean = builder._pushEnabled
 
     private val visitorService =
         ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
@@ -58,6 +67,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         identify(UserIdentifiers.Builder().withClientUserId(clientUserId).build())
     }
 
+    /**
+     * Merges the given identifiers into the current visitor and notifies the backend.
+     * Does not change the visitor ID. Identifiers accumulate across calls. Fires
+     * `POST /e?t=idn` to the Attentive backend.
+     */
     override fun identify(userIdentifiers: UserIdentifiers) {
         this.userIdentifiers = UserIdentifiers.merge(this.userIdentifiers, userIdentifiers)
         Timber.i("identify called with userIdentifiers: %s", this.userIdentifiers)
@@ -70,6 +84,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
     }
 
+    /**
+     * Clears local user identifiers and generates a new visitor ID. Does **not** notify the
+     * backend — the push token remains associated with the prior user server-side. For a
+     * full logout that detaches the push token on the backend, use [AttentiveSdk.clearUser]
+     * instead.
+     */
     @Deprecated(
         message = "Use AttentiveSdk.clearUser() instead. It properly detaches the push token from the logged-out user.",
         replaceWith = ReplaceWith("AttentiveSdk.clearUser()")
@@ -79,6 +99,12 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         resetIdentifiers()
     }
 
+    /**
+     * Changes the Attentive domain at runtime. Fires a fresh `InfoEvent` if the domain
+     * changed.
+     *
+     * @throws IllegalArgumentException if [domain] is empty or contains `attn.tv`, `:`, or `/`.
+     */
     override fun changeDomain(domain: String) {
         domain.verifyValidAttentiveDomain()
         if (domain != this.domain) {
@@ -87,6 +113,9 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
+    /**
+     * Changes the event-API version at runtime. Debug/testing use only.
+     */
     fun changeApiVersion(apiVersion: ApiVersion) {
         Timber.d("Changing API version from ${this@AttentiveConfig.apiVersion} to $apiVersion")
         this@AttentiveConfig.apiVersion = apiVersion
@@ -140,6 +169,19 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
+    /**
+     * Builder for [AttentiveConfig]. Required: [applicationContext], [mode], [domain].
+     *
+     * Example:
+     * ```
+     * val config = AttentiveConfig.Builder()
+     *     .applicationContext(application)
+     *     .mode(AttentiveConfig.Mode.PRODUCTION)
+     *     .domain("mybrand")
+     *     .build()
+     * AttentiveSdk.initialize(config)
+     * ```
+     */
     class Builder {
         internal lateinit var _context: Application
         internal lateinit var _mode: Mode
@@ -150,6 +192,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal var okHttpClient: OkHttpClient? = null
         internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
+        internal var _pushEnabled: Boolean = true
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
@@ -168,6 +211,9 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _mode = mode
         }
 
+        /**
+         * @throws IllegalArgumentException if [domain] is empty or contains `attn.tv`, `:`, or `/`.
+         */
         fun domain(domain: String) = apply {
             domain.verifyValidAttentiveDomain()
             _domain = domain
@@ -186,6 +232,9 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         private val allowApiVersionOverride = false
 
+        /**
+         * Currently a no-op for integrators — gated behind a private flag.
+         */
         fun apiVersion(apiVersion: ApiVersion) =
             apply {
                 if (allowApiVersionOverride) {
@@ -208,6 +257,29 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 this.logLevel = logLevel
             }
 
+        /**
+         * Controls whether the Attentive SDK participates in push at all. Defaults to `true`.
+         *
+         * When set to `false`, the SDK will:
+         * - Not fetch the FCM token or call `/token`.
+         * - Not send app-launch / direct-open events to `/mtctrl`.
+         *
+         * Marketing opt-in / opt-out calls remain functional with `pushEnabled = false`;
+         * they are sent without a push token in the payload.
+         *
+         * The SDK's FirebaseMessagingService declaration also uses a negative intent-filter
+         * priority so a host app's own service wins FCM dispatch when declared. This flag
+         * is the broader switch for clients who want to disable the push pipeline entirely
+         * regardless of which service wins.
+         */
+        fun pushEnabled(enabled: Boolean) =
+            apply {
+                this._pushEnabled = enabled
+            }
+
+        /**
+         * @throws IllegalStateException if [applicationContext], [mode], or [domain] was not set.
+         */
         fun build(): AttentiveConfig {
             if (this::_context.isInitialized.not()) {
                 throw IllegalStateException("A valid context must be provided.")
@@ -223,13 +295,19 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel)"
+                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel, pushEnabled=$_pushEnabled)"
         }
     }
 
 
+    /**
+     * SDK runtime mode.
+     */
     enum class Mode {
+        /** Debug mode — verbose logging by default, intended for development. */
         DEBUG,
+
+        /** Production mode — standard logging, intended for release builds. */
         PRODUCTION,
     }
 }

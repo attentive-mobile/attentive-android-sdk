@@ -368,21 +368,20 @@ val attentiveConfig = AttentiveConfig.Builder()
 
 ## Step 4 (optional) - Integrate With Push
 
-Push notification support is **optional**. The core SDK functionality — event tracking, creatives, and user identification — works without any push setup. Only follow this section if you want to send push notifications to your users via Attentive.
+Push notification support is  **enabled by default** but can be disabled. The core SDK functionality — event tracking, creatives, and user identification — works without any push setup. Only follow this section if you want to send push notifications to your users via Attentive.
 
-If you are **not** using push notifications, add the following to your `AndroidManifest.xml` to remove the SDK's Firebase messaging service:
+If you are **not** using push notifications, disable it on the config builder:
 
-```xml
-<service
-    android:name="com.attentive.androidsdk.push.AttentiveFirebaseMessagingService"
-    tools:node="remove" />
+```kotlin
+val config = AttentiveConfig.Builder()
+    .applicationContext(this)
+    .domain("YOUR_DOMAIN")
+    .mode(AttentiveConfig.Mode.PRODUCTION)
+    .pushEnabled(false)
+    .build()
 ```
 
-Make sure the `tools` namespace is declared in your `<manifest>` tag:
-```xml
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-```
+With `pushEnabled(false)` the SDK will not receive push notifications from Attentive.
 
 The conditions for your users to receive push notifications are as follows:
 1. You have initialized the Attentive SDK with a valid domain and a notification icon resource id.
@@ -453,6 +452,10 @@ First check that is a message from Attentive, then send it over.
         }
     }
 ```
+
+#### Service priority when multiple `FirebaseMessagingService` declarations exist
+
+FCM dispatches each message to a single `FirebaseMessagingService`, picked by `android:priority` on the `<intent-filter>`. The SDK declares its `AttentiveFirebaseMessagingService` with `android:priority="-500"` so any host-app service declared at the default priority (`0`) automatically wins. If you want to forward Attentive messages to the SDK, use the `isAttentiveFirebaseMessage` / `sendNotification` pattern shown above. If your service declares a higher priority and does not forward, FCM will deliver to your service only and Attentive notifications won't be displayed.
 
 ### Deeplinking
 

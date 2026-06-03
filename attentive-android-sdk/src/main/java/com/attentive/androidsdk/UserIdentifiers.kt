@@ -2,6 +2,25 @@ package com.attentive.androidsdk
 
 import kotlinx.serialization.Serializable
 
+/**
+ * A set of identifiers describing a single user on this device.
+ *
+ * Held on [AttentiveConfig.userIdentifiers] and passed to
+ * [AttentiveConfigInterface.identify] to associate contact info and vendor IDs with the
+ * current visitor. All fields are optional except that a visitor must have a [visitorId] —
+ * the SDK generates one automatically on first launch.
+ *
+ * Instances are immutable; use [Builder] to construct and [merge] to combine.
+ *
+ * @property visitorId The auto-generated, device-scoped anonymous ID. Persists in
+ *   SharedPreferences and is regenerated on logout or user switch.
+ * @property clientUserId The user's ID in your own system. Optional.
+ * @property phone The user's phone number in E.164 format. Optional.
+ * @property email The user's email address. Optional.
+ * @property shopifyId The user's Shopify customer ID. Optional.
+ * @property klaviyoId The user's Klaviyo profile ID. Optional.
+ * @property customIdentifiers Additional vendor or custom IDs keyed by identifier name.
+ */
 @Serializable
 data class UserIdentifiers(
     val visitorId: String? = null,
@@ -34,6 +53,7 @@ data class UserIdentifiers(
                 this.clientUserId = clientUserId
             }
 
+        /** @param phone E.164 format (e.g. `"+15551234567"`). */
         fun withPhone(phone: String): Builder =
             apply {
                 this.phone = phone
@@ -75,6 +95,10 @@ data class UserIdentifiers(
     }
 
     companion object {
+        /**
+         * Merges two [UserIdentifiers], with [second] taking precedence on conflict.
+         * Custom identifiers are combined; second's entries override first's for matching keys.
+         */
         fun merge(
             first: UserIdentifiers,
             second: UserIdentifiers,
