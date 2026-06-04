@@ -1,14 +1,10 @@
 package com.attentive.androidsdk.internal.network
 
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import okio.Timeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -21,7 +17,6 @@ import java.util.TimeZone
 import kotlin.random.Random
 
 class RetryInterceptorTest {
-
     @Test
     fun retriesOn5xxThenSucceeds() {
         val sleeps = mutableListOf<Long>()
@@ -63,9 +58,10 @@ class RetryInterceptorTest {
     fun honorsRetryAfterRfc1123HeaderOn429() {
         val sleeps = mutableListOf<Long>()
         val target = Date(System.currentTimeMillis() + 5_000L)
-        val header = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("GMT")
-        }.format(target)
+        val header =
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("GMT")
+            }.format(target)
         val chain = scriptedChain(listOf(response(429, retryAfter = header), response(200)))
         val interceptor = newInterceptor(sleeper = { sleeps.add(it) })
 
@@ -79,9 +75,10 @@ class RetryInterceptorTest {
     fun ignoresRetryAfterDateInThePast() {
         val sleeps = mutableListOf<Long>()
         val past = Date(System.currentTimeMillis() - 60_000L)
-        val header = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("GMT")
-        }.format(past)
+        val header =
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("GMT")
+            }.format(past)
         val chain = scriptedChain(listOf(response(429, retryAfter = header), response(200)))
         val interceptor = newInterceptor(sleeper = { sleeps.add(it) })
 
@@ -108,10 +105,11 @@ class RetryInterceptorTest {
         val sleeps = mutableListOf<Long>()
         val responses = List(6) { response(503) }
         val chain = scriptedChain(responses)
-        val interceptor = newInterceptor(
-            config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
-            sleeper = { sleeps.add(it) },
-        )
+        val interceptor =
+            newInterceptor(
+                config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
+                sleeper = { sleeps.add(it) },
+            )
 
         val result = interceptor.intercept(chain)
 
@@ -124,10 +122,11 @@ class RetryInterceptorTest {
     fun retriesOnIoExceptionAndPropagatesIfStillFailing() {
         val sleeps = mutableListOf<Long>()
         val chain = throwingChain(IOException("boom"), times = Int.MAX_VALUE)
-        val interceptor = newInterceptor(
-            config = RetryConfiguration(maxRetries = 3, jitterRangeMs = 0L..0L),
-            sleeper = { sleeps.add(it) },
-        )
+        val interceptor =
+            newInterceptor(
+                config = RetryConfiguration(maxRetries = 3, jitterRangeMs = 0L..0L),
+                sleeper = { sleeps.add(it) },
+            )
 
         assertThrows(IOException::class.java) { interceptor.intercept(chain) }
         assertEquals(4, chain.callCount) // 1 initial + 3 retries
@@ -140,15 +139,17 @@ class RetryInterceptorTest {
         // initial=10s, jitter=0, cap=15s. attempt0=10s ok, attempt1=20s would push cumulative=30s past 15s.
         val responses = listOf(response(503), response(503), response(503))
         val chain = scriptedChain(responses)
-        val interceptor = newInterceptor(
-            config = RetryConfiguration(
-                initialDelayMs = 10_000L,
-                maxRetries = 5,
-                jitterRangeMs = 0L..0L,
-                maxCumulativeDelayMs = 15_000L,
-            ),
-            sleeper = { sleeps.add(it) },
-        )
+        val interceptor =
+            newInterceptor(
+                config =
+                    RetryConfiguration(
+                        initialDelayMs = 10_000L,
+                        maxRetries = 5,
+                        jitterRangeMs = 0L..0L,
+                        maxCumulativeDelayMs = 15_000L,
+                    ),
+                sleeper = { sleeps.add(it) },
+            )
 
         val result = interceptor.intercept(chain)
 
@@ -164,16 +165,18 @@ class RetryInterceptorTest {
         val seededRandom = Random(42)
         val responses = List(5) { response(503) }
         val chain = scriptedChain(responses)
-        val interceptor = newInterceptor(
-            config = RetryConfiguration(
-                initialDelayMs = 1_000L,
-                maxRetries = 4,
-                jitterRangeMs = 0L..0L,
-                maxCumulativeDelayMs = 10_000_000L,
-            ),
-            random = seededRandom,
-            sleeper = { sleeps.add(it) },
-        )
+        val interceptor =
+            newInterceptor(
+                config =
+                    RetryConfiguration(
+                        initialDelayMs = 1_000L,
+                        maxRetries = 4,
+                        jitterRangeMs = 0L..0L,
+                        maxCumulativeDelayMs = 10_000_000L,
+                    ),
+                random = seededRandom,
+                sleeper = { sleeps.add(it) },
+            )
 
         interceptor.intercept(chain)
 
@@ -185,11 +188,12 @@ class RetryInterceptorTest {
     fun doesNotRetryWhenCallIsCanceled() {
         val sleeps = mutableListOf<Long>()
         val chain = throwingChain(IOException("Canceled"), times = Int.MAX_VALUE)
-        chain.fakeCall.cancel()
-        val interceptor = newInterceptor(
-            config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
-            sleeper = { sleeps.add(it) },
-        )
+        chain.testCall.cancel()
+        val interceptor =
+            newInterceptor(
+                config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
+                sleeper = { sleeps.add(it) },
+            )
 
         assertThrows(IOException::class.java) { interceptor.intercept(chain) }
         assertEquals(1, chain.callCount)
@@ -204,53 +208,37 @@ class RetryInterceptorTest {
         sleeper: RetryInterceptor.Sleeper,
     ) = RetryInterceptor(config = config, random = random, sleeper = sleeper)
 
-    private fun response(code: Int, retryAfter: String? = null): Response {
-        val builder = Response.Builder()
-            .request(dummyRequest)
-            .protocol(Protocol.HTTP_1_1)
-            .code(code)
-            .message("test")
-            .body("".toResponseBody("text/plain".toMediaType()))
+    private fun response(
+        code: Int,
+        retryAfter: String? = null
+    ): Response {
+        val builder =
+            Response.Builder()
+                .request(dummyRequest)
+                .protocol(Protocol.HTTP_1_1)
+                .code(code)
+                .message("test")
+                .body("".toResponseBody("text/plain".toMediaType()))
         if (retryAfter != null) builder.header("Retry-After", retryAfter)
         return builder.build()
     }
 
     private val dummyRequest = Request.Builder().url("https://example.test/").build()
 
-    private class ScriptedChain(private val responses: List<Response>) : Interceptor.Chain {
+    private class ScriptedChain(private val responses: List<Response>) : TestChain() {
         var callCount = 0
-
-        override fun request(): Request =
-            Request.Builder().url("https://example.test/").build()
 
         override fun proceed(request: Request): Response {
             val r = responses[callCount.coerceAtMost(responses.lastIndex)]
             callCount += 1
             return r
         }
-
-        override fun connection() = null
-        val fakeCall = StubCall()
-        override fun call() = fakeCall
-        override fun connectTimeoutMillis() = 0
-        override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
-        override fun readTimeoutMillis() = 0
-        override fun withReadTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
-        override fun writeTimeoutMillis() = 0
-        override fun withWriteTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
     }
 
     private fun scriptedChain(responses: List<Response>) = ScriptedChain(responses)
 
-    private class ThrowingChain(private val error: Throwable, private val times: Int) :
-        Interceptor.Chain {
+    private class ThrowingChain(private val error: Throwable, private val times: Int) : TestChain() {
         var callCount = 0
-
-        override fun request(): Request =
-            Request.Builder().url("https://example.test/").build()
 
         override fun proceed(request: Request): Response {
             callCount += 1
@@ -263,32 +251,10 @@ class RetryInterceptorTest {
                 .body("".toResponseBody("text/plain".toMediaType()))
                 .build()
         }
-
-        override fun connection() = null
-        val fakeCall = StubCall()
-        override fun call() = fakeCall
-        override fun connectTimeoutMillis() = 0
-        override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
-        override fun readTimeoutMillis() = 0
-        override fun withReadTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
-        override fun writeTimeoutMillis() = 0
-        override fun withWriteTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) =
-            throw UnsupportedOperationException()
     }
 
-    private fun throwingChain(error: Throwable, times: Int) = ThrowingChain(error, times)
-
-    private class StubCall : Call {
-        var canceled: Boolean = false
-        override fun cancel() { canceled = true }
-        override fun isCanceled(): Boolean = canceled
-        override fun clone(): Call = this
-        override fun execute(): Response = throw UnsupportedOperationException()
-        override fun enqueue(responseCallback: Callback) = throw UnsupportedOperationException()
-        override fun isExecuted(): Boolean = false
-        override fun request(): Request = Request.Builder().url("https://example.test/").build()
-        override fun timeout(): Timeout = Timeout.NONE
-    }
+    private fun throwingChain(
+        error: Throwable,
+        times: Int
+    ) = ThrowingChain(error, times)
 }

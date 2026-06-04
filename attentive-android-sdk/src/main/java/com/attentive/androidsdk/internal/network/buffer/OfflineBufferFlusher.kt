@@ -24,10 +24,18 @@ class OfflineBufferFlusher(
             val batch = queue.peekOldest(config.batchSize)
             if (batch.isEmpty()) return true
 
+            val drained = mutableListOf<Long>()
+            var stopped = false
             for (entity in batch) {
-                if (!replay(entity)) return false
-                queue.deleteById(entity.id)
+                if (replay(entity)) {
+                    drained.add(entity.id)
+                } else {
+                    stopped = true
+                    break
+                }
             }
+            if (drained.isNotEmpty()) queue.deleteByIds(drained)
+            if (stopped) return false
         }
     }
 
@@ -38,7 +46,7 @@ class OfflineBufferFlusher(
             Request.Builder()
                 .url(entity.url)
                 .method(entity.method, entity.body.toRequestBody(mediaType))
-                .header(BufferConfiguration.REPLAY_HEADER, BufferConfiguration.REPLAY_HEADER_VALUE)
+                .tag(ReplayMarker::class.java, ReplayMarker)
                 .build()
 
         return try {

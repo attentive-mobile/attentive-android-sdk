@@ -20,33 +20,21 @@ class OfflineBufferInterceptor(
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val isReplay = request.header(BufferConfiguration.REPLAY_HEADER) != null
-
-        if (isReplay) {
+        if (request.tag(ReplayMarker::class.java) != null) {
             return chain.proceed(request)
         }
 
-        val outcome = runCatching { chain.proceed(request) }
-        val response = outcome.getOrNull()
-        val error = outcome.exceptionOrNull()
-
-        if (!BufferableEndpoints.shouldBuffer(request)) {
-            if (error != null) throw error
-            return response!!
-        }
-
-        when {
-            error is IOException -> {
-                tryEnqueue(request)
-                throw error
+        val response =
+            try {
+                chain.proceed(request)
+            } catch (e: IOException) {
+                if (BufferableEndpoints.shouldBuffer(request)) tryEnqueue(request)
+                throw e
             }
-            error != null -> throw error
-            response != null && response.code in 500..599 -> {
-                tryEnqueue(request)
-                return response
-            }
-            else -> return response!!
+        if (response.code in 500..599 && BufferableEndpoints.shouldBuffer(request)) {
+            tryEnqueue(request)
         }
+        return response
     }
 
     private fun tryEnqueue(request: Request) {

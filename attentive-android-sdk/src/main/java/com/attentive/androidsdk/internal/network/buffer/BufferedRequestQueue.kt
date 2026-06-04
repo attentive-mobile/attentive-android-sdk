@@ -12,7 +12,7 @@ interface BufferedRequestQueue {
 
     suspend fun peekOldest(limit: Int): List<BufferedRequestEntity>
 
-    suspend fun deleteById(id: Long)
+    suspend fun deleteByIds(ids: List<Long>)
 }
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -34,5 +34,5 @@ class RoomBufferedRequestQueue(
 
     override suspend fun peekOldest(limit: Int): List<BufferedRequestEntity> = dao.peekOldest(limit)
 
-    override suspend fun deleteById(id: Long) = dao.deleteById(id)
+    override suspend fun deleteByIds(ids: List<Long>) = dao.deleteByIds(ids)
 }

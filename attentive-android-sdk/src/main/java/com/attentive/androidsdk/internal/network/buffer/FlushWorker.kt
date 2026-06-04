@@ -21,9 +21,7 @@ class FlushWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
-
-    override suspend fun doWork(): Result =
-        doFlush(ClassFactory.bufferQueue, ClassFactory.bufferOkHttpClient)
+    override suspend fun doWork(): Result = doFlush(ClassFactory.bufferQueue, ClassFactory.bufferOkHttpClient)
 
     companion object {
         const val UNIQUE_NAME = "com.attentive.androidsdk.flush"
@@ -38,29 +36,25 @@ class FlushWorker(
                 Timber.i("OfflineBuffer: FlushWorker waiting for SDK initialization")
                 return ListenableWorker.Result.retry()
             }
-            val flusher = OfflineBufferFlusher(queue, { client })
-            return try {
-                if (flusher.flush()) ListenableWorker.Result.success() else ListenableWorker.Result.retry()
-            } catch (t: Throwable) {
-                Timber.w(t, "OfflineBuffer: FlushWorker threw")
-                ListenableWorker.Result.retry()
-            }
+            val drained = OfflineBufferFlusher(queue, { client }).flush()
+            return if (drained) ListenableWorker.Result.success() else ListenableWorker.Result.retry()
         }
 
         @JvmStatic
         fun enqueue(context: Context) {
-            val request = OneTimeWorkRequestBuilder<FlushWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
-                .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    WorkRequest.MIN_BACKOFF_MILLIS,
-                    TimeUnit.MILLISECONDS,
-                )
-                .build()
+            val request =
+                OneTimeWorkRequestBuilder<FlushWorker>()
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build(),
+                    )
+                    .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        WorkRequest.MIN_BACKOFF_MILLIS,
+                        TimeUnit.MILLISECONDS,
+                    )
+                    .build()
             WorkManager.getInstance(context.applicationContext)
                 .enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.KEEP, request)
         }

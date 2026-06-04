@@ -18,7 +18,8 @@ class FakeBufferedRequestQueue : BufferedRequestQueue {
 
     override suspend fun peekOldest(limit: Int): List<BufferedRequestEntity> = entries.take(limit)
 
-    override suspend fun deleteById(id: Long) {
-        entries.removeAll { it.id == id }
+    override suspend fun deleteByIds(ids: List<Long>) {
+        val set = ids.toSet()
+        entries.removeAll { it.id in set }
     }
 }

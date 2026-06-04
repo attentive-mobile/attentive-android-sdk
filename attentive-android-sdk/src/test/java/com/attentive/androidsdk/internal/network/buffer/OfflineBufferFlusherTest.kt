@@ -9,6 +9,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import timber.log.Timber
@@ -98,22 +99,22 @@ class OfflineBufferFlusherTest {
         }
 
     @Test
-    fun replayRequestsCarryReplayHeader() =
+    fun replayRequestsCarryReplayTag() =
         runTest {
             val queue = FakeBufferedRequestQueue()
             queue.enqueue(entity("https://example.test/e", "x"), 100)
 
-            var seenHeader: String? = null
+            var taggedAsReplay = false
             val client =
                 clientReturning { req ->
-                    seenHeader = req.header(BufferConfiguration.REPLAY_HEADER)
+                    taggedAsReplay = req.tag(ReplayMarker::class.java) != null
                     response(req, 200)
                 }
             val flusher = OfflineBufferFlusher(queue, { client })
 
             flusher.flush()
 
-            assertEquals(BufferConfiguration.REPLAY_HEADER_VALUE, seenHeader)
+            assertTrue(taggedAsReplay)
         }
 
     private fun entity(
