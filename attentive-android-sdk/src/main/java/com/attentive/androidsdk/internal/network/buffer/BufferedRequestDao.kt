@@ -17,9 +17,6 @@ interface BufferedRequestDao {
     @Query("DELETE FROM buffered_requests WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("UPDATE buffered_requests SET attemptCount = attemptCount + 1 WHERE id = :id")
-    suspend fun incrementAttempt(id: Long)
-
     @Query("SELECT COUNT(*) FROM buffered_requests")
     suspend fun count(): Int
 

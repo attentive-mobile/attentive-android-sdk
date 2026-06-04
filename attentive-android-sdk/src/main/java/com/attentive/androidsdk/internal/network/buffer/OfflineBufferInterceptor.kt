@@ -16,7 +16,6 @@ class OfflineBufferInterceptor(
     private val context: Context,
     private val config: BufferConfiguration = BufferConfiguration(),
     private val scheduleFlush: (Context) -> Unit = { FlushWorker.enqueue(it) },
-    private val clock: () -> Long = { System.currentTimeMillis() },
 ) : Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -56,11 +55,6 @@ class OfflineBufferInterceptor(
             Timber.w("OfflineBuffer: skipping enqueue, request has no body")
             return
         }
-        val contentLength = runCatching { body.contentLength() }.getOrDefault(-1L)
-        if (contentLength > config.maxBodyBytes) {
-            Timber.w("OfflineBuffer: skipping enqueue, body too large (%d bytes)", contentLength)
-            return
-        }
         val bytes =
             try {
                 val buffer = Buffer()
@@ -82,7 +76,7 @@ class OfflineBufferInterceptor(
                 method = request.method,
                 contentType = contentType,
                 body = bytes,
-                createdAtMs = clock(),
+                createdAtMs = System.currentTimeMillis(),
             )
 
         try {

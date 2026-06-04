@@ -21,9 +21,4 @@ class FakeBufferedRequestQueue : BufferedRequestQueue {
     override suspend fun deleteById(id: Long) {
         entries.removeAll { it.id == id }
     }
-
-    override suspend fun incrementAttempt(id: Long) {
-        val idx = entries.indexOfFirst { it.id == id }
-        if (idx >= 0) entries[idx] = entries[idx].copy(attemptCount = entries[idx].attemptCount + 1)
-    }
 }

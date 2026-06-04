@@ -13,7 +13,6 @@ data class BufferedRequestEntity(
     val contentType: String,
     val body: ByteArray,
     val createdAtMs: Long,
-    val attemptCount: Int = 0,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -23,8 +22,7 @@ data class BufferedRequestEntity(
             method == other.method &&
             contentType == other.contentType &&
             body.contentEquals(other.body) &&
-            createdAtMs == other.createdAtMs &&
-            attemptCount == other.attemptCount
+            createdAtMs == other.createdAtMs
     }
 
     override fun hashCode(): Int {
@@ -34,7 +32,6 @@ data class BufferedRequestEntity(
         result = 31 * result + contentType.hashCode()
         result = 31 * result + body.contentHashCode()
         result = 31 * result + createdAtMs.hashCode()
-        result = 31 * result + attemptCount
         return result
     }
 }

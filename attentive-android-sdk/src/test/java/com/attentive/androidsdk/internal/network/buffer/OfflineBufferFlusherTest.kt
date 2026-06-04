@@ -63,13 +63,10 @@ class OfflineBufferFlusherTest {
 
             flusher.flush()
 
-            // First entry succeeded → deleted. Second hit 503 → stays with attemptCount 1.
-            // Third never attempted.
+            // First entry succeeded → deleted. Second hit 503 → stays. Third never attempted.
             assertEquals(2, queue.entries.size)
             assertEquals("b", String(queue.entries[0].body))
-            assertEquals(1, queue.entries[0].attemptCount)
             assertEquals("c", String(queue.entries[1].body))
-            assertEquals(0, queue.entries[1].attemptCount)
         }
 
     @Test
@@ -87,7 +84,7 @@ class OfflineBufferFlusherTest {
         }
 
     @Test
-    fun stopsOnIoExceptionAndIncrementsAttempt() =
+    fun stopsOnIoExceptionAndKeepsEntry() =
         runTest {
             val queue = FakeBufferedRequestQueue()
             queue.enqueue(entity("https://example.test/e", "x"), 100)
@@ -98,7 +95,6 @@ class OfflineBufferFlusherTest {
             flusher.flush()
 
             assertEquals(1, queue.entries.size)
-            assertEquals(1, queue.entries[0].attemptCount)
         }
 
     @Test
