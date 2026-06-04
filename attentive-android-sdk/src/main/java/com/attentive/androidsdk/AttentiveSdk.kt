@@ -284,6 +284,11 @@ object AttentiveSdk {
         }
     }
 
+    /**
+     * The Attentive domain the SDK is currently configured with, or `null` if [initialize]
+     * has not been called yet. Reflects [AttentiveConfig.domain] including any subsequent
+     * [AttentiveConfig.changeDomain] updates.
+     */
     @get:JvmStatic
     val domain: String?
         get() = _config?.domain
