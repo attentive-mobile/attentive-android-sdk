@@ -13,6 +13,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import androidx.work.WorkerParameters
 import com.attentive.androidsdk.ClassFactory
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -38,6 +39,30 @@ class FlushWorker(
             }
             val drained = OfflineBufferFlusher(queue, { client }).flush()
             return if (drained) ListenableWorker.Result.success() else ListenableWorker.Result.retry()
+        }
+
+        /**
+         * Called once on SDK init. Flips any orphaned `pending=true` rows (left behind by
+         * a prior process that died mid-retry) to ready, and schedules [FlushWorker] if any
+         * ready rows exist. No-op if the buffer queue isn't wired yet.
+         */
+        @JvmStatic
+        fun recoverOrphansAndSchedule(context: Context) {
+            val queue = ClassFactory.bufferQueue ?: return
+            val ready =
+                try {
+                    runBlocking {
+                        queue.markAllReady()
+                        queue.countReady()
+                    }
+                } catch (t: Throwable) {
+                    Timber.w("OfflineBuffer: failed to read queue count: %s", t.message ?: t.javaClass.simpleName)
+                    return
+                }
+            if (ready > 0) {
+                Timber.i("OfflineBuffer: %d row(s) found at launch — scheduling recovery flush", ready)
+                enqueue(context)
+            }
         }
 
         @JvmStatic

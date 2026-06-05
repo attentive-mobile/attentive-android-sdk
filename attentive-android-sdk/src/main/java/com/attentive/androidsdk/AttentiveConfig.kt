@@ -6,7 +6,6 @@ import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.internal.network.buffer.FlushWorker
-import kotlinx.coroutines.runBlocking
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
@@ -43,26 +42,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
     var apiVersion = ApiVersion.OLD
 
-    private fun scheduleRecoveryFlushIfNeeded(context: android.content.Context) {
-        val queue = ClassFactory.bufferQueue ?: return
-        val ready =
-            try {
-                runBlocking {
-                    // Any rows still marked pending=true at launch are orphans from a prior
-                    // process that died mid-retry. Flip them all so the worker drains them.
-                    queue.markAllReady()
-                    queue.countReady()
-                }
-            } catch (t: Throwable) {
-                Timber.w("OfflineBuffer: failed to read queue count: %s", t.message ?: t.javaClass.simpleName)
-                return
-            }
-        if (ready > 0) {
-            Timber.i("OfflineBuffer: %d row(s) found at launch — scheduling recovery flush", ready)
-            FlushWorker.enqueue(context)
-        }
-    }
-
     init {
         Timber.d("Initializing AttentiveConfig with configuration: %s", builder)
         logLevel = builder.logLevel
@@ -76,10 +55,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 builder._context,
             )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
-        // If a prior process died mid-retry it may have left rows in Room. Schedule a flush
-        // only when there's something to drain — otherwise we'd race the worker against
-        // the very next in-flight request and double-send it.
-        scheduleRecoveryFlushIfNeeded(builder._context)
+        FlushWorker.recoverOrphansAndSchedule(builder._context)
         sendInfoEvent()
     }
 
