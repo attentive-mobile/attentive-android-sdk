@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.annotation.ColorRes
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
-import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.StandardTree
 import com.attentive.androidsdk.internal.util.VerboseTree
@@ -55,7 +54,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 builder._context,
             )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
-        FlushWorker.recoverOrphansAndSchedule(builder._context)
         sendInfoEvent()
     }
 
