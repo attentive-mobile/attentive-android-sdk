@@ -48,26 +48,32 @@ class OfflineBufferFlusher(
                 .method(entity.method, entity.body.toRequestBody(mediaType))
                 .tag(ReplayMarker::class.java, ReplayMarker)
                 .build()
+        val label = "${ReplayLabel.of(request.url)} [${request.url.encodedPath}]"
 
         return try {
             okHttpClientProvider().newCall(request).execute().use { response ->
                 when {
-                    response.isSuccessful -> true
-                    response.code == 429 -> false
-                    response.code in 500..599 -> false
+                    response.isSuccessful -> {
+                        Timber.i("Replayed buffered %s successfully.", label)
+                        true
+                    }
+                    response.code == 429 -> {
+                        Timber.w("Replay of buffered %s rate-limited (429), will retry later.", label)
+                        false
+                    }
+                    response.code in 500..599 -> {
+                        Timber.w("Replay of buffered %s failed with %d, will retry later.", label, response.code)
+                        false
+                    }
                     response.code in 400..499 -> {
-                        Timber.w(
-                            "OfflineBuffer: dropping entry %d after %d on replay",
-                            entity.id,
-                            response.code,
-                        )
+                        Timber.w("Replay of buffered %s rejected with %d, dropping.", label, response.code)
                         true
                     }
                     else -> true
                 }
             }
         } catch (e: IOException) {
-            Timber.w(e, "OfflineBuffer: replay failed for entry %d, will retry later", entity.id)
+            Timber.w(e, "Replay of buffered %s failed (network), will retry later.", label)
             false
         }
     }
