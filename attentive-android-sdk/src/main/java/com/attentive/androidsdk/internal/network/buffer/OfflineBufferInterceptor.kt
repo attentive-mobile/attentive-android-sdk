@@ -10,6 +10,13 @@ import okio.Buffer
 import timber.log.Timber
 import java.io.IOException
 
+/**
+ * Persists bufferable POST bodies to Room **before** the request enters the retry/network stack,
+ * and removes the row only on a terminal non-replayable outcome (2xx, 4xx non-429). If the
+ * process dies during [com.attentive.androidsdk.internal.network.RetryInterceptor]'s exponential-
+ * backoff sleep (up to 5 minutes), the row stays in place and [FlushWorker] replays it on next
+ * launch.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 class OfflineBufferInterceptor(
     private val queue: BufferedRequestQueue,
@@ -24,24 +31,46 @@ class OfflineBufferInterceptor(
             return chain.proceed(request)
         }
 
+        val rowId =
+            if (BufferableEndpoints.shouldBuffer(request)) preflightEnqueue(request) else null
+
         val response =
             try {
                 chain.proceed(request)
             } catch (e: IOException) {
-                if (BufferableEndpoints.shouldBuffer(request)) tryEnqueue(request)
+                if (rowId != null) {
+                    markReadyForReplay(rowId)
+                    scheduleFlush(context)
+                }
                 throw e
             }
-        if (response.code in 500..599 && BufferableEndpoints.shouldBuffer(request)) {
-            tryEnqueue(request)
+
+        if (rowId != null) {
+            when {
+                response.code in 500..599 || response.code == 429 -> {
+                    markReadyForReplay(rowId)
+                    scheduleFlush(context)
+                }
+                else -> deleteRow(rowId)
+            }
         }
         return response
     }
 
-    private fun tryEnqueue(request: Request) {
+    private fun markReadyForReplay(id: Long) {
+        try {
+            runBlocking { queue.markReady(id) }
+        } catch (t: Throwable) {
+            Timber.w("OfflineBuffer: failed to mark row %d ready: %s", id, t.message ?: t.javaClass.simpleName)
+        }
+    }
+
+    /** Captures body bytes and inserts a row. Returns the row id, or null if buffering was skipped. */
+    private fun preflightEnqueue(request: Request): Long? {
         val body = request.body
         if (body == null) {
             Timber.w("OfflineBuffer: skipping enqueue, request has no body")
-            return
+            return null
         }
         val bytes =
             try {
@@ -49,32 +78,38 @@ class OfflineBufferInterceptor(
                 body.writeTo(buffer)
                 if (buffer.size > config.maxBodyBytes) {
                     Timber.w("OfflineBuffer: skipping enqueue, body too large (%d bytes)", buffer.size)
-                    return
+                    return null
                 }
                 buffer.readByteArray()
             } catch (t: Throwable) {
                 Timber.w(t, "OfflineBuffer: failed to read request body, skipping enqueue")
-                return
+                return null
             }
 
-        val contentType = body.contentType()?.toString().orEmpty()
         val entity =
             BufferedRequestEntity(
                 url = request.url.toString(),
                 method = request.method,
-                contentType = contentType,
+                contentType = body.contentType()?.toString().orEmpty(),
                 body = bytes,
                 createdAtMs = System.currentTimeMillis(),
             )
 
-        try {
-            runBlocking {
-                queue.enqueue(entity, config.maxEntries)
-            }
+        return try {
+            val id = runBlocking { queue.enqueue(entity, config.maxEntries) }
             Timber.i("OfflineBuffer: enqueued %s %s", request.method, request.url.encodedPath)
-            scheduleFlush(context)
+            id
         } catch (t: Throwable) {
             Timber.w(t, "OfflineBuffer: failed to enqueue request")
+            null
+        }
+    }
+
+    private fun deleteRow(id: Long) {
+        try {
+            runBlocking { queue.deleteByIds(listOf(id)) }
+        } catch (t: Throwable) {
+            Timber.w(t, "OfflineBuffer: failed to delete buffered row %d", id)
         }
     }
 }

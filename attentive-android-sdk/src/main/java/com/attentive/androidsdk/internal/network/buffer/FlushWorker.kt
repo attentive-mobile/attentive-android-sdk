@@ -55,8 +55,14 @@ class FlushWorker(
                         TimeUnit.MILLISECONDS,
                     )
                     .build()
-            WorkManager.getInstance(context.applicationContext)
-                .enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.KEEP, request)
+            try {
+                WorkManager.getInstance(context.applicationContext)
+                    .enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.KEEP, request)
+            } catch (t: Throwable) {
+                // WorkManager not initialized (typical in unit tests without
+                // WorkManagerTestInitHelper) or context not yet attached. Best-effort.
+                Timber.w("OfflineBuffer: failed to enqueue FlushWorker: %s", t.message ?: t.javaClass.simpleName)
+            }
         }
     }
 }

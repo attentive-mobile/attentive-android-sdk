@@ -7,7 +7,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
-@Database(entities = [BufferedRequestEntity::class], version = 1, exportSchema = false)
+@Database(entities = [BufferedRequestEntity::class], version = 2, exportSchema = false)
 abstract class BufferDatabase : RoomDatabase() {
     abstract fun bufferedRequestDao(): BufferedRequestDao
 

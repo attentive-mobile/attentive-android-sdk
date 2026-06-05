@@ -11,14 +11,30 @@ interface BufferedRequestDao {
     @Insert
     suspend fun insert(entity: BufferedRequestEntity): Long
 
-    @Query("SELECT * FROM buffered_requests ORDER BY id ASC LIMIT :limit")
-    suspend fun peekOldest(limit: Int): List<BufferedRequestEntity>
+    /** Returns rows ready to be replayed by [FlushWorker] (pending=false). */
+    @Query("SELECT * FROM buffered_requests WHERE pending = 0 ORDER BY id ASC LIMIT :limit")
+    suspend fun peekOldestReady(limit: Int): List<BufferedRequestEntity>
 
     @Query("DELETE FROM buffered_requests WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 
+    /** Flips a row from pending=true to pending=false so [FlushWorker] picks it up. */
+    @Query("UPDATE buffered_requests SET pending = 0 WHERE id = :id")
+    suspend fun markReady(id: Long)
+
+    /**
+     * On cold start, any rows still marked pending must be from a prior process that died
+     * mid-retry. Flip them so [FlushWorker] drains them.
+     */
+    @Query("UPDATE buffered_requests SET pending = 0 WHERE pending = 1")
+    suspend fun markAllReady(): Int
+
     @Query("SELECT COUNT(*) FROM buffered_requests")
     suspend fun count(): Int
+
+    /** Number of rows ready to replay (excludes in-flight `pending=true` rows). */
+    @Query("SELECT COUNT(*) FROM buffered_requests WHERE pending = 0")
+    suspend fun countReady(): Int
 
     @Query(
         "DELETE FROM buffered_requests WHERE id IN " +

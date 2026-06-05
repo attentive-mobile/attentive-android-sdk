@@ -21,7 +21,7 @@ class OfflineBufferFlusher(
      */
     suspend fun flush(): Boolean {
         while (true) {
-            val batch = queue.peekOldest(config.batchSize)
+            val batch = queue.peekOldestReady(config.batchSize)
             if (batch.isEmpty()) return true
 
             val drained = mutableListOf<Long>()

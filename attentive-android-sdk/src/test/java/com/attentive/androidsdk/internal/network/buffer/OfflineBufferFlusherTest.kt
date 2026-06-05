@@ -28,9 +28,9 @@ class OfflineBufferFlusherTest {
     fun flushesQueueInFifoOrder() =
         runTest {
             val queue = FakeBufferedRequestQueue()
-            queue.enqueue(entity("https://example.test/e", "first"), 100)
-            queue.enqueue(entity("https://example.test/e", "second"), 100)
-            queue.enqueue(entity("https://example.test/e", "third"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "first"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "second"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "third"), 100)
 
             val seen = mutableListOf<String>()
             val client =
@@ -50,9 +50,9 @@ class OfflineBufferFlusherTest {
     fun stopsOn5xxAndIncrementsAttempt() =
         runTest {
             val queue = FakeBufferedRequestQueue()
-            queue.enqueue(entity("https://example.test/e", "a"), 100)
-            queue.enqueue(entity("https://example.test/e", "b"), 100)
-            queue.enqueue(entity("https://example.test/e", "c"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "a"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "b"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "c"), 100)
 
             val callCount = AtomicInteger()
             val client =
@@ -74,7 +74,7 @@ class OfflineBufferFlusherTest {
     fun dropsEntryOn4xx() =
         runTest {
             val queue = FakeBufferedRequestQueue()
-            queue.enqueue(entity("https://example.test/e", "bad"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "bad"), 100)
 
             val client = clientReturning { req -> response(req, 400) }
             val flusher = OfflineBufferFlusher(queue, { client })
@@ -88,7 +88,7 @@ class OfflineBufferFlusherTest {
     fun stopsOnIoExceptionAndKeepsEntry() =
         runTest {
             val queue = FakeBufferedRequestQueue()
-            queue.enqueue(entity("https://example.test/e", "x"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "x"), 100)
 
             val client = clientReturning { _ -> throw IOException("network down") }
             val flusher = OfflineBufferFlusher(queue, { client })
@@ -102,7 +102,7 @@ class OfflineBufferFlusherTest {
     fun replayRequestsCarryReplayTag() =
         runTest {
             val queue = FakeBufferedRequestQueue()
-            queue.enqueue(entity("https://example.test/e", "x"), 100)
+            queue.enqueueReady(entity("https://example.test/e", "x"), 100)
 
             var taggedAsReplay = false
             val client =

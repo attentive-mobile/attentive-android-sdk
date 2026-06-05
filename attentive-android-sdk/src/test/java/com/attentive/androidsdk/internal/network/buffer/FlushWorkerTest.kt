@@ -32,7 +32,7 @@ class FlushWorkerTest {
     @Test
     fun returnsSuccessWhenQueueDrains() = runTest {
         val queue = FakeBufferedRequestQueue()
-        queue.enqueue(entity("https://example.test/e", "x"), 100)
+        queue.enqueueReady(entity("https://example.test/e", "x"), 100)
         val client = clientReturning { req -> response(req, 200) }
 
         val result = FlushWorker.doFlush(queue, client)
@@ -43,7 +43,7 @@ class FlushWorkerTest {
     @Test
     fun returnsRetryWhenFlushStops() = runTest {
         val queue = FakeBufferedRequestQueue()
-        queue.enqueue(entity("https://example.test/e", "x"), 100)
+        queue.enqueueReady(entity("https://example.test/e", "x"), 100)
         val client = clientReturning { req -> response(req, 503) }
 
         val result = FlushWorker.doFlush(queue, client)
