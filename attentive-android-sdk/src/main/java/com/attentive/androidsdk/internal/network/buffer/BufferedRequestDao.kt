@@ -23,11 +23,12 @@ interface BufferedRequestDao {
     suspend fun markReady(id: Long)
 
     /**
-     * On cold start, any rows still marked pending must be from a prior process that died
-     * mid-retry. Flip them so [FlushWorker] drains them.
+     * On cold start, flip any pending rows whose `createdAtMs` predates [cutoffMs] to ready.
+     * The cutoff is the wall-clock time at SDK init, so rows preflighted by *this* process
+     * (which haven't completed yet) are skipped — only orphans from prior processes are flipped.
      */
-    @Query("UPDATE buffered_requests SET pending = 0 WHERE pending = 1")
-    suspend fun markAllReady(): Int
+    @Query("UPDATE buffered_requests SET pending = 0 WHERE pending = 1 AND createdAtMs < :cutoffMs")
+    suspend fun markAllReadyOlderThan(cutoffMs: Long): Int
 
     @Query("SELECT COUNT(*) FROM buffered_requests")
     suspend fun count(): Int

@@ -31,10 +31,10 @@ class FakeBufferedRequestQueue : BufferedRequestQueue {
         if (idx >= 0) entries[idx] = entries[idx].copy(pending = false)
     }
 
-    override suspend fun markAllReady(): Int {
+    override suspend fun markAllReadyOlderThan(cutoffMs: Long): Int {
         var n = 0
         for (i in entries.indices) {
-            if (entries[i].pending) {
+            if (entries[i].pending && entries[i].createdAtMs < cutoffMs) {
                 entries[i] = entries[i].copy(pending = false)
                 n++
             }

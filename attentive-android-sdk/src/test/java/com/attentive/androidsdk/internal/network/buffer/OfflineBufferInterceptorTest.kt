@@ -262,7 +262,7 @@ class OfflineBufferInterceptorTest {
 
                 override suspend fun markReady(id: Long) = Unit
 
-                override suspend fun markAllReady(): Int = 0
+                override suspend fun markAllReadyOlderThan(cutoffMs: Long): Int = 0
 
                 override suspend fun countReady(): Int = 0
             }

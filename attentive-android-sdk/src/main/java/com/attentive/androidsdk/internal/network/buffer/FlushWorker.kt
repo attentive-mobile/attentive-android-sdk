@@ -13,7 +13,10 @@ import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import androidx.work.WorkerParameters
 import com.attentive.androidsdk.ClassFactory
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -41,27 +44,39 @@ class FlushWorker(
             return if (drained) ListenableWorker.Result.success() else ListenableWorker.Result.retry()
         }
 
+        // Single supervisor scope for fire-and-forget recovery work; survives the call
+        // site (typically Application.onCreate). Failures in one recovery attempt don't
+        // cancel the scope. Tests don't observe this scope directly — they exercise the
+        // queue methods.
+        private val recoveryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         /**
-         * Called once on SDK init. Flips any orphaned `pending=true` rows (left behind by
-         * a prior process that died mid-retry) to ready, and schedules [FlushWorker] if any
-         * ready rows exist. No-op if the buffer queue isn't wired yet.
+         * Called once on SDK init. Off-loads to [Dispatchers.IO] (no main-thread DB work).
+         * Uses [BufferedRequestQueue.markAllReadyOlderThan] with the SDK-init wall-clock
+         * time as cutoff so we only flip rows that predate this process — rows preflighted
+         * by in-flight calls in this process stay `pending=true` and aren't replayed by
+         * the worker until their original call gives up.
          */
         @JvmStatic
         fun recoverOrphansAndSchedule(context: Context) {
             val queue = ClassFactory.bufferQueue ?: return
-            val ready =
-                try {
-                    runBlocking {
-                        queue.markAllReady()
+            val cutoffMs = System.currentTimeMillis()
+            recoveryScope.launch {
+                val ready =
+                    try {
+                        queue.markAllReadyOlderThan(cutoffMs)
                         queue.countReady()
+                    } catch (t: Throwable) {
+                        Timber.w(
+                            "OfflineBuffer: failed to read queue count: %s",
+                            t.message ?: t.javaClass.simpleName,
+                        )
+                        return@launch
                     }
-                } catch (t: Throwable) {
-                    Timber.w("OfflineBuffer: failed to read queue count: %s", t.message ?: t.javaClass.simpleName)
-                    return
+                if (ready > 0) {
+                    Timber.i("OfflineBuffer: %d row(s) found at launch — scheduling recovery flush", ready)
+                    enqueue(context)
                 }
-            if (ready > 0) {
-                Timber.i("OfflineBuffer: %d row(s) found at launch — scheduling recovery flush", ready)
-                enqueue(context)
             }
         }
 

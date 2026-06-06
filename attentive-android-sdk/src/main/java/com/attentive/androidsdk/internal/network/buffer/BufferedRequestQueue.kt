@@ -23,10 +23,12 @@ interface BufferedRequestQueue {
     suspend fun markReady(id: Long)
 
     /**
-     * Flips ALL pending rows to ready. Call once on SDK init: any rows still pending must
-     * be orphans of a prior process that died mid-retry.
+     * Flips pending rows older than [cutoffMs] to ready. Call once on SDK init with the
+     * process-start wall-clock time as the cutoff: rows older than that are orphans from
+     * a prior process; rows newer are still in-flight in this process and must not be
+     * touched (would race the original call and double-send on replay).
      */
-    suspend fun markAllReady(): Int
+    suspend fun markAllReadyOlderThan(cutoffMs: Long): Int
 
     suspend fun countReady(): Int
 }
@@ -55,7 +57,8 @@ class RoomBufferedRequestQueue(
 
     override suspend fun markReady(id: Long) = dao.markReady(id)
 
-    override suspend fun markAllReady(): Int = dao.markAllReady()
+    override suspend fun markAllReadyOlderThan(cutoffMs: Long): Int =
+        dao.markAllReadyOlderThan(cutoffMs)
 
     override suspend fun countReady(): Int = dao.countReady()
 }
