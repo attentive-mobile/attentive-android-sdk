@@ -89,7 +89,7 @@ class RetryInterceptor(
 
     private fun parseRetryAfterMs(response: Response): Long? {
         val header = response.header("Retry-After") ?: return null
-        header.toLongOrNull()?.let { return it * 1000L }
+        header.toLongOrNull()?.let { return max(0L, it * 1000L) }
         val parsed = retryAfterDateFormat.get()!!.parse(header, ParsePosition(0)) ?: return null
         return max(0L, parsed.time - System.currentTimeMillis())
     }

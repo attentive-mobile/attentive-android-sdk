@@ -88,6 +88,19 @@ class RetryInterceptorTest {
     }
 
     @Test
+    fun clampsNegativeNumericRetryAfter() {
+        // A misbehaving server returning "Retry-After: -1" must not produce a negative
+        // backoff; Thread.sleep would throw IllegalArgumentException on a negative value.
+        val sleeps = mutableListOf<Long>()
+        val chain = scriptedChain(listOf(response(429, retryAfter = "-1"), response(200)))
+        val interceptor = newInterceptor(sleeper = { sleeps.add(it) })
+
+        interceptor.intercept(chain)
+
+        assertEquals(listOf(0L), sleeps)
+    }
+
+    @Test
     fun doesNotRetryOn4xxOtherThan429() {
         val sleeps = mutableListOf<Long>()
         val chain = scriptedChain(listOf(response(404)))
