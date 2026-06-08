@@ -248,7 +248,8 @@ If the launch mode is the default (`standard`) or `singleTop`, skip this step.
 3. Tell the user:
    - Replace `"YOUR_ATTENTIVE_DOMAIN"` with their real domain if a placeholder was used.
    - Switch `Mode.DEBUG` to `Mode.PRODUCTION` for release builds (or wire it to `BuildConfig.DEBUG`).
-   - For identify, events, and creatives, see the SDK's `README.md`.
+   - For everything this guide intentionally skipped (identify, events, creatives, push deep linking, subscription management, etc.), see the SDK README: https://github.com/attentive-mobile/attentive-android-sdk/blob/main/README.md
+4. Then list the skipped features as clickable Markdown links to their README anchors — copy the bullets verbatim from the **What this guide intentionally skipped** section below. Do not summarize or omit them; the user needs the deep-links to find each feature.
 
 Do not run the app on a device or emulator unless asked.
 
