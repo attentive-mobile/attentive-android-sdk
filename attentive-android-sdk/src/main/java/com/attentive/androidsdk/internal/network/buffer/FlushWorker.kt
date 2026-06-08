@@ -60,7 +60,7 @@ class FlushWorker(
         @JvmStatic
         fun recoverOrphansAndSchedule(context: Context) {
             val queue = ClassFactory.bufferQueue ?: return
-            val cutoffMs = System.currentTimeMillis()
+            val cutoffMs = ClassFactory.bufferCutoffMs
             recoveryScope.launch {
                 val ready =
                     try {

@@ -27,6 +27,18 @@ object ClassFactory {
     @JvmStatic
     internal var bufferQueue: BufferedRequestQueue? = null
 
+    /**
+     * Wall-clock time captured the moment the buffer queue is wired (before any request
+     * can be preflighted by this process). Used by
+     * [com.attentive.androidsdk.internal.network.buffer.FlushWorker.recoverOrphansAndSchedule]
+     * as the cutoff for orphan detection: any pending row with `createdAtMs < cutoff` is
+     * by definition from a prior process. Rows preflighted by this process always have
+     * `createdAtMs >= cutoff`, so they're never flipped by recovery.
+     */
+    @Volatile
+    @JvmStatic
+    internal var bufferCutoffMs: Long = 0L
+
     @JvmStatic
     fun buildPersistentStorage(context: Context): PersistentStorage {
         return PersistentStorage(context)
@@ -53,6 +65,10 @@ object ClassFactory {
         if (context != null) {
             // OfflineBuffer must wrap Retry so each retry attempt does NOT re-enter the buffer.
             // Only the final retry-exhausted IOException reaches OfflineBufferInterceptor.
+            // Capture the cutoff BEFORE installing the interceptor so any row this process
+            // ever preflights has createdAtMs >= bufferCutoffMs and is excluded from
+            // orphan recovery.
+            bufferCutoffMs = System.currentTimeMillis()
             val queue = RoomBufferedRequestQueue(BufferDatabase.getInstance(context))
             builder.addInterceptor(OfflineBufferInterceptor(queue, context))
             bufferQueue = queue
