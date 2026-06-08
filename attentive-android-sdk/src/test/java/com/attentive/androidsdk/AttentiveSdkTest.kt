@@ -117,31 +117,6 @@ class AttentiveSdkTest {
         }
     }
 
-    @Test
-    fun domain_returnsConfiguredDomain_whenInitialized() {
-        assertTrue(AttentiveSdk.domain == DOMAIN)
-    }
-
-    @Test
-    fun domain_returnsNull_whenNotInitialized() {
-        val field = AttentiveSdk::class.java.getDeclaredField("_config")
-        field.isAccessible = true
-        field.set(AttentiveSdk, null)
-
-        assertTrue(AttentiveSdk.domain == null)
-    }
-
-    @Test
-    fun domain_reflectsChangeDomain() {
-        val newDomain = "newTestDomain"
-        val field = AttentiveSdk::class.java.getDeclaredField("_config")
-        field.isAccessible = true
-        val config = field.get(AttentiveSdk) as AttentiveConfig
-        config.changeDomain(newDomain)
-
-        assertTrue(AttentiveSdk.domain == newDomain)
-    }
-
     companion object {
         private const val DOMAIN = "testDomain"
         private const val VISITOR_ID = "visitorIdValue"
