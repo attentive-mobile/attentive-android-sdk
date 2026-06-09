@@ -198,6 +198,22 @@ class RetryInterceptorTest {
     }
 
     @Test
+    fun convertsInterruptedExceptionDuringSleepToIoException() {
+        val chain = throwingChain(IOException("network down"), times = Int.MAX_VALUE)
+        val interceptor =
+            newInterceptor(
+                config = RetryConfiguration(maxRetries = 5, jitterRangeMs = 0L..0L),
+                sleeper = { throw InterruptedException("canceled mid-sleep") },
+            )
+
+        val thrown = assertThrows(IOException::class.java) { interceptor.intercept(chain) }
+        assertEquals("Canceled during retry backoff", thrown.message)
+        assertTrue(thrown.cause is InterruptedException)
+        // Interrupt status should be restored so callers further up the stack can observe it.
+        assertTrue(Thread.interrupted())
+    }
+
+    @Test
     fun doesNotRetryWhenCallIsCanceled() {
         val sleeps = mutableListOf<Long>()
         val chain = throwingChain(IOException("Canceled"), times = Int.MAX_VALUE)

@@ -71,7 +71,14 @@ class RetryInterceptor(
                 response?.code?.toString() ?: error?.javaClass?.simpleName ?: "unknown",
             )
 
-            sleeper.sleep(backoffMs)
+            try {
+                sleeper.sleep(backoffMs)
+            } catch (e: InterruptedException) {
+                // OkHttp's Call.cancel() interrupts the dispatcher thread; surface as IOException
+                // to honor the @Throws contract instead of leaking an unchecked exception.
+                Thread.currentThread().interrupt()
+                throw IOException("Canceled during retry backoff", e)
+            }
             cumulativeDelayMs = nextCumulative
             attempt += 1
         }
