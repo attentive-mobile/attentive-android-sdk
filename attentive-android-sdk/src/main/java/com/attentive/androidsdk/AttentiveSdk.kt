@@ -285,8 +285,8 @@ object AttentiveSdk {
     }
 
     @get:JvmStatic
-    val domain: String?
-        get() = _config?.domain
+    val domain: String
+        get() = config.domain
 
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are

@@ -568,7 +568,7 @@ fun SwitchUserWithPhoneSetting(
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
-    var domain by remember { mutableStateOf(AttentiveSdk.domain ?: "") }
+    var domain by remember { mutableStateOf(AttentiveSdk.domain) }
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {
@@ -580,7 +580,7 @@ fun EditableDomainSetting(settingItem: SettingItem) {
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,
+                            focusedBorderColor = BonniPink,q
                             unfocusedBorderColor = Color.Gray,
                             focusedTextColor = Color.Black,
                         ),
