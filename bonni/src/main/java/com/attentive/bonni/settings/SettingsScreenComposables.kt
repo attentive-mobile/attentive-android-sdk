@@ -580,7 +580,7 @@ fun EditableDomainSetting(settingItem: SettingItem) {
                     singleLine = true,
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = BonniPink,q
+                            focusedBorderColor = BonniPink,
                             unfocusedBorderColor = Color.Gray,
                             focusedTextColor = Color.Black,
                         ),
