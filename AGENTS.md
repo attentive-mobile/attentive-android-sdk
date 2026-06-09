@@ -110,7 +110,18 @@ Wait for the user to either add the class themselves or explicitly ask you to cr
 
 Add the same two blocks (`AttentiveConfig.Builder()...build()` and `AttentiveSdk.initialize(...)`) inside the existing `onCreate()`, **after** `super.onCreate()` and after any logging/crash-reporter initialization the client already has. Do not reorder existing initialization. Match the file's language (Kotlin or Java).
 
-**Java equivalent:**
+**Kotlin:**
+```kotlin
+val attentiveConfig = AttentiveConfig.Builder()
+    .applicationContext(this)
+    .domain("YOUR_ATTENTIVE_DOMAIN")
+    .mode(AttentiveConfig.Mode.DEBUG)
+    .build()
+
+AttentiveSdk.initialize(attentiveConfig)
+```
+
+**Java:**
 ```java
 AttentiveConfig attentiveConfig = new AttentiveConfig.Builder()
     .applicationContext(this)
