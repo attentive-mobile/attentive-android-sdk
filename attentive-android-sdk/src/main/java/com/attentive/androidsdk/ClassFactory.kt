@@ -2,6 +2,7 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
+import com.attentive.androidsdk.internal.network.DatadogTracePriorityInterceptor
 import com.attentive.androidsdk.internal.network.RetryInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import com.attentive.androidsdk.internal.network.buffer.BufferDatabase
@@ -61,7 +62,10 @@ object ClassFactory {
         } else if (logLevel == AttentiveLogLevel.STANDARD) {
             logging.setLevel(HttpLoggingInterceptor.Level.BASIC)
         }
-        val builder = OkHttpClient.Builder().addInterceptor(interceptor)
+        val builder =
+            OkHttpClient.Builder()
+                .addInterceptor(interceptor)
+                .addInterceptor(DatadogTracePriorityInterceptor())
         if (context != null) {
             // OfflineBuffer must wrap Retry so each retry attempt does NOT re-enter the buffer.
             // Only the final retry-exhausted IOException reaches OfflineBufferInterceptor.

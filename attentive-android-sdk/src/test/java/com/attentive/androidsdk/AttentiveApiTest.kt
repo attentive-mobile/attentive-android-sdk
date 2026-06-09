@@ -608,6 +608,7 @@ class AttentiveApiTest {
         latch: CountDownLatch,
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(com.attentive.androidsdk.internal.network.DatadogTracePriorityInterceptor())
             .addInterceptor { chain ->
                 val request = chain.request()
                 if (request.url.host == "mobile.attentivemobile.com") {
