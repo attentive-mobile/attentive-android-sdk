@@ -50,19 +50,37 @@ Before editing anything, determine:
 
 ## Step 2 — Add the dependency
 
+### 2a. Look up the latest SDK version
+
+Do **not** hardcode a version from this guide — fetch the latest release from GitHub at integration time so the user gets the current SDK. Run one of the following and capture the `tag_name`, stripping the leading `v`:
+
+```bash
+curl -fsSL https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases/latest \
+  | grep -m1 '"tag_name"' \
+  | sed -E 's/.*"v?([^"]+)".*/\1/'
+```
+
+If `jq` is available: `curl -fsSL …/releases/latest | jq -r .tag_name | sed 's/^v//'`. If you have a web-fetch tool instead of shell access, fetch `https://github.com/attentive-mobile/attentive-android-sdk/releases/latest` (it redirects to `/releases/tag/v<version>`) and read the version out of the URL or page title.
+
+If the lookup fails (no network, rate-limited, etc.), tell the user and ask them for the version they want to use — do not guess.
+
+Use the resolved version (e.g. `2.1.7`) in place of `<VERSION>` below.
+
+### 2b. Add to the build file
+
 In the **app module's** `build.gradle` or `build.gradle.kts`, add to `dependencies`:
 
 **Groovy (`build.gradle`):**
 ```groovy
-implementation 'com.attentive:attentive-android-sdk:2.1.7'
+implementation 'com.attentive:attentive-android-sdk:<VERSION>'
 ```
 
 **Kotlin DSL (`build.gradle.kts`):**
 ```kotlin
-implementation("com.attentive:attentive-android-sdk:2.1.7")
+implementation("com.attentive:attentive-android-sdk:<VERSION>")
 ```
 
-> Use `2.1.7` as the default version. If the client uses a version catalog (`libs.versions.toml`), add an entry there instead and reference it via `libs.attentive.android.sdk`.
+> If the client uses a version catalog (`libs.versions.toml`), add an entry there instead (`attentive-android-sdk = "<VERSION>"` plus a library entry) and reference it via `libs.attentive.android.sdk`.
 
 Ensure `mavenCentral()` is in the authoritative repositories block. If `dependencyResolutionManagement` exists in `settings.gradle`(.kts), add it there; otherwise add to the root `build.gradle` `allprojects { repositories { ... } }`.
 
