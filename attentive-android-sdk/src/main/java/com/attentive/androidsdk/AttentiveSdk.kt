@@ -13,6 +13,7 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
@@ -281,6 +282,7 @@ object AttentiveSdk {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
             initializeInbox()
+            FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
     }
 
