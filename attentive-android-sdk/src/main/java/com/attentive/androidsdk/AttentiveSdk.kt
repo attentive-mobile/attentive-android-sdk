@@ -12,7 +12,9 @@ import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.network.MarkMessagesReadRequest
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.internal.network.UnreadCountRequest
 import com.attentive.androidsdk.internal.network.UpdateMessageRequest
 import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
@@ -73,6 +75,10 @@ object AttentiveSdk {
 
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
+    // Unread count and mark-read are served by a separate backend; matches the URL the iOS SDK uses.
+    private const val INBOX_UNREAD_COUNT_URL = "https://mobile.attentivemobile.com/inbox/messages/unread/count"
+    private const val INBOX_MESSAGES_READ_URL = "https://mobile.attentivemobile.com/inbox/messages/read"
+
     // Pagination management
     private val paginationLock = Mutex()
     private const val INBOX_PAGE_SIZE = 20
@@ -88,7 +94,7 @@ object AttentiveSdk {
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
         )
-        val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
+       val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
         if (inboxBaseUrl != null) {
             val json = Json { ignoreUnknownKeys = true }
             inboxApi = Retrofit.Builder()
@@ -116,6 +122,7 @@ object AttentiveSdk {
                     Timber.e(e, "Failed to fetch inbox from server, falling back to mock data")
                     initializeMockInbox()
                 }
+                refreshInboxUnreadCount()
             }
         } else {
             initializeMockInbox()
@@ -695,6 +702,48 @@ object AttentiveSdk {
     }
 
     /**
+     * Refreshes the unread inbox message count from the server and updates [inboxState].
+     * Per the inbox RFC, host apps should call this when navigating to the app's main page
+     * (e.g. on app launch) and after opening a push notification.
+     *
+     * No-op if no inbox base URL is configured. Errors are logged; the previously stored
+     * count is preserved.
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated(
+        message = "Inbox is not yet available for public use.",
+        level = DeprecationLevel.WARNING,
+    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    suspend fun refreshInboxUnreadCount() {
+        val inboxApi = inboxApi ?: run {
+            Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
+            return
+        }
+        val identifiers = config.userIdentifiers
+        val visitorId = identifiers.visitorId ?: run {
+            Timber.w("Skipping refreshInboxUnreadCount — visitor id is null")
+            return
+        }
+        val pushToken = TokenProvider.getInstance().token
+        try {
+            val response = inboxApi.getUnreadCount(
+                url = INBOX_UNREAD_COUNT_URL,
+                body = UnreadCountRequest(
+                    visitorId = visitorId,
+                    pushToken = pushToken?.takeIf { it.isNotBlank() },
+                    email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
+                    phone = identifiers.phone?.trim()?.takeIf { it.isNotBlank() },
+                ),
+            )
+            _inboxState.value = _inboxState.value.copy(unreadCount = response.unreadCount)
+            Timber.d("Inbox unread count refreshed: ${response.unreadCount}")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to refresh inbox unread count")
+        }
+    }
+
+    /**
      * Gets the count of unread messages from the current inbox state.
      * This is a lightweight operation that returns the current unread count.
      *
@@ -739,9 +788,29 @@ object AttentiveSdk {
             )
         Timber.d("Message $messageId marked as read")
         inboxApi?.also { api ->
+            val visitorId = config.userIdentifiers.visitorId
+            if (visitorId == null) {
+                Timber.w("Skipping markRead network call — visitor id is null")
+                return@also
+            }
+            val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = true)) }
-                catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
+                try {
+                    val response = api.markMessagesRead(
+                        url = INBOX_MESSAGES_READ_URL,
+                        body = MarkMessagesReadRequest(
+                            visitorId = visitorId,
+                            pushToken = pushToken,
+                            messageIds = listOf(messageId),
+                        ),
+                    )
+                    Timber.d("markMessagesRead response: $response")
+                    response.unreadCount?.let { serverCount ->
+                        _inboxState.value = _inboxState.value.copy(unreadCount = serverCount)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to sync markRead to server")
+                }
             }
         }
     }

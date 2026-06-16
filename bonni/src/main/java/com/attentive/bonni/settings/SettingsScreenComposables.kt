@@ -175,7 +175,7 @@ fun SettingsList(
 //    debugSettings.add("Toggle Api Version - Current: $apiVersionString" to { viewModel.toggleEndpointVersion() })
 
     val creativeSettings = mutableListOf<Pair<String, () -> Unit>>()
-    creativeSettings.add("Show Creatives" to { creative.trigger() })
+    creativeSettings.add("Show Creatives" to { creative.trigger(creativeId = "1350958") })
     creativeSettings.add(
         "Clear Cookies (ignore filtering rules for next creative)" to {
             android.webkit.CookieManager.getInstance().removeAllCookies(null)

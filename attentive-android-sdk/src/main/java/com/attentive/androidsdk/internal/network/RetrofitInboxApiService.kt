@@ -7,8 +7,10 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 internal interface RetrofitInboxApiService {
     @GET("inbox/messages")
@@ -29,6 +31,18 @@ internal interface RetrofitInboxApiService {
         @Path("id") id: String,
         @Query("c") domain: String,
     ): Response<Unit>
+
+    @POST
+    suspend fun getUnreadCount(
+        @Url url: String,
+        @Body body: UnreadCountRequest,
+    ): UnreadCountResponse
+
+    @PATCH
+    suspend fun markMessagesRead(
+        @Url url: String,
+        @Body body: MarkMessagesReadRequest,
+    ): MarkMessagesReadResponse
 }
 
 @Serializable
