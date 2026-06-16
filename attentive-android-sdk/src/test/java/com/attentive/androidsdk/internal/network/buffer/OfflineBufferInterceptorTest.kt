@@ -161,6 +161,28 @@ class OfflineBufferInterceptorTest {
     }
 
     @Test
+    fun cancelsCallDoesNotMarkReady() {
+        // Mirrors RetryInterceptor's doesNotRetryWhenCallIsCanceled. When the OkHttp Call is
+        // canceled mid-flight (Call.cancel() surfaces as IOException), the buffer must not
+        // mark the row ready or schedule a flush — otherwise FlushWorker replays a request the
+        // user explicitly canceled. The preflighted row is dropped to keep the queue clean.
+        val request = postRequest("https://example.test/e", "hi".toByteArray())
+        val chain =
+            object : TestChain() {
+                override fun request(): Request = request
+
+                override fun proceed(request: Request): Response {
+                    testCall.cancel()
+                    throw IOException("Canceled")
+                }
+            }
+
+        assertThrows(IOException::class.java) { interceptor.intercept(chain) }
+        assertEquals("Canceled call must drop the preflighted row", 0, queue.entries.size)
+        assertEquals("Canceled call must not schedule a flush", 0, scheduleFlushCount)
+    }
+
+    @Test
     fun replayTagBypassesPreflight() {
         val request =
             postRequest("https://example.test/e", "{}".toByteArray())

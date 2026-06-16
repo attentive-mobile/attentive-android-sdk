@@ -39,8 +39,15 @@ class OfflineBufferInterceptor(
                 chain.proceed(request)
             } catch (e: IOException) {
                 if (rowId != null) {
-                    markReadyForReplay(rowId)
-                    scheduleFlush(context)
+                    if (chain.call().isCanceled()) {
+                        // User canceled mid-flight. Drop the preflighted row so it doesn't linger
+                        // as `pending` and get flipped to ready by recoverOrphansAndSchedule on
+                        // the next process launch.
+                        deleteRow(rowId)
+                    } else {
+                        markReadyForReplay(rowId)
+                        scheduleFlush(context)
+                    }
                 }
                 throw e
             }

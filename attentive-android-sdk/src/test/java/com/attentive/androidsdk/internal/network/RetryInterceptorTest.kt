@@ -214,6 +214,41 @@ class RetryInterceptorTest {
     }
 
     @Test
+    fun skipsRetryForReplayedRequests() {
+        // Replays from FlushWorker carry ReplayMarker. RetryInterceptor must not sleep or retry —
+        // WorkManager handles replay-side retry via BackoffPolicy.EXPONENTIAL. Sleeping inside
+        // doWork can blow past WorkManager's 10-minute job timeout when batches are draining
+        // a flaky backend.
+        val sleeps = mutableListOf<Long>()
+        val replayRequest =
+            Request.Builder()
+                .url("https://example.test/")
+                .tag(
+                    com.attentive.androidsdk.internal.network.buffer.ReplayMarker::class.java,
+                    com.attentive.androidsdk.internal.network.buffer.ReplayMarker,
+                )
+                .build()
+        val chain =
+            object : TestChain() {
+                var callCount = 0
+
+                override fun request(): Request = replayRequest
+
+                override fun proceed(request: Request): Response {
+                    callCount += 1
+                    return response(503)
+                }
+            }
+        val interceptor = newInterceptor(sleeper = { sleeps.add(it) })
+
+        val result = interceptor.intercept(chain)
+
+        assertEquals(503, result.code)
+        assertEquals("Replay must be passed through exactly once", 1, chain.callCount)
+        assertEquals("Replay must not sleep inside RetryInterceptor", 0, sleeps.size)
+    }
+
+    @Test
     fun doesNotRetryWhenCallIsCanceled() {
         val sleeps = mutableListOf<Long>()
         val chain = throwingChain(IOException("Canceled"), times = Int.MAX_VALUE)

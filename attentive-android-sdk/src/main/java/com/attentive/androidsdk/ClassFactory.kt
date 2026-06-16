@@ -96,7 +96,25 @@ object ClassFactory {
         okHttpClient: OkHttpClient,
         domain: String,
     ): AttentiveApi {
-        return AttentiveApi(okHttpClient, domain)
+        return AttentiveApi(ensureDatadogTracePriority(okHttpClient), domain)
+    }
+
+    /**
+     * Host apps may supply their own [OkHttpClient] via [AttentiveConfig.Builder.okHttpClient],
+     * which bypasses the SDK's interceptor stack. Force [DatadogTracePriorityInterceptor] onto
+     * every SDK-bound client so substitution doesn't silently drop observability fidelity.
+     * Idempotent — clients built by [buildOkHttpClient] already have the interceptor and are
+     * returned unchanged.
+     */
+    @JvmStatic
+    internal fun ensureDatadogTracePriority(client: OkHttpClient): OkHttpClient {
+        return if (client.interceptors.any { it is DatadogTracePriorityInterceptor }) {
+            client
+        } else {
+            client.newBuilder()
+                .addInterceptor(DatadogTracePriorityInterceptor())
+                .build()
+        }
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {

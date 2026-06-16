@@ -1,6 +1,7 @@
 package com.attentive.androidsdk.internal.network
 
 import androidx.annotation.RestrictTo
+import com.attentive.androidsdk.internal.network.buffer.ReplayMarker
 import okhttp3.Interceptor
 import okhttp3.Response
 import timber.log.Timber
@@ -25,6 +26,13 @@ class RetryInterceptor(
 
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
+        // Replays from FlushWorker carry ReplayMarker. Skip the in-process retry loop —
+        // WorkManager's BackoffPolicy.EXPONENTIAL already handles replay-side retry, and
+        // sleeping up to maxCumulativeDelayMs per row inside doWork can blow past
+        // WorkManager's 10-minute job timeout when batches are draining a flaky backend.
+        if (chain.request().tag(ReplayMarker::class.java) != null) {
+            return chain.proceed(chain.request())
+        }
         var attempt = 0
         var cumulativeDelayMs = 0L
 
