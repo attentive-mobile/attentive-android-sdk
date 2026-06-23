@@ -1,8 +1,8 @@
 [versions]
 # SDK versions
-compileSdk = "35"
+compileSdk = "37"
 minSdk = "21"
-targetSdk = "35"
+targetSdk = "37"
 
 # Kotlin & Compose
 kotlin = "2.0.0"
@@ -59,10 +59,10 @@ mockitoAndroid = "5.5.0"
 leakcanary = "2.14"
 
 # Lint
-lintApi = "31.8.0"
+lintApi = "31.13.2"
 
 # Build tools
-agp = "8.8.0"
+agp = "8.13.2"
 nexusPublish = "1.3.0"
 googleServices = "4.4.2"
 checkstyle = "8.36"
