@@ -18,6 +18,23 @@ internal data class UnreadCountResponse(
     val unreadCount: Int,
 )
 
+internal data class GetMessagesRequest(
+    @SerializedName("visitor_id")
+    val visitorId: String,
+    @SerializedName("push_token")
+    val pushToken: String? = null,
+    @SerializedName("email")
+    val email: String? = null,
+    @SerializedName("phone")
+    val phone: String? = null,
+    @SerializedName("page_size")
+    val pageSize: Int,
+    @SerializedName("page_token")
+    val pageToken: String? = null,
+    @SerializedName("since")
+    val since: String? = null,
+)
+
 internal data class MarkMessagesReadRequest(
     @SerializedName("visitor_id")
     val visitorId: String,
@@ -39,4 +56,27 @@ internal data class MarkMessagesReadEntry(
     val messageId: String,
     @SerializedName("is_read")
     val isRead: Boolean,
+)
+
+internal data class DeleteMessageRequest(
+    @SerializedName("visitor_id")
+    val visitorId: String,
+    @SerializedName("push_token")
+    val pushToken: String? = null,
+)
+
+internal data class DeleteMessageResponse(
+    @SerializedName("message_id")
+    val messageId: String,
+)
+
+internal data class TrackClickRequest(
+    @SerializedName("visitor_id")
+    val visitorId: String,
+    @SerializedName("push_token")
+    val pushToken: String? = null,
+    @SerializedName("message_id")
+    val messageId: String,
+    @SerializedName("action_url")
+    val actionUrl: String? = null,
 )

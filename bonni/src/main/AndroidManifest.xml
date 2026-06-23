@@ -30,6 +30,6 @@
 
         <meta-data
             android:name="com.attentive.sdk.INBOX_BASE_URL"
-            android:value="http://10.0.2.2:3000/" />
+            android:value="https://mobile.attentivemobile.com/" />
     </application>
 </manifest>
