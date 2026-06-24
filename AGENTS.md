@@ -146,9 +146,11 @@ Do not run the app on a device or emulator unless asked.
 
 ## Step 5 — Ask about push
 
-Push notifications are **enabled by default** in the SDK. Before doing anything else, ask the user a single question:
+Push notifications are **enabled by default** in the SDK. **You must ask the user about push before finishing the integration** — do not skip this step, do not assume the answer, and do not infer it from the presence/absence of Firebase. Once Step 4 builds cleanly, ask exactly:
 
 > "Do you plan to send push notifications to your users via Attentive? (yes/no)"
+
+Wait for an explicit answer before proceeding.
 
 ### If the user answers **no**
 
@@ -183,18 +185,22 @@ If any of these are missing, **stop and tell the user**. Do not add Firebase you
 
 Wait for confirmation before proceeding.
 
-#### 5b. Existing `FirebaseMessagingService` subclass — detect and offer to forward
+#### 5b. Existing `FirebaseMessagingService` subclass — detect and patch in place
+
+The SDK ships its own `AttentiveFirebaseMessagingService` and handles incoming Attentive messages automatically. **Do not ask the user to create a `FirebaseMessagingService` subclass** — they don't need one. The only reason to touch this area at all is if the host app *already* has its own subclass, in which case Android will route every FCM message to whichever service has the highest `android:priority`, and Attentive messages may go to the host's service instead of the SDK's. We patch the host's service so it forwards Attentive messages back to the SDK.
 
 Search the host app for an existing `FirebaseMessagingService` subclass:
 
 - Grep all source files (`.kt` and `.java`) under the app module's `src/main/java` and `src/main/kotlin` for `: FirebaseMessagingService` (Kotlin) or `extends FirebaseMessagingService` (Java).
 - Cross-check `AndroidManifest.xml` for a `<service>` whose `<intent-filter>` declares `com.google.firebase.MESSAGING_EVENT`.
 
-**If a subclass is found**, look at its `onMessageReceived` and check whether it already forwards Attentive messages (`AttentiveSdk.isAttentiveFirebaseMessage(...)` followed by `AttentiveSdk.sendNotification(...)`). If it does not, ask:
+**If no subclass is found**, do nothing. The SDK's built-in `AttentiveFirebaseMessagingService` will receive Attentive messages directly. Skip to 5c — do **not** prompt the user to create a service.
 
-> "I found `com.example.MyFirebaseMessagingService` extending `FirebaseMessagingService`. Want me to add the Attentive forwarding so push notifications from Attentive are displayed? It's a 3-line change inside `onMessageReceived`."
+**If a subclass is found**, look at its `onMessageReceived` and check whether it already forwards Attentive messages (`AttentiveSdk.isAttentiveFirebaseMessage(...)` followed by `AttentiveSdk.sendNotification(...)`). If it already does, skip to 5c. Otherwise tell the user what you're about to do and patch it directly — this is a mechanical safety fix, not a judgment call:
 
-If yes, add the forwarding inside `onMessageReceived` **after** `super.onMessageReceived(remoteMessage)` and **before** the host's existing message handling, so Attentive messages short-circuit before the host tries to render them:
+> "I found `com.example.MyFirebaseMessagingService` extending `FirebaseMessagingService`. I'm going to add a 3-line check at the top of `onMessageReceived` that routes Attentive messages back into the SDK so they still display. Your existing handling for non-Attentive messages stays exactly as-is."
+
+Then add the forwarding inside `onMessageReceived` **after** `super.onMessageReceived(remoteMessage)` and **before** the host's existing message handling, so Attentive messages short-circuit before the host tries to render them:
 
 ```kotlin
 override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -207,9 +213,7 @@ override fun onMessageReceived(remoteMessage: RemoteMessage) {
 }
 ```
 
-Add the `AttentiveSdk` import. Match Kotlin/Java to the existing class. If the host's service has a higher `android:priority` than the SDK's (the SDK declares `-500`), this forwarding is what makes Attentive notifications still display.
-
-**If no subclass is found**, do nothing — the SDK's built-in `AttentiveFirebaseMessagingService` will receive Attentive messages directly. Skip to 5c.
+Add the `AttentiveSdk` import. Match Kotlin/Java to the existing class.
 
 #### 5c. Notification icon
 
@@ -233,6 +237,8 @@ If they don't have one, add a clearly-marked placeholder comment in the builder 
 Ask follow-up only if relevant: "Do you want to set a background color for the icon?" If yes, add `.notificationIconBackgroundColor(R.color.your_color)`.
 
 #### 5d. Push permission prompt (Android 13+)
+
+**Do not add `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />` to the host app's `AndroidManifest.xml`.** The SDK's manifest already declares it, and Android merges permissions from library manifests into the app's final manifest at build time. Adding it again is redundant and a sign you're about to do too much.
 
 Ask:
 
@@ -303,6 +309,9 @@ Do not run the app on a device or emulator unless asked.
 
 - Do not add `identify()`, `clearUser()`, `updateUser()`, `recordEvent()`, or `Creative` calls.
 - Do not install Firebase or create a `google-services.json` — only detect what's already there.
+- Do not skip Step 5 — always ask the user whether they plan to use push, even if push looks already wired up.
+- Do not create a `FirebaseMessagingService` subclass for the user. The SDK ships its own; only patch one if the host app *already* has one.
+- Do not add `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />` to the host's manifest — the SDK declares it and it's merged in transitively.
 - Do not add `<service tools:node="remove">` for `AttentiveFirebaseMessagingService`. Use `pushEnabled(false)` instead.
 - Do not bump the user's `minSdk`, `targetSdk`, AGP version, or Kotlin version.
 - Do not introduce DI frameworks (Hilt/Dagger/Koin) to wire this — direct construction in `onCreate` is correct here.
