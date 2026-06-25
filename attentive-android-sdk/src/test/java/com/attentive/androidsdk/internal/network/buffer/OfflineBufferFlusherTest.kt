@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.internal.network.buffer
 
-import com.attentive.androidsdk.internal.network.DatadogTracePriorityInterceptor
 import kotlinx.coroutines.test.runTest
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -97,31 +96,6 @@ class OfflineBufferFlusherTest {
             flusher.flush()
 
             assertEquals(1, queue.entries.size)
-        }
-
-    @Test
-    fun replayCarriesDatadogPriorityHeaderViaInterceptor() =
-        runTest {
-            val queue = FakeBufferedRequestQueue()
-            queue.enqueueReady(entity("https://example.test/e", "x"), 100)
-
-            var seenHeader: String? = null
-            val client =
-                OkHttpClient.Builder()
-                    .addInterceptor(DatadogTracePriorityInterceptor())
-                    .addInterceptor(
-                        Interceptor { chain ->
-                            val req = chain.request()
-                            seenHeader = req.header("x-datadog-sampling-priority")
-                            response(req, 200)
-                        },
-                    )
-                    .build()
-            val flusher = OfflineBufferFlusher(queue, { client })
-
-            flusher.flush()
-
-            assertEquals("1", seenHeader)
         }
 
     @Test

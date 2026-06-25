@@ -2,7 +2,6 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
-import com.attentive.androidsdk.internal.network.DatadogTracePriorityInterceptor
 import com.attentive.androidsdk.internal.network.RetryInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import com.attentive.androidsdk.internal.network.buffer.BufferDatabase
@@ -65,7 +64,6 @@ object ClassFactory {
         val builder =
             OkHttpClient.Builder()
                 .addInterceptor(interceptor)
-                .addInterceptor(DatadogTracePriorityInterceptor())
         if (context != null) {
             // OfflineBuffer must wrap Retry so each retry attempt does NOT re-enter the buffer.
             // Only the final retry-exhausted IOException reaches OfflineBufferInterceptor.
@@ -96,25 +94,7 @@ object ClassFactory {
         okHttpClient: OkHttpClient,
         domain: String,
     ): AttentiveApi {
-        return AttentiveApi(ensureDatadogTracePriority(okHttpClient), domain)
-    }
-
-    /**
-     * Host apps may supply their own [OkHttpClient] via [AttentiveConfig.Builder.okHttpClient],
-     * which bypasses the SDK's interceptor stack. Force [DatadogTracePriorityInterceptor] onto
-     * every SDK-bound client so substitution doesn't silently drop observability fidelity.
-     * Idempotent — clients built by [buildOkHttpClient] already have the interceptor and are
-     * returned unchanged.
-     */
-    @JvmStatic
-    internal fun ensureDatadogTracePriority(client: OkHttpClient): OkHttpClient {
-        return if (client.interceptors.any { it is DatadogTracePriorityInterceptor }) {
-            client
-        } else {
-            client.newBuilder()
-                .addInterceptor(DatadogTracePriorityInterceptor())
-                .build()
-        }
+        return AttentiveApi(okHttpClient, domain)
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {
