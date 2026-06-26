@@ -74,7 +74,7 @@ android {
                 excludes = ['jdk.internal.*']
             }
         }
-        targetSdk 37
+        targetSdk libs.versions.targetSdk.get().toInteger()
     }
 
     testFixtures {
