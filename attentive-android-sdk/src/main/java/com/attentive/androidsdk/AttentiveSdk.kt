@@ -33,8 +33,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import org.jetbrains.annotations.VisibleForTesting
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
@@ -88,10 +90,11 @@ object AttentiveSdk {
         )
         val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
         if (inboxBaseUrl != null) {
+            val json = Json { ignoreUnknownKeys = true }
             inboxApi = Retrofit.Builder()
                 .baseUrl(inboxBaseUrl)
                 .client(OkHttpClient())
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
                 .create(RetrofitInboxApiService::class.java)
             Timber.d("Inbox API configured with base URL: $inboxBaseUrl")

@@ -1,6 +1,7 @@
 package com.attentive.androidsdk.internal.network
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -30,7 +31,8 @@ internal interface RetrofitInboxApiService {
     ): Response<Unit>
 }
 
+@Serializable
 internal data class UpdateMessageRequest(
-    @SerializedName("c") val domain: String,
+    @SerialName("c") val domain: String,
     val isRead: Boolean,
 )
