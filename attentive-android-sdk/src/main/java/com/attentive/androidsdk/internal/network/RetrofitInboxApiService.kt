@@ -11,6 +11,7 @@ import retrofit2.http.Query
 internal interface RetrofitInboxApiService {
     @GET("inbox/messages")
     suspend fun getMessages(
+        @Query("c") domain: String,
         @Query("offset") offset: Int,
         @Query("limit") limit: Int,
     ): InboxResponse
@@ -18,11 +19,17 @@ internal interface RetrofitInboxApiService {
     @PATCH("inbox/messages/{id}")
     suspend fun updateMessage(
         @Path("id") id: String,
-        @Body body: Map<String, Boolean>,
+        @Body body: UpdateMessageRequest,
     ): Response<Unit>
 
     @DELETE("inbox/messages/{id}")
     suspend fun deleteMessage(
         @Path("id") id: String,
+        @Query("c") domain: String,
     ): Response<Unit>
 }
+
+internal data class UpdateMessageRequest(
+    val c: String,
+    val isRead: Boolean,
+)

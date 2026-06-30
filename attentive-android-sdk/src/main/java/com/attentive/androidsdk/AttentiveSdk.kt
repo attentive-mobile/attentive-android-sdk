@@ -13,6 +13,7 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.internal.network.UpdateMessageRequest
 import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
@@ -100,7 +101,7 @@ object AttentiveSdk {
         if (inboxApi != null) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val response = inboxApi.getMessages(0, INBOX_PAGE_SIZE)
+                    val response = inboxApi.getMessages(config.domain, 0, INBOX_PAGE_SIZE)
                     _inboxState.value = InboxState(
                         messages = response.messages,
                         unreadCount = response.unreadCount,
@@ -219,7 +220,7 @@ object AttentiveSdk {
                 val inboxApi = inboxApi
 
                 if (inboxApi != null) {
-                    val response = inboxApi.getMessages(offsetToFetch, INBOX_PAGE_SIZE)
+                    val response = inboxApi.getMessages(config.domain, offsetToFetch, INBOX_PAGE_SIZE)
                     val latestState = _inboxState.value
                     val updatedMessages = latestState.messages + response.messages
 
@@ -727,7 +728,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as read")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, mapOf("isRead" to true)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(c = config.domain, isRead = true)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
             }
         }
@@ -763,7 +764,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as unread")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, mapOf("isRead" to false)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(c = config.domain, isRead = false)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markUnread to server") }
             }
         }
@@ -796,7 +797,7 @@ object AttentiveSdk {
         val inboxApi = inboxApi
         if (inboxApi != null) {
             CoroutineScope(Dispatchers.IO).launch {
-                try { inboxApi.deleteMessage(messageId) }
+                try { inboxApi.deleteMessage(messageId, config.domain) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync deleteMessage to server") }
             }
         }
