@@ -728,7 +728,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as read")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, UpdateMessageRequest(c = config.domain, isRead = true)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = true)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
             }
         }
@@ -764,7 +764,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as unread")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, UpdateMessageRequest(c = config.domain, isRead = false)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = false)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markUnread to server") }
             }
         }
