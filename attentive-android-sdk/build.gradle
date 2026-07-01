@@ -20,7 +20,6 @@ android {
 
     defaultConfig {
         minSdk libs.versions.minSdk.get().toInteger()
-        targetSdk libs.versions.targetSdk.get().toInteger()
 
         buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
@@ -52,6 +51,7 @@ android {
     lint {
         baseline = file("lint-baseline.xml")
         lintConfig = rootProject.file("lint.xml")
+        targetSdk libs.versions.targetSdk.get().toInteger()
     }
 
     buildFeatures {
@@ -75,10 +75,15 @@ android {
                 excludes = ['jdk.internal.*']
             }
         }
+        targetSdk libs.versions.targetSdk.get().toInteger()
     }
 
     testFixtures {
         enable = true
+    }
+
+    publishing {
+        singleVariant('release')
     }
     sourceSets {
         main {

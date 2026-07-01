@@ -160,7 +160,7 @@ internal class AttentivePush {
                 .setColor(ContextCompat.getColor(context, notificationIconBackgroundColorResourceId))
         }
 
-        if (imageUrl != null) {
+        if (!imageUrl.isNullOrEmpty()) {
             CoroutineScope(Dispatchers.IO).launch {
                 val bitmap = imageUrl.getBitmapFromUrl()
                 if (bitmap != null) {

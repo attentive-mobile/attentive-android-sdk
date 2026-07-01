@@ -998,11 +998,6 @@ internal suspend fun sendOptInSubscriptionStatus(
     email: String? = "",
     pushToken: String?
 ): Result<Unit> {
-    if (pushToken == null) {
-        val msg = "Invalid push token, cannot send opt-in subscription status"
-        Timber.e(msg)
-        return Result.failure(IllegalStateException(msg))
-    }
     val domain = AttentiveEventTracker.instance.config.domain
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
@@ -1047,11 +1042,6 @@ internal suspend fun sendOptOutSubscriptionStatus(
     domain: String,
     pushToken: String?
 ): Result<Unit> {
-    if (pushToken == null) {
-        val msg = "Invalid push token, cannot send opt-out subscription status"
-        Timber.e(msg)
-        return Result.failure(IllegalStateException(msg))
-    }
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         val msg = "No visitorId available, cannot send opt-out subscription"
