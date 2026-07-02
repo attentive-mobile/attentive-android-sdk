@@ -5,6 +5,7 @@ version: 2.1
 orbs:
   android: circleci/android@2.5.0
   slack: circleci/slack@6.1.3
+  attentive: attentive-mobile/circleci-orb@0.0.11
 
 # ========================
 # Constants
@@ -17,9 +18,6 @@ parameters:
     type: boolean
     default: false
   release_version:
-    type: string
-    default: ""
-  next_version:
     type: string
     default: ""
 
@@ -277,6 +275,17 @@ jobs:
     executor: android-executor
     steps:
       - checkout
+      - attentive/app-based-github-token:
+          github_app_client_id: ${GITHUB_APP_CLIENT_ID}
+          github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
+          github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
+      - run:
+          name: Switch git remote to HTTPS with App token
+          command: |
+            git remote set-url origin "https://github.com/attentive-mobile/attentive-android-sdk.git"
+            git config --local --replace-all \
+              "http.https://github.com/.extraheader" \
+              "Authorization: basic $(printf 'x-access-token:%s' "${GITHUB_TOKEN}" | base64 -w 0)"
       - restore_cache:
           keys:
             - gradle-v2-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "attentive-android-sdk/build.gradle" }}
@@ -291,39 +300,50 @@ jobs:
             fi
             echo "export RELEASE_VERSION=$VERSION" >> "$BASH_ENV"
 
-            # Detect beta versions
             if echo "$VERSION" | grep -qi "beta"; then
               echo "export IS_BETA=true" >> "$BASH_ENV"
-              echo "Beta release detected — skipping GitHub Release and version bump"
+              echo "Beta release detected — skipping GitHub Release"
             else
               echo "export IS_BETA=false" >> "$BASH_ENV"
-
-              if [ -n "<< pipeline.parameters.next_version >>" ]; then
-                NEXT="<< pipeline.parameters.next_version >>"
-              else
-                MAJOR=$(echo "$VERSION" | cut -d. -f1)
-                MINOR=$(echo "$VERSION" | cut -d. -f2)
-                PATCH=$(echo "$VERSION" | cut -d. -f3)
-                NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
-              fi
-              echo "export NEXT_VERSION=$NEXT" >> "$BASH_ENV"
-              echo "Next dev version: $NEXT"
             fi
 
             echo "Releasing: $VERSION"
       - run:
-          name: Set release version
-          command: |
-            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$RELEASE_VERSION/" attentive-android-sdk/gradle.properties
-      - run:
-          name: Commit release version
+          name: Push release branch and open PR
           command: |
             git config user.name "circleci[bot]"
             git config user.email "circleci[bot]@users.noreply.github.com"
+
+            BRANCH="release/$RELEASE_VERSION"
+            git checkout -b "$BRANCH"
+            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$RELEASE_VERSION/" attentive-android-sdk/gradle.properties
             git add attentive-android-sdk/gradle.properties
-            if ! git diff --cached --quiet; then
+
+            if git diff --cached --quiet; then
+              echo "gradle.properties already at $RELEASE_VERSION; skipping release branch + PR. Publishing from current commit."
+            else
               git commit -m "Set version to $RELEASE_VERSION"
-              git push origin HEAD:main
+              git push --force origin "$BRANCH"
+
+              HTTP_STATUS=$(curl -s -o /tmp/pr-response.json -w "%{http_code}" \
+                -X POST \
+                "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"title\": \"Release v$RELEASE_VERSION\",
+                  \"body\": \"Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified.\",
+                  \"head\": \"$BRANCH\",
+                  \"base\": \"main\"
+                }")
+
+              echo "GitHub PR API status: $HTTP_STATUS"
+              cat /tmp/pr-response.json
+              echo
+
+              if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+                exit 1
+              fi
             fi
       - run:
           name: Clean
@@ -338,43 +358,16 @@ jobs:
               echo "Skipping GitHub Release for beta version"
               exit 0
             fi
-            git tag "v$RELEASE_VERSION"
-            git push origin "v$RELEASE_VERSION"
+            git tag "$RELEASE_VERSION"
+            git push origin "$RELEASE_VERSION"
             curl -sf -X POST \
               "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases" \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/json" \
               -d "{
-                \"tag_name\": \"v$RELEASE_VERSION\",
-                \"name\": \"v$RELEASE_VERSION\",
+                \"tag_name\": \"$RELEASE_VERSION\",
+                \"name\": \"$RELEASE_VERSION\",
                 \"generate_release_notes\": true
-              }"
-      - run:
-          name: Create version bump PR
-          command: |
-            if [ "$IS_BETA" = "true" ]; then
-              echo "Skipping version bump for beta version"
-              exit 0
-            fi
-            git config user.name "circleci[bot]"
-            git config user.email "circleci[bot]@users.noreply.github.com"
-
-            BRANCH="chore/bump-version-to-$NEXT_VERSION"
-            git checkout -b "$BRANCH"
-            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$NEXT_VERSION/" attentive-android-sdk/gradle.properties
-            git add attentive-android-sdk/gradle.properties
-            git commit -m "Bump version to $NEXT_VERSION"
-            git push origin "$BRANCH"
-
-            curl -sf -X POST \
-              "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"title\": \"Bump version to $NEXT_VERSION\",
-                \"body\": \"Automated version bump after releasing v$RELEASE_VERSION to Maven Central.\",
-                \"head\": \"$BRANCH\",
-                \"base\": \"main\"
               }"
       - notify-slack-on-failure
 

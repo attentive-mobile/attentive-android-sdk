@@ -7,10 +7,11 @@ on:
         description: 'Version to release (e.g. 2.1.3). Leave empty to use the version in gradle.properties.'
         required: false
         type: string
-      next_version:
-        description: 'Next development version (e.g. 2.1.4). Leave empty to auto-increment patch.'
+      branch:
+        description: 'Branch to run the release pipeline against. Defaults to main.'
         required: false
         type: string
+        default: 'main'
 
 jobs:
   trigger-release:
@@ -25,10 +26,9 @@ jobs:
             -H "Circle-Token: ${{ secrets.CIRCLECI_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "branch": "main",
+              "branch": "${{ inputs.branch }}",
               "parameters": {
                 "run_release": true,
-                "release_version": "${{ inputs.version }}",
-                "next_version": "${{ inputs.next_version }}"
+                "release_version": "${{ inputs.version }}"
               }
             }'

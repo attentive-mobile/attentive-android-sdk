@@ -402,7 +402,7 @@ fun AboutSection() {
 @Composable
 fun EditableDomainSetting(settingItem: SettingItem) {
     var isEditing by remember { mutableStateOf(false) }
-    var domain by remember { mutableStateOf(AttentiveEventTracker.instance.config.domain) }
+    var domain by remember { mutableStateOf(AttentiveSdk.domain) }
 
     AnimatedContent(targetState = isEditing) { editing ->
         if (editing) {

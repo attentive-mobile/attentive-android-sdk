@@ -290,6 +290,11 @@ object AttentiveSdk {
         }
     }
 
+    @get:JvmStatic
+    val domain: String
+        get() = config.domain
+
+
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
      * logged but not surfaced to the caller. For coroutine-aware error handling, use
@@ -440,6 +445,10 @@ object AttentiveSdk {
      * displays the notification automatically.
      */
     fun sendNotification(remoteMessage: RemoteMessage) {
+        if (!AttentiveEventTracker.instance.isPushEnabled()) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); dropping incoming notification")
+            return
+        }
         AttentivePush.getInstance().sendNotification(remoteMessage)
     }
 
