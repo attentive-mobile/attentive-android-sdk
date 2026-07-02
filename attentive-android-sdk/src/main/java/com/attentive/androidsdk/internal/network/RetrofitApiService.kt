@@ -15,35 +15,25 @@ interface RetrofitApiService {
      * to keep the backend's push token mapping in sync with the current device user.
      * Backend requires pushToken (pt) to be non-blank or it silently discards the request (204).
      */
-    @Headers(
-        "x-datadog-sampling-priority: 1",
-        "Content-Type: application/json",
-    )
+    @Headers("Content-Type: application/json")
     @POST("user-update")
     fun updateUser(
         @Body request: UserUpdateRequest,
     ): Call<Unit>
 
-    @Headers("x-datadog-sampling-priority: 1")
     @FormUrlEncoded
     @POST("mobile")
     fun sendEvent(
         @Field("d") eventData: String,
     ): Call<Unit>
 
-    @Headers(
-        "x-datadog-sampling-priority: 1",
-        "Content-Type: application/json",
-    )
+    @Headers("Content-Type: application/json")
     @POST("token")
     fun registerPushToken(
         @Body request: PushTokenRequest,
     ): Call<Unit>
 
-    @Headers(
-        "x-datadog-sampling-priority: 1",
-        "Content-Type: application/json",
-    )
+    @Headers("Content-Type: application/json")
     @POST("mtctrl")
     fun sendDirectOpenStatus(
         @Body request: DirectOpenRequest,
@@ -61,16 +51,12 @@ interface RetrofitApiService {
         @Body request: OptOutSubscriptionRequest,
     ): Call<Unit>
 
-    @Headers(
-        "x-datadog-sampling-priority: 1",
-        "Content-Type: application/json",
-    )
+    @Headers("Content-Type: application/json")
     @POST("user-update")
     suspend fun updateUserSuspend(
         @Body request: UserUpdateRequest,
     ): Response<Unit>
 
-    @Headers("x-datadog-sampling-priority: 1")
     @FormUrlEncoded
     @POST("mobile")
     suspend fun sendEventSuspend(

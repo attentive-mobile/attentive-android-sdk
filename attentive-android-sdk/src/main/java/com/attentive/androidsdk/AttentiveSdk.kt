@@ -13,6 +13,8 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.internal.network.UpdateMessageRequest
+import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
@@ -31,8 +33,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import org.jetbrains.annotations.VisibleForTesting
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
@@ -86,10 +90,11 @@ object AttentiveSdk {
         )
         val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
         if (inboxBaseUrl != null) {
+            val json = Json { ignoreUnknownKeys = true }
             inboxApi = Retrofit.Builder()
                 .baseUrl(inboxBaseUrl)
                 .client(OkHttpClient())
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
                 .create(RetrofitInboxApiService::class.java)
             Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
@@ -99,7 +104,7 @@ object AttentiveSdk {
         if (inboxApi != null) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val response = inboxApi.getMessages(0, INBOX_PAGE_SIZE)
+                    val response = inboxApi.getMessages(config.domain, 0, INBOX_PAGE_SIZE)
                     _inboxState.value = InboxState(
                         messages = response.messages,
                         unreadCount = response.unreadCount,
@@ -218,7 +223,7 @@ object AttentiveSdk {
                 val inboxApi = inboxApi
 
                 if (inboxApi != null) {
-                    val response = inboxApi.getMessages(offsetToFetch, INBOX_PAGE_SIZE)
+                    val response = inboxApi.getMessages(config.domain, offsetToFetch, INBOX_PAGE_SIZE)
                     val latestState = _inboxState.value
                     val updatedMessages = latestState.messages + response.messages
 
@@ -281,6 +286,7 @@ object AttentiveSdk {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
             initializeInbox()
+            FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
     }
 
@@ -733,7 +739,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as read")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, mapOf("isRead" to true)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = true)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
             }
         }
@@ -769,7 +775,7 @@ object AttentiveSdk {
         Timber.d("Message $messageId marked as unread")
         inboxApi?.also { api ->
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, mapOf("isRead" to false)) }
+                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = false)) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync markUnread to server") }
             }
         }
@@ -802,7 +808,7 @@ object AttentiveSdk {
         val inboxApi = inboxApi
         if (inboxApi != null) {
             CoroutineScope(Dispatchers.IO).launch {
-                try { inboxApi.deleteMessage(messageId) }
+                try { inboxApi.deleteMessage(messageId, config.domain) }
                 catch (e: Exception) { Timber.e(e, "Failed to sync deleteMessage to server") }
             }
         }
