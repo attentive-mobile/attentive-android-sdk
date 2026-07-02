@@ -6,6 +6,10 @@ The Attentive mobile SDK provides identity, data collection, and creative render
 
 The Attentive Android SDK currently supports Android API Level 26 and above. The SDK will still build on versions below 26, but functionality will no-op.
 
+**Using an AI agent?**
+Our sdk has instructions for your agent to integrate it automatically for you. 
+Use a prompt like: "Look at this sdk and integrate it for me https://github.com/attentive-mobile/attentive-android-sdk/blob/develop/AGENTS.md"
+
 **First**, add the Maven Central repository to your `build.gradle` `buildscript` or
 `settings.gradle` `dependencyResolutionManagement`:
 ```groovy
