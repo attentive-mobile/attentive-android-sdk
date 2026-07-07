@@ -21,6 +21,17 @@ If you've previously added the marketplace but don't see `mobile-sdk-internal`, 
 
 This keeps internal details out of the public SDK repo while letting Claude Code pull them in at runtime.
 
+### Drafting a PR description
+
+Once the `mobile-sdk-internal` plugin is installed, use its `write-pr` skill to draft PR descriptions that meet the mobile SDK team's expectations (verification with API-level coverage, public API impact, host-app rollback):
+
+```
+/mobile-sdk-internal:write-pr           # new PR
+/mobile-sdk-internal:write-pr --update  # update existing PR on this branch
+```
+
+The skill detects this repo from the git remote, confirms the base branch (this repo uses both `main` and `develop`, so confirmation matters), reads the diff, and asks targeted questions before drafting.
+
 ## Project Structure
 
 Multi-module Android Gradle project:
