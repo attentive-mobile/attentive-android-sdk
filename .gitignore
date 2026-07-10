@@ -114,9 +114,13 @@ github.properties
 # Local dev tooling (mock server, scripts). Lives on develop but not intended for main.
 tools/
 
-# Claude
-.claude/
-# Exceptions for shared config (if applicable)
+# Claude — ignore everything under .claude/ except shared config files.
+# Note: `.claude/` (directory form) prunes the dir before negations evaluate,
+# so we ignore by glob and re-include directories explicitly.
+.claude/*
 !.claude/CLAUDE.md
 !.claude/settings.json
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/**/
 !.claude/skills/**/SKILL.md

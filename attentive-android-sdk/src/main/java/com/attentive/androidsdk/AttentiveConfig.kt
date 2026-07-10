@@ -52,6 +52,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             builder.okHttpClient ?: ClassFactory.buildOkHttpClient(
                 logLevel,
                 ClassFactory.buildUserAgentInterceptor(builder._context),
+                builder._context,
             )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
@@ -187,6 +188,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal lateinit var _mode: Mode
         internal lateinit var _domain: String
         internal var _notificationIconId: Int = 0
+
         @ColorRes
         internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
@@ -203,21 +205,24 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             }
 
         @Deprecated("Use applicationContext() instead. This function will be removed in a future release.")
-        fun context(context: Application) = apply {
-            _context = context
-        }
+        fun context(context: Application) =
+            apply {
+                _context = context
+            }
 
-        fun mode(mode: Mode) = apply {
-            _mode = mode
-        }
+        fun mode(mode: Mode) =
+            apply {
+                _mode = mode
+            }
 
         /**
          * @throws IllegalArgumentException if [domain] is empty or contains `attn.tv`, `:`, or `/`.
          */
-        fun domain(domain: String) = apply {
-            domain.verifyValidAttentiveDomain()
-            _domain = domain
-        }
+        fun domain(domain: String) =
+            apply {
+                domain.verifyValidAttentiveDomain()
+                _domain = domain
+            }
 
         fun notificationIconId(notificationIconId: Int) =
             apply {
@@ -242,10 +247,10 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 }
             }
 
-
-        fun okHttpClient(okHttpClient: OkHttpClient) = apply {
-            this.okHttpClient = okHttpClient
-        }
+        fun okHttpClient(okHttpClient: OkHttpClient) =
+            apply {
+                this.okHttpClient = okHttpClient
+            }
 
         fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
             apply {
@@ -298,7 +303,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel, pushEnabled=$_pushEnabled)"
         }
     }
-
 
     /**
      * SDK runtime mode.
