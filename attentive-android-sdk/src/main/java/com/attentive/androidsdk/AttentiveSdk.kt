@@ -19,6 +19,7 @@ import com.attentive.androidsdk.internal.network.MarkMessagesReadRequest
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import com.attentive.androidsdk.internal.network.TrackClickRequest
 import com.attentive.androidsdk.internal.network.UnreadCountRequest
+import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
 import com.attentive.androidsdk.internal.util.isPhoneNumber
@@ -100,7 +101,7 @@ object AttentiveSdk {
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
         )
-        val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY) ?: DEFAULT_INBOX_HOST
+        val inboxBaseUrl = DEFAULT_INBOX_HOST
         inboxHost = inboxBaseUrl
         val client = ClassFactory.buildOkHttpClient(
             config.logLevel,
@@ -148,6 +149,7 @@ object AttentiveSdk {
         val visitorId = identifiers.visitorId ?: return null
         val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
         return GetMessagesRequest(
+            domain = config.domain,
             visitorId = visitorId,
             pushToken = pushToken,
             email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
@@ -357,8 +359,14 @@ object AttentiveSdk {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
             initializeInbox()
+            FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
     }
+
+    @get:JvmStatic
+    val domain: String
+        get() = config.domain
+
 
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
@@ -510,6 +518,10 @@ object AttentiveSdk {
      * displays the notification automatically.
      */
     fun sendNotification(remoteMessage: RemoteMessage) {
+        if (!AttentiveEventTracker.instance.isPushEnabled()) {
+            Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); dropping incoming notification")
+            return
+        }
         AttentivePush.getInstance().sendNotification(remoteMessage)
     }
 
@@ -784,6 +796,7 @@ object AttentiveSdk {
             val response = inboxApi.getUnreadCount(
                 url = inboxUnreadCountUrl,
                 body = UnreadCountRequest(
+                    domain = config.domain,
                     visitorId = visitorId,
                     pushToken = pushToken?.takeIf { it.isNotBlank() },
                     email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
@@ -853,6 +866,7 @@ object AttentiveSdk {
                     val response = api.markMessagesRead(
                         url = inboxMessagesReadUrl,
                         body = MarkMessagesReadRequest(
+                            domain = config.domain,
                             visitorId = visitorId,
                             pushToken = pushToken,
                             messageIds = listOf(messageId),
@@ -909,6 +923,7 @@ object AttentiveSdk {
                     val response = api.markMessagesUnread(
                         url = inboxMessagesUnreadUrl,
                         body = MarkMessagesReadRequest(
+                            domain = config.domain,
                             visitorId = visitorId,
                             pushToken = pushToken,
                             messageIds = listOf(messageId),
@@ -959,7 +974,7 @@ object AttentiveSdk {
             try {
                 inboxApi.deleteMessage(
                     url = "$inboxMessagesUrl/$messageId",
-                    body = DeleteMessageRequest(visitorId = visitorId, pushToken = pushToken),
+                    body = DeleteMessageRequest(domain = config.domain, visitorId = visitorId, pushToken = pushToken),
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Failed to sync deleteMessage to server")
@@ -989,6 +1004,7 @@ object AttentiveSdk {
                 inboxApi.trackClick(
                     url = inboxEventsClickedUrl,
                     body = TrackClickRequest(
+                        domain = config.domain,
                         visitorId = visitorId,
                         pushToken = pushToken,
                         messageId = messageId,

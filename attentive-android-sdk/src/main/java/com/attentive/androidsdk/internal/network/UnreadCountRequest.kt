@@ -3,6 +3,8 @@ package com.attentive.androidsdk.internal.network
 import com.google.gson.annotations.SerializedName
 
 internal data class UnreadCountRequest(
+    @SerializedName("c")
+    val domain: String,
     @SerializedName("visitor_id")
     val visitorId: String,
     @SerializedName("push_token")
@@ -19,6 +21,8 @@ internal data class UnreadCountResponse(
 )
 
 internal data class GetMessagesRequest(
+    @SerializedName("c")
+    val domain: String,
     @SerializedName("visitor_id")
     val visitorId: String,
     @SerializedName("push_token")
@@ -36,6 +40,8 @@ internal data class GetMessagesRequest(
 )
 
 internal data class MarkMessagesReadRequest(
+    @SerializedName("c")
+    val domain: String,
     @SerializedName("visitor_id")
     val visitorId: String,
     @SerializedName("push_token")
@@ -59,6 +65,8 @@ internal data class MarkMessagesReadEntry(
 )
 
 internal data class DeleteMessageRequest(
+    @SerializedName("c")
+    val domain: String,
     @SerializedName("visitor_id")
     val visitorId: String,
     @SerializedName("push_token")
@@ -71,6 +79,8 @@ internal data class DeleteMessageResponse(
 )
 
 internal data class TrackClickRequest(
+    @SerializedName("c")
+    val domain: String,
     @SerializedName("visitor_id")
     val visitorId: String,
     @SerializedName("push_token")
