@@ -188,7 +188,7 @@ fun AttentiveInbox(
                     }
 
                     // Handle deep link if actionUrl is present
-                    message.actionUrl?.let { url ->
+                    message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
                         AttentiveSdk.trackInboxClick(message.id, url)
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
