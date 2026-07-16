@@ -119,6 +119,7 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
+    AttentiveSdk.initializeInbox()
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
     val listState = rememberLazyListState()

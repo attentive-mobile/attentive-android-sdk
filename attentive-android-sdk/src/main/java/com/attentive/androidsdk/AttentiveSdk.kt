@@ -95,7 +95,6 @@ object AttentiveSdk {
      * otherwise falls back to mock data.
      */
     @SuppressLint("DefaultLocale")
-    @VisibleForTesting
     internal fun initializeInbox() {
         val context = config.applicationContext
         val appInfo = context.packageManager.getApplicationInfo(
@@ -358,7 +357,6 @@ object AttentiveSdk {
         synchronized(AttentiveSdk::class.java) {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
-            initializeInbox()
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
     }
