@@ -27,9 +27,5 @@
                 <data android:scheme="bonni" android:host="cart" />
             </intent-filter>
         </activity>
-
-        <meta-data
-            android:name="com.attentive.sdk.INBOX_BASE_URL"
-            android:value="https://mobile.attentivemobile.com/" />
     </application>
 </manifest>
