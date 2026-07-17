@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     id 'jacoco'
 }
 
@@ -122,11 +123,20 @@ dependencies {
     // Logging
     implementation(libs.timber)
 
+    // Room (offline request buffer)
+    implementation(libs.bundles.room)
+    ksp(libs.androidx.room.compiler)
+
+    // WorkManager (offline request buffer flush trigger)
+    implementation(libs.androidx.work.runtime.ktx)
+    testImplementation(libs.androidx.work.testing)
+
     // Networking
     api(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.gson)
 
     // Serialization

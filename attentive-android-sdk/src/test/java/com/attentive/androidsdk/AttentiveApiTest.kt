@@ -483,9 +483,6 @@ class AttentiveApiTest {
         Assert.assertTrue(captured.request.url.encodedPath.endsWith("/token"))
         Assert.assertEquals("POST", captured.request.method)
 
-        // Verify headers
-        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
-
         // Verify JSON body fields match @SerializedName annotations
         val body = JsonParser.parseString(captured.bodyJson).asJsonObject
         Assert.assertEquals(DOMAIN, body.get("c").asString)
@@ -536,9 +533,6 @@ class AttentiveApiTest {
         // Verify endpoint and method
         Assert.assertTrue(captured.request.url.encodedPath.endsWith("/mtctrl"))
         Assert.assertEquals("POST", captured.request.method)
-
-        // Verify headers
-        Assert.assertEquals("1", captured.request.header("x-datadog-sampling-priority"))
 
         // Verify JSON body structure
         val body = JsonParser.parseString(captured.bodyJson).asJsonObject

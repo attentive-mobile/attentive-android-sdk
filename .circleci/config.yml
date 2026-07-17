@@ -283,7 +283,6 @@ jobs:
           github_app_client_id: ${GITHUB_APP_CLIENT_ID}
           github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
           github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
-      - github-cli/install
       - run:
           name: Switch git remote to HTTPS with App token
           command: |
