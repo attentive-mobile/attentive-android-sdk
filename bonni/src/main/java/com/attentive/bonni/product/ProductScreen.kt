@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -77,6 +78,12 @@ fun ProductScreenContent(
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val items by viewModel.productItemsFlow.collectAsState()
     val inboxState by AttentiveSdk.inboxState.collectAsState()
+
+    // Opt this app in to the inbox: the first call triggers a background fetch
+    // that populates inboxState.unreadCount for the toolbar badge.
+    LaunchedEffect(Unit) {
+        AttentiveSdk.getUnreadCount()
+    }
 
     Column {
         SimpleToolbar(title = "Products", actions = {

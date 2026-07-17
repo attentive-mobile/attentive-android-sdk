@@ -96,6 +96,10 @@ object AttentiveSdk {
      */
     @SuppressLint("DefaultLocale")
     internal fun initializeInbox() {
+        if (inboxApi != null) {
+            Timber.d("Inbox already initialized; skipping")
+            return
+        }
         val context = config.applicationContext
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
@@ -755,29 +759,13 @@ object AttentiveSdk {
      *
      * @return List of all messages in the inbox
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getAllMessages(): List<Message> {
         return inboxState.value.messages
     }
 
     /**
      * Refreshes the unread inbox message count from the server and updates [inboxState].
-     * Per the inbox RFC, host apps should call this when navigating to the app's main page
-     * (e.g. on app launch) and after opening a push notification.
-     *
-     * No-op if no inbox base URL is configured. Errors are logged; the previously stored
-     * count is preserved.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     suspend fun refreshInboxUnreadCount() {
         val inboxApi = inboxApi ?: run {
@@ -810,32 +798,25 @@ object AttentiveSdk {
 
     /**
      * Gets the count of unread messages from the current inbox state.
-     * This is a lightweight operation that returns the current unread count.
      *
-     * @return The number of unread messages
+     * The first call opts this app in to the inbox: it lazily initializes the inbox
+     * API client and kicks off a background fetch of the first page of messages plus
+     * the unread count. That fetch is async, so the first invocation returns the
+     * current snapshot (0 on cold start); callers observing [inboxState] will see
+     * the real count emit shortly after. Subsequent calls are cheap — inbox
+     * initialization is idempotent.
+     *
+     * @return The number of unread messages currently in state
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getUnreadCount(): Int {
+        initializeInbox()
         return inboxState.value.unreadCount
     }
 
     /**
-     * Marks a message as read and emits a new inbox state.
-     * TODO: This will send an update to the backend once the API is ready.
-     *
+     * Marks a message as read and emits a new inbox state.*
      * @param messageId The ID of the message to mark as read
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markRead(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -883,16 +864,8 @@ object AttentiveSdk {
 
     /**
      * Marks a message as unread and emits a new inbox state.
-     * TODO: This will send an update to the backend once the API is ready.
-     *
      * @param messageId The ID of the message to mark as unread
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markUnread(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -938,17 +911,9 @@ object AttentiveSdk {
     }
 
     /**
-     * Deletes a message from the inbox and emits a new inbox state.
-     * TODO: This will send a delete request to the backend once the API is ready.
-     *
+     * Deletes a message from the inbox and emits a new inbox state.*
      * @param messageId The ID of the message to delete
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun deleteMessage(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -983,12 +948,6 @@ object AttentiveSdk {
     /**
      * Reports a click on an inbox message link to the backend. Fire-and-forget.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun trackInboxClick(messageId: String, actionUrl: String? = null) {
         val inboxApi = inboxApi ?: return
         val visitorId = config.userIdentifiers.visitorId
