@@ -369,7 +369,6 @@ object AttentiveSdk {
     val domain: String
         get() = config.domain
 
-
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
      * logged but not surfaced to the caller. For coroutine-aware error handling, use

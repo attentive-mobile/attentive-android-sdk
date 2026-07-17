@@ -6,6 +6,7 @@ orbs:
   android: circleci/android@2.5.0
   slack: circleci/slack@6.1.3
   attentive: attentive-mobile/circleci-orb@0.0.11
+  github-cli: circleci/github-cli@3.0.0
 
 # ========================
 # Constants
@@ -264,8 +265,11 @@ jobs:
           command: |
             firebase appdistribution:distribute bonni/build/outputs/apk/release/bonni-release.apk \
               --app "$FIREBASE_APP_ID" \
-              --groups "dev, product-+-eng" \
-              --token "$FIREBASE_TOKEN"
+              --groups "dev, product-+-eng"
+      - run:
+          name: Cleanup keystore
+          when: always
+          command: rm -f bonni/bonni-release.keystore
       - store_artifacts:
           path: bonni/build/outputs/apk/release
           destination: bonni-apk
@@ -325,25 +329,12 @@ jobs:
               git commit -m "Set version to $RELEASE_VERSION"
               git push --force origin "$BRANCH"
 
-              HTTP_STATUS=$(curl -s -o /tmp/pr-response.json -w "%{http_code}" \
-                -X POST \
-                "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/pulls" \
-                -H "Authorization: token $GITHUB_TOKEN" \
-                -H "Content-Type: application/json" \
-                -d "{
-                  \"title\": \"Release v$RELEASE_VERSION\",
-                  \"body\": \"Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified.\",
-                  \"head\": \"$BRANCH\",
-                  \"base\": \"main\"
-                }")
-
-              echo "GitHub PR API status: $HTTP_STATUS"
-              cat /tmp/pr-response.json
-              echo
-
-              if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
-                exit 1
-              fi
+              gh pr create \
+                --repo attentive-mobile/attentive-android-sdk \
+                --title "Release v$RELEASE_VERSION" \
+                --body "Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified." \
+                --head "$BRANCH" \
+                --base main
             fi
       - run:
           name: Clean
@@ -360,15 +351,10 @@ jobs:
             fi
             git tag "$RELEASE_VERSION"
             git push origin "$RELEASE_VERSION"
-            curl -sf -X POST \
-              "https://api.github.com/repos/attentive-mobile/attentive-android-sdk/releases" \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"tag_name\": \"$RELEASE_VERSION\",
-                \"name\": \"$RELEASE_VERSION\",
-                \"generate_release_notes\": true
-              }"
+            gh release create "$RELEASE_VERSION" \
+              --repo attentive-mobile/attentive-android-sdk \
+              --title "$RELEASE_VERSION" \
+              --generate-notes
       - notify-slack-on-failure
 
 workflows:
