@@ -12,8 +12,13 @@ import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.network.DeleteMessageRequest
+import com.attentive.androidsdk.internal.network.GetMessagesRequest
+import com.attentive.androidsdk.internal.network.InboxMessageDto
+import com.attentive.androidsdk.internal.network.MarkMessagesReadRequest
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
-import com.attentive.androidsdk.internal.network.UpdateMessageRequest
+import com.attentive.androidsdk.internal.network.TrackClickRequest
+import com.attentive.androidsdk.internal.network.UnreadCountRequest
 import com.attentive.androidsdk.internal.network.buffer.FlushWorker
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.isEmail
@@ -33,10 +38,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import org.jetbrains.annotations.VisibleForTesting
-import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
-import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
@@ -73,53 +76,120 @@ object AttentiveSdk {
 
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
+    // Inbox endpoints — paths relative to the host configured via INBOX_BASE_URL_META_KEY.
+    private const val DEFAULT_INBOX_HOST = "https://mobile.attentivemobile.com/"
+    private var inboxHost: String = DEFAULT_INBOX_HOST
+    private val inboxMessagesUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages"
+    private val inboxUnreadCountUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages/unread/count"
+    private val inboxMessagesReadUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages/read"
+    private val inboxMessagesUnreadUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages/unread"
+    private val inboxEventsClickedUrl get() = "${inboxHost.trimEnd('/')}/inbox/events/clicked"
+
     // Pagination management
     private val paginationLock = Mutex()
     private const val INBOX_PAGE_SIZE = 20
+    private var nextPageToken: String? = null
 
     /**
      * Initializes the inbox by fetching the first page from the server if configured,
      * otherwise falls back to mock data.
      */
     @SuppressLint("DefaultLocale")
-    @VisibleForTesting
     internal fun initializeInbox() {
+        if (inboxApi != null) {
+            Timber.d("Inbox already initialized; skipping")
+            return
+        }
         val context = config.applicationContext
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
         )
-        val inboxBaseUrl = appInfo.metaData?.getString(INBOX_BASE_URL_META_KEY)
-        if (inboxBaseUrl != null) {
-            val json = Json { ignoreUnknownKeys = true }
-            inboxApi = Retrofit.Builder()
-                .baseUrl(inboxBaseUrl)
-                .client(OkHttpClient())
-                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-                .build()
-                .create(RetrofitInboxApiService::class.java)
-            Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
-        }
+        val inboxBaseUrl = DEFAULT_INBOX_HOST
+        inboxHost = inboxBaseUrl
+        val client = ClassFactory.buildOkHttpClient(
+            config.logLevel,
+            ClassFactory.buildUserAgentInterceptor(context),
+        )
+        inboxApi = Retrofit.Builder()
+            .baseUrl(inboxBaseUrl)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(RetrofitInboxApiService::class.java)
+        Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
         val inboxApi = this.inboxApi
         if (inboxApi != null) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val response = inboxApi.getMessages(config.domain, 0, INBOX_PAGE_SIZE)
+                    val request = buildGetMessagesRequest(pageToken = null) ?: run {
+                        Timber.w("Skipping initial inbox fetch — no visitor id")
+                        return@launch
+                    }
+                    val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                    val messages = response.messages.map { it.toMessage() }
+                    nextPageToken = response.nextPageToken
                     _inboxState.value = InboxState(
-                        messages = response.messages,
-                        unreadCount = response.unreadCount,
-                        currentOffset = response.messages.size,
-                        hasMoreMessages = response.hasMoreMessages,
+                        messages = messages,
+                        unreadCount = messages.count { !it.isRead },
+                        currentOffset = messages.size,
+                        hasMoreMessages = response.nextPageToken != null,
                     )
-                    Timber.d("Initialized inbox from server with ${response.messages.size} messages")
+                    Timber.d("Initialized inbox from server with ${messages.size} messages")
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to fetch inbox from server, falling back to mock data")
                     initializeMockInbox()
                 }
+                refreshInboxUnreadCount()
             }
         } else {
             initializeMockInbox()
         }
+    }
+
+    private fun buildGetMessagesRequest(pageToken: String?): GetMessagesRequest? {
+        val identifiers = config.userIdentifiers
+        val visitorId = identifiers.visitorId ?: return null
+        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        return GetMessagesRequest(
+            domain = config.domain,
+            visitorId = visitorId,
+            pushToken = pushToken,
+            email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
+            phone = identifiers.phone?.trim()?.takeIf { it.isNotBlank() },
+            pageSize = INBOX_PAGE_SIZE,
+            pageToken = pageToken,
+        )
+    }
+
+    private fun InboxMessageDto.toMessage(): Message {
+        val timestampMs = sentAt?.let { parseIso8601ToMillis(it) } ?: 0L
+        return Message(
+            id = inboxMessageId,
+            title = title.orEmpty(),
+            body = body.orEmpty(),
+            timestamp = timestampMs,
+            isRead = isRead,
+            imageUrl = imageUrl,
+            // TODO(MSDK-201): remove override — backend mock currently returns "myapp://..." which
+            // bonni cannot resolve. Force a known-good bonni deep link so click handling can be tested.
+            actionUrl = "bonni://cart",
+            style = if (imageUrl != null) Style.Large else Style.Small,
+        )
+    }
+
+    private fun parseIso8601ToMillis(iso: String): Long {
+        // Handles "2026-05-01T12:00:00Z" and ISO timestamps with optional fractional seconds.
+        val formats = arrayOf("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mm:ssXXX")
+        for (pattern in formats) {
+            try {
+                return java.text.SimpleDateFormat(pattern, java.util.Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }.parse(iso)?.time ?: continue
+            } catch (_: Exception) { /* try next */ }
+        }
+        Timber.w("Failed to parse timestamp: $iso")
+        return 0L
     }
 
     @SuppressLint("DefaultLocale")
@@ -223,18 +293,24 @@ object AttentiveSdk {
                 val inboxApi = inboxApi
 
                 if (inboxApi != null) {
-                    val response = inboxApi.getMessages(config.domain, offsetToFetch, INBOX_PAGE_SIZE)
+                    val request = buildGetMessagesRequest(pageToken = nextPageToken) ?: run {
+                        Timber.w("Skipping loadMore — no visitor id")
+                        return@withLock
+                    }
+                    val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                    val newMessages = response.messages.map { it.toMessage() }
+                    nextPageToken = response.nextPageToken
                     val latestState = _inboxState.value
-                    val updatedMessages = latestState.messages + response.messages
+                    val updatedMessages = latestState.messages + newMessages
 
                     _inboxState.value = InboxState(
                         messages = updatedMessages,
-                        unreadCount = response.unreadCount,
+                        unreadCount = updatedMessages.count { !it.isRead },
                         isLoadingMore = false,
-                        hasMoreMessages = response.hasMoreMessages,
-                        currentOffset = offsetToFetch + response.messages.size,
+                        hasMoreMessages = response.nextPageToken != null,
+                        currentOffset = offsetToFetch + newMessages.size,
                     )
-                    Timber.d("Loaded ${response.messages.size} more messages from server. Total: ${updatedMessages.size}")
+                    Timber.d("Loaded ${newMessages.size} more messages from server. Total: ${updatedMessages.size}")
                 } else {
                     delay(5000)
 
@@ -285,7 +361,6 @@ object AttentiveSdk {
         synchronized(AttentiveSdk::class.java) {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
-            initializeInbox()
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
     }
@@ -684,44 +759,64 @@ object AttentiveSdk {
      *
      * @return List of all messages in the inbox
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun getAllMessages(): List<Message> {
         return inboxState.value.messages
     }
 
     /**
-     * Gets the count of unread messages from the current inbox state.
-     * This is a lightweight operation that returns the current unread count.
-     *
-     * @return The number of unread messages
+     * Refreshes the unread inbox message count from the server and updates [inboxState].
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    suspend fun refreshInboxUnreadCount() {
+        val inboxApi = inboxApi ?: run {
+            Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
+            return
+        }
+        val identifiers = config.userIdentifiers
+        val visitorId = identifiers.visitorId ?: run {
+            Timber.w("Skipping refreshInboxUnreadCount — visitor id is null")
+            return
+        }
+        val pushToken = TokenProvider.getInstance().token
+        try {
+            val response = inboxApi.getUnreadCount(
+                url = inboxUnreadCountUrl,
+                body = UnreadCountRequest(
+                    domain = config.domain,
+                    visitorId = visitorId,
+                    pushToken = pushToken?.takeIf { it.isNotBlank() },
+                    email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
+                    phone = identifiers.phone?.trim()?.takeIf { it.isNotBlank() },
+                ),
+            )
+            _inboxState.value = _inboxState.value.copy(unreadCount = response.unreadCount)
+            Timber.d("Inbox unread count refreshed: ${response.unreadCount}")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to refresh inbox unread count")
+        }
+    }
+
+    /**
+     * Gets the count of unread messages from the current inbox state.
+     *
+     * The first call opts this app in to the inbox: it lazily initializes the inbox
+     * API client and kicks off a background fetch of the first page of messages plus
+     * the unread count. That fetch is async, so the first invocation returns the
+     * current snapshot (0 on cold start); callers observing [inboxState] will see
+     * the real count emit shortly after. Subsequent calls are cheap — inbox
+     * initialization is idempotent.
+     *
+     * @return The number of unread messages currently in state
+     */
     fun getUnreadCount(): Int {
+        initializeInbox()
         return inboxState.value.unreadCount
     }
 
     /**
-     * Marks a message as read and emits a new inbox state.
-     * TODO: This will send an update to the backend once the API is ready.
-     *
+     * Marks a message as read and emits a new inbox state.*
      * @param messageId The ID of the message to mark as read
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markRead(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -739,25 +834,38 @@ object AttentiveSdk {
             )
         Timber.d("Message $messageId marked as read")
         inboxApi?.also { api ->
+            val visitorId = config.userIdentifiers.visitorId
+            if (visitorId == null) {
+                Timber.w("Skipping markRead network call — visitor id is null")
+                return@also
+            }
+            val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = true)) }
-                catch (e: Exception) { Timber.e(e, "Failed to sync markRead to server") }
+                try {
+                    val response = api.markMessagesRead(
+                        url = inboxMessagesReadUrl,
+                        body = MarkMessagesReadRequest(
+                            domain = config.domain,
+                            visitorId = visitorId,
+                            pushToken = pushToken,
+                            messageIds = listOf(messageId),
+                        ),
+                    )
+                    Timber.d("markMessagesRead response: $response")
+                    response.unreadCount?.let { serverCount ->
+                        _inboxState.value = _inboxState.value.copy(unreadCount = serverCount)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to sync markRead to server")
+                }
             }
         }
     }
 
     /**
      * Marks a message as unread and emits a new inbox state.
-     * TODO: This will send an update to the backend once the API is ready.
-     *
      * @param messageId The ID of the message to mark as unread
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun markUnread(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -775,25 +883,37 @@ object AttentiveSdk {
             )
         Timber.d("Message $messageId marked as unread")
         inboxApi?.also { api ->
+            val visitorId = config.userIdentifiers.visitorId
+            if (visitorId == null) {
+                Timber.w("Skipping markUnread network call — visitor id is null")
+                return@also
+            }
+            val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
             CoroutineScope(Dispatchers.IO).launch {
-                try { api.updateMessage(messageId, UpdateMessageRequest(domain = config.domain, isRead = false)) }
-                catch (e: Exception) { Timber.e(e, "Failed to sync markUnread to server") }
+                try {
+                    val response = api.markMessagesUnread(
+                        url = inboxMessagesUnreadUrl,
+                        body = MarkMessagesReadRequest(
+                            domain = config.domain,
+                            visitorId = visitorId,
+                            pushToken = pushToken,
+                            messageIds = listOf(messageId),
+                        ),
+                    )
+                    response.unreadCount?.let { serverCount ->
+                        _inboxState.value = _inboxState.value.copy(unreadCount = serverCount)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to sync markUnread to server")
+                }
             }
         }
     }
 
     /**
-     * Deletes a message from the inbox and emits a new inbox state.
-     * TODO: This will send a delete request to the backend once the API is ready.
-     *
+     * Deletes a message from the inbox and emits a new inbox state.*
      * @param messageId The ID of the message to delete
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     fun deleteMessage(messageId: String) {
         val currentState = _inboxState.value
         val updatedMessages =
@@ -806,11 +926,50 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId deleted from inbox")
-        val inboxApi = inboxApi
-        if (inboxApi != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try { inboxApi.deleteMessage(messageId, config.domain) }
-                catch (e: Exception) { Timber.e(e, "Failed to sync deleteMessage to server") }
+        val inboxApi = inboxApi ?: return
+        val visitorId = config.userIdentifiers.visitorId
+        if (visitorId == null) {
+            Timber.w("Skipping deleteMessage network call — visitor id is null")
+            return
+        }
+        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                inboxApi.deleteMessage(
+                    url = "$inboxMessagesUrl/$messageId",
+                    body = DeleteMessageRequest(domain = config.domain, visitorId = visitorId, pushToken = pushToken),
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to sync deleteMessage to server")
+            }
+        }
+    }
+
+    /**
+     * Reports a click on an inbox message link to the backend. Fire-and-forget.
+     */
+    fun trackInboxClick(messageId: String, actionUrl: String? = null) {
+        val inboxApi = inboxApi ?: return
+        val visitorId = config.userIdentifiers.visitorId
+        if (visitorId == null) {
+            Timber.w("Skipping trackInboxClick — visitor id is null")
+            return
+        }
+        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                inboxApi.trackClick(
+                    url = inboxEventsClickedUrl,
+                    body = TrackClickRequest(
+                        domain = config.domain,
+                        visitorId = visitorId,
+                        pushToken = pushToken,
+                        messageId = messageId,
+                        actionUrl = actionUrl,
+                    ),
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to track inbox click")
             }
         }
     }
