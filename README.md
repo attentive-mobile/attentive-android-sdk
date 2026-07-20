@@ -29,6 +29,8 @@ __*** NOTE: Please refrain from using any private or undocumented classes or met
 
 ### Setup with an AI coding agent
 
+> **⚠️ Experimental:** Agent-driven setup is a new, experimental workflow. Behavior varies across agents and models, and the guide is still evolving. Review any changes an agent makes before committing them, and fall back to the manual steps below if something looks off.
+
 If you use Claude Code, Cursor, Copilot, Codex, or another AI coding agent, you can have the agent walk you through setup. Point it at [`AGENTS.md`](./AGENTS.md) in this repo — it's a step-by-step integration guide written for agents that handles dependency wiring, `Application` initialization, and an interactive push-setup flow (Firebase detection, `FirebaseMessagingService` forwarding, notification icon, and permission prompt).
 
 **To trigger the flow**, open your project in your agent of choice and paste a prompt like:
