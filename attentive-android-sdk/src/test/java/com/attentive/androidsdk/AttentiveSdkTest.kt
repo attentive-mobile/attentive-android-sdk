@@ -4,11 +4,15 @@ import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
+import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
+import com.attentive.androidsdk.internal.network.UnreadCountRequest
+import com.attentive.androidsdk.internal.network.UnreadCountResponse
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -19,6 +23,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.whenever
@@ -64,6 +69,9 @@ class AttentiveSdkTest {
         factoryMocks.close()
         mockedAppInfo?.close()
         TokenProvider.getInstance().token = null
+        val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
+        inboxApiField.isAccessible = true
+        inboxApiField.set(AttentiveSdk, null)
     }
 
     @Test
@@ -115,6 +123,23 @@ class AttentiveSdkTest {
         runBlocking {
             verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    @Test
+    fun refreshInboxUnreadCount_prefixesPushTokenWithFcm() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
+        inboxApiField.isAccessible = true
+        inboxApiField.set(AttentiveSdk, inboxApi)
+
+        runBlocking { AttentiveSdk.refreshInboxUnreadCount() }
+
+        val bodyCaptor = argumentCaptor<UnreadCountRequest>()
+        runBlocking { verify(inboxApi).getUnreadCount(any(), bodyCaptor.capture()) }
+        assertEquals("fcm:$PUSH_TOKEN", bodyCaptor.firstValue.pushToken)
     }
 
     companion object {
