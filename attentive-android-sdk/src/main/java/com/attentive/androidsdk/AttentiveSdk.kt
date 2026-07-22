@@ -147,10 +147,13 @@ object AttentiveSdk {
         }
     }
 
+    private fun fcmPushToken(): String? =
+        TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
+
     private fun buildGetMessagesRequest(pageToken: String?): GetMessagesRequest? {
         val identifiers = config.userIdentifiers
         val visitorId = identifiers.visitorId ?: return null
-        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        val pushToken = fcmPushToken()
         return GetMessagesRequest(
             domain = config.domain,
             visitorId = visitorId,
@@ -776,14 +779,14 @@ object AttentiveSdk {
             Timber.w("Skipping refreshInboxUnreadCount — visitor id is null")
             return
         }
-        val pushToken = TokenProvider.getInstance().token
+        val pushToken = fcmPushToken()
         try {
             val response = inboxApi.getUnreadCount(
                 url = inboxUnreadCountUrl,
                 body = UnreadCountRequest(
                     domain = config.domain,
                     visitorId = visitorId,
-                    pushToken = pushToken?.takeIf { it.isNotBlank() },
+                    pushToken = pushToken,
                     email = identifiers.email?.trim()?.takeIf { it.isNotBlank() },
                     phone = identifiers.phone?.trim()?.takeIf { it.isNotBlank() },
                 ),
@@ -838,7 +841,7 @@ object AttentiveSdk {
                 Timber.w("Skipping markRead network call — visitor id is null")
                 return@also
             }
-            val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+            val pushToken = fcmPushToken()
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val response = api.markMessagesRead(
@@ -887,7 +890,7 @@ object AttentiveSdk {
                 Timber.w("Skipping markUnread network call — visitor id is null")
                 return@also
             }
-            val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+            val pushToken = fcmPushToken()
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val response = api.markMessagesUnread(
@@ -931,7 +934,7 @@ object AttentiveSdk {
             Timber.w("Skipping deleteMessage network call — visitor id is null")
             return
         }
-        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        val pushToken = fcmPushToken()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 inboxApi.deleteMessage(
@@ -954,7 +957,7 @@ object AttentiveSdk {
             Timber.w("Skipping trackInboxClick — visitor id is null")
             return
         }
-        val pushToken = TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }
+        val pushToken = fcmPushToken()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 inboxApi.trackClick(
