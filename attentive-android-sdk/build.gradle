@@ -115,6 +115,7 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     androidTestImplementation(libs.androidx.test.runner)
 
     // Google Material
