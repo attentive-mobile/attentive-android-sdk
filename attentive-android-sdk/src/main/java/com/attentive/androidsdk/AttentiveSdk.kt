@@ -96,10 +96,7 @@ object AttentiveSdk {
      */
     @SuppressLint("DefaultLocale")
     internal fun initializeInbox() {
-        if (inboxApi != null) {
-            Timber.d("Inbox already initialized; skipping")
-            return
-        }
+        if (inboxApi != null) return
         val context = config.applicationContext
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
@@ -118,33 +115,39 @@ object AttentiveSdk {
             .create(RetrofitInboxApiService::class.java)
         Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
-        val inboxApi = this.inboxApi
-        if (inboxApi != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val request = buildGetMessagesRequest(pageToken = null) ?: run {
-                        Timber.w("Skipping initial inbox fetch — no visitor id")
-                        return@launch
-                    }
-                    val response = inboxApi.getMessages(inboxMessagesUrl, request)
-                    val messages = response.messages.map { it.toMessage() }
-                    nextPageToken = response.nextPageToken
-                    _inboxState.value = InboxState(
-                        messages = messages,
-                        unreadCount = messages.count { !it.isRead },
-                        currentOffset = messages.size,
-                        hasMoreMessages = response.nextPageToken != null,
-                    )
-                    Timber.d("Initialized inbox from server with ${messages.size} messages")
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to fetch inbox from server, falling back to mock data")
-                    initializeMockInbox()
-                }
-                refreshInboxUnreadCount()
-            }
-        } else {
-            initializeMockInbox()
+        CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+    }
+
+    /**
+     * Refetches the first page of inbox messages and the unread count, replacing
+     * [inboxState]. Safe to call repeatedly (e.g., on screen resume or push receipt).
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    suspend fun refreshInbox() {
+        val inboxApi = inboxApi ?: run {
+            Timber.d("Skipping refreshInbox — inbox API not configured")
+            return
         }
+        try {
+            val request = buildGetMessagesRequest(pageToken = null) ?: run {
+                Timber.w("Skipping inbox refresh — no visitor id")
+                return
+            }
+            val response = inboxApi.getMessages(inboxMessagesUrl, request)
+            val messages = response.messages.map { it.toMessage() }
+            nextPageToken = response.nextPageToken
+            _inboxState.value = InboxState(
+                messages = messages,
+                unreadCount = messages.count { !it.isRead },
+                currentOffset = messages.size,
+                hasMoreMessages = response.nextPageToken != null,
+            )
+            Timber.d("Refreshed inbox from server with ${messages.size} messages")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to refresh inbox from server")
+            if (_inboxState.value.messages.isEmpty()) initializeMockInbox()
+        }
+        refreshInboxUnreadCount()
     }
 
     private fun fcmPushToken(): String? =
@@ -174,9 +177,6 @@ object AttentiveSdk {
             timestamp = timestampMs,
             isRead = isRead,
             imageUrl = imageUrl,
-            // TODO(MSDK-201): remove override — backend mock currently returns "myapp://..." which
-            // bonni cannot resolve. Force a known-good bonni deep link so click handling can be tested.
-            actionUrl = "bonni://cart",
             style = if (imageUrl != null) Style.Large else Style.Small,
         )
     }
@@ -527,6 +527,9 @@ object AttentiveSdk {
             return
         }
         AttentivePush.getInstance().sendNotification(remoteMessage)
+        if (inboxApi != null) {
+            CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        }
     }
 
     @VisibleForTesting
