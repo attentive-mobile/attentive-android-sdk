@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.annotation.RestrictTo
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
@@ -65,12 +64,6 @@ object AttentiveSdk {
      * Subscribe to the inbox state stream to receive updates when messages change.
      * This StateFlow emits a new InboxState whenever messages are updated.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
     // Inbox server API (created from manifest meta-data if present)
@@ -124,8 +117,7 @@ object AttentiveSdk {
      * Refetches the first page of inbox messages and the unread count, replacing
      * [inboxState]. Safe to call repeatedly (e.g., on screen resume or push receipt).
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    suspend fun refreshInbox() {
+    internal suspend fun refreshInbox() {
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInbox — inbox API not configured")
             return
@@ -279,12 +271,6 @@ object AttentiveSdk {
      * Call this when the user scrolls near the end of the message list.
      * Uses the server API when configured, otherwise falls back to mock data.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     suspend fun loadMoreInboxMessages() {
         paginationLock.withLock {
             val currentState = _inboxState.value
@@ -781,8 +767,7 @@ object AttentiveSdk {
     /**
      * Refreshes the unread inbox message count from the server and updates [inboxState].
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    suspend fun refreshInboxUnreadCount() {
+    internal suspend fun refreshInboxUnreadCount() {
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
             return
