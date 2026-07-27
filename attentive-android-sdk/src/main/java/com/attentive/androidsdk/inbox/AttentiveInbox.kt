@@ -61,6 +61,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -632,6 +633,27 @@ private fun SmallMessageContent(
             Spacer(modifier = Modifier.width(20.dp))
         }
 
+        // Display image if available (matches iOS: image sits to the left of the text)
+        message.imageUrl?.let { imageUrl ->
+            val imageRequest =
+                ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)
+                    .build()
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = "Message image",
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = message.title,
@@ -651,27 +673,6 @@ private fun SmallMessageContent(
                 color = bodyTextColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        // Display image if available
-        message.imageUrl?.let { imageUrl ->
-            Spacer(modifier = Modifier.width(12.dp))
-            val imageRequest =
-                ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
-                    .crossfade(200)
-                    .build()
-
-            AsyncImage(
-                model = imageRequest,
-                contentDescription = "Message image",
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray),
             )
         }
 
@@ -779,6 +780,78 @@ private fun LargeMessageContent(
             }
         }
     }
+}
+
+@Preview(name = "Small · unread with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m1",
+            title = "Your cart is waiting",
+            body = "Pick up where you left off — free shipping on orders over \$50.",
+            timestamp = System.currentTimeMillis() - 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = "https://picsum.photos/200",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+
+@Preview(name = "Small · read with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_ReadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m2",
+            title = "Order shipped",
+            body = "Order #12345 is on the way.",
+            timestamp = System.currentTimeMillis() - 3 * 60 * 60 * 1000L,
+            isRead = true,
+            imageUrl = "https://picsum.photos/201",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+
+@Preview(name = "Small · unread no image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadNoImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m3",
+            title = "Welcome to Attentive",
+            body = "Thanks for joining — check out our latest offers.",
+            timestamp = System.currentTimeMillis() - 24 * 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = null,
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
 }
 
 private fun formatTimestamp(timestamp: Long): String {
