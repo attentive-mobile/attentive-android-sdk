@@ -612,12 +612,13 @@ private fun mapPurchaseEvent(
     val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     val products = event.items.map { item -> itemToProduct(item) }
-    val cart = event.cart?.let { cartToCartModel(it) }
+    val computedCartTotal = calculateCartTotal(event.items)
+    val cart = event.cart?.let { cartToCartModel(it, computedCartTotal) }
 
     val purchaseMetadata = PurchaseMetadata(
         orderId = event.order.orderId,
         currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
-        orderTotal = calculateCartTotal(event.items),
+        orderTotal = computedCartTotal,
         cart = cart,
         products = products
     )
@@ -1161,11 +1162,14 @@ internal fun itemToProduct(item: Item): Product {
 }
 
 @VisibleForTesting
-internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
+internal fun cartToCartModel(
+    cart: com.attentive.androidsdk.events.Cart,
+    computedCartTotal: String? = null,
+): Cart {
     return Cart(
-        cartTotal = null,
+        cartTotal = cart.cartTotal ?: computedCartTotal,
         cartCoupon = cart.cartCoupon,
-        cartDiscount = null,
+        cartDiscount = cart.cartDiscount,
         cartId = cart.cartId
     )
 }
