@@ -7,6 +7,8 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.annotation.RestrictTo
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
@@ -91,8 +93,8 @@ object AttentiveSdk {
     private var nextPageToken: String? = null
 
     /**
-     * Initializes the inbox by fetching the first page from the server if configured,
-     * otherwise falls back to mock data.
+     * One-time inbox setup: builds the Retrofit client and kicks off the first-page
+     * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
      */
     @SuppressLint("DefaultLocale")
     internal fun initializeInbox() {
@@ -128,24 +130,30 @@ object AttentiveSdk {
             Timber.d("Skipping refreshInbox — inbox API not configured")
             return
         }
-        try {
-            val request = buildGetMessagesRequest(pageToken = null) ?: run {
-                Timber.w("Skipping inbox refresh — no visitor id")
+        paginationLock.withLock {
+            if (_inboxState.value.isLoadingMore) {
+                Timber.d("Skipping refreshInbox — pagination fetch in flight")
                 return
             }
-            val response = inboxApi.getMessages(inboxMessagesUrl, request)
-            val messages = response.messages.map { it.toMessage() }
-            nextPageToken = response.nextPageToken
-            _inboxState.value = InboxState(
-                messages = messages,
-                unreadCount = messages.count { !it.isRead },
-                currentOffset = messages.size,
-                hasMoreMessages = response.nextPageToken != null,
-            )
-            Timber.d("Refreshed inbox from server with ${messages.size} messages")
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to refresh inbox from server")
-            if (_inboxState.value.messages.isEmpty()) initializeMockInbox()
+            try {
+                val request = buildGetMessagesRequest(pageToken = null) ?: run {
+                    Timber.w("Skipping inbox refresh — no visitor id")
+                    return
+                }
+                val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                val messages = response.messages.map { it.toMessage() }
+                nextPageToken = response.nextPageToken
+                _inboxState.value = InboxState(
+                    messages = messages,
+                    unreadCount = messages.count { !it.isRead },
+                    currentOffset = messages.size,
+                    hasMoreMessages = response.nextPageToken != null,
+                )
+                Timber.d("Refreshed inbox from server with ${messages.size} messages")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to refresh inbox from server")
+                if (_inboxState.value.messages.isEmpty()) initializeMockInbox()
+            }
         }
         refreshInboxUnreadCount()
     }
@@ -527,7 +535,9 @@ object AttentiveSdk {
             return
         }
         AttentivePush.getInstance().sendNotification(remoteMessage)
-        if (inboxApi != null) {
+        val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(Lifecycle.State.STARTED)
+        if (inboxApi != null && isForeground) {
             CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
         }
     }
