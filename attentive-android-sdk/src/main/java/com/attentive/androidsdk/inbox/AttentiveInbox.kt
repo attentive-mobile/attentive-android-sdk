@@ -633,7 +633,6 @@ private fun SmallMessageContent(
             Spacer(modifier = Modifier.width(20.dp))
         }
 
-        // Display image if available (matches iOS: image sits to the left of the text)
         message.imageUrl?.let { imageUrl ->
             val imageRequest =
                 ImageRequest.Builder(LocalPlatformContext.current)
