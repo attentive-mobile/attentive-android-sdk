@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 class PurchaseMetadataDto : ProductMetadata() {
     var quantity: String? = null
     var cartTotal: String? = null
+    var cartDiscount: String? = null
     var cartId: String? = null
     var cartCoupon: String? = null
 }
