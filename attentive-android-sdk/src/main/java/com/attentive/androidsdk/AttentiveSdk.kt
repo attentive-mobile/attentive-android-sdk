@@ -97,9 +97,6 @@ object AttentiveSdk {
     internal fun initializeInbox(): Boolean {
         if (inboxApi != null) return false
         val context = config.applicationContext
-        val appInfo = context.packageManager.getApplicationInfo(
-            context.packageName, PackageManager.GET_META_DATA,
-        )
         val inboxBaseUrl = DEFAULT_INBOX_HOST
         inboxHost = inboxBaseUrl
         val client = ClassFactory.buildOkHttpClient(
@@ -158,7 +155,6 @@ object AttentiveSdk {
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to refresh inbox from server")
-                if (_inboxState.value.messages.isEmpty()) initializeMockInbox()
             }
         }
         refreshInboxUnreadCount()
