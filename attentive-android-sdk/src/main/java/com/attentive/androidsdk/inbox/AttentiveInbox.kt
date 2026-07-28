@@ -73,9 +73,6 @@ import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -687,7 +684,7 @@ private fun SmallMessageContent(
 
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = formatTimestamp(message.timestamp),
+            text = InboxTime.formatRelative(message.timestamp),
             fontSize = 12.sp,
             fontFamily = timestampFontFamily ?: FontFamily.Default,
             color = timestampTextColor,
@@ -781,7 +778,7 @@ private fun LargeMessageContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = formatTimestamp(message.timestamp),
+                    text = InboxTime.formatRelative(message.timestamp),
                     fontSize = 12.sp,
                     fontFamily = timestampFontFamily ?: FontFamily.Default,
                     color = timestampTextColor,
@@ -863,15 +860,3 @@ private fun SmallMessagePreview_UnreadNoImage() {
     )
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-
-    return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m ago"
-        diff < 86400_000 -> "${diff / 3600_000}h ago"
-        diff < 604800_000 -> "${diff / 86400_000}d ago"
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
-    }
-}

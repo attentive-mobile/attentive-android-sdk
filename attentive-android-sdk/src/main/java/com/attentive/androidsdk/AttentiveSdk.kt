@@ -179,7 +179,7 @@ object AttentiveSdk {
     }
 
     private fun InboxMessageDto.toMessage(): Message {
-        val timestampMs = sentAt?.let { parseIso8601ToMillis(it) } ?: 0L
+        val timestampMs = sentAt?.let { com.attentive.androidsdk.inbox.InboxTime.parseIso8601ToMillis(it) } ?: 0L
         return Message(
             id = inboxMessageId,
             title = title.orEmpty(),
@@ -190,20 +190,6 @@ object AttentiveSdk {
             actionUrl = actionUrl,
             style = if (imageUrl != null) Style.Large else Style.Small,
         )
-    }
-
-    private fun parseIso8601ToMillis(iso: String): Long {
-        // Handles "2026-05-01T12:00:00Z" and ISO timestamps with optional fractional seconds.
-        val formats = arrayOf("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mm:ssXXX")
-        for (pattern in formats) {
-            try {
-                return java.text.SimpleDateFormat(pattern, java.util.Locale.US).apply {
-                    timeZone = java.util.TimeZone.getTimeZone("UTC")
-                }.parse(iso)?.time ?: continue
-            } catch (_: Exception) { /* try next */ }
-        }
-        Timber.w("Failed to parse timestamp: $iso")
-        return 0L
     }
 
     @SuppressLint("DefaultLocale")
