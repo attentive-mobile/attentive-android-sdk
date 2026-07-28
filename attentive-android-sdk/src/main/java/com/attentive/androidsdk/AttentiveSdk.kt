@@ -69,6 +69,14 @@ object AttentiveSdk {
     // Inbox server API (created from manifest meta-data if present)
     private var inboxApi: RetrofitInboxApiService? = null
 
+    /**
+     * Test-only escape hatch: when true, [refreshInbox] is a no-op and
+     * [initializeInbox] skips its auto-fetch. Set via reflection from tests
+     * that render the inbox composable without wanting a real network round-trip.
+     */
+    @VisibleForTesting
+    internal var disableInboxAutoFetchForTest: Boolean = false
+
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
     // Inbox endpoints — paths relative to the host configured via INBOX_BASE_URL_META_KEY.
@@ -115,7 +123,9 @@ object AttentiveSdk {
         // badge reading getUnreadCount) see real data. Subsequent refreshes come
         // from the AttentiveInbox composable's ON_RESUME observer and from
         // sendNotification() on push receipt.
-        CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        if (!disableInboxAutoFetchForTest) {
+            CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        }
         return true
     }
 
@@ -124,6 +134,7 @@ object AttentiveSdk {
      * [inboxState]. Safe to call repeatedly (e.g., on screen resume or push receipt).
      */
     internal suspend fun refreshInbox() {
+        if (disableInboxAutoFetchForTest) return
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInbox — inbox API not configured")
             return
