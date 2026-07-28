@@ -89,9 +89,13 @@ object AttentiveSdk {
      * One-time inbox setup: builds the Retrofit client and kicks off the first-page
      * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
      */
+    /**
+     * @return true if this call performed first-time setup (and kicked off the
+     *   initial fetch); false if the inbox was already initialized.
+     */
     @SuppressLint("DefaultLocale")
-    internal fun initializeInbox() {
-        if (inboxApi != null) return
+    internal fun initializeInbox(): Boolean {
+        if (inboxApi != null) return false
         val context = config.applicationContext
         val appInfo = context.packageManager.getApplicationInfo(
             context.packageName, PackageManager.GET_META_DATA,
@@ -110,7 +114,12 @@ object AttentiveSdk {
             .create(RetrofitInboxApiService::class.java)
         Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
+        // Kick off the very first fetch so non-inbox-screen callers (e.g. a toolbar
+        // badge reading getUnreadCount) see real data. Subsequent refreshes come
+        // from the AttentiveInbox composable's ON_RESUME observer and from
+        // sendNotification() on push receipt.
         CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        return true
     }
 
     /**
@@ -142,6 +151,11 @@ object AttentiveSdk {
                     hasMoreMessages = response.nextPageToken != null,
                 )
                 Timber.d("Refreshed inbox from server with ${messages.size} messages")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Caller scope (e.g. the AttentiveInbox composable) was cancelled
+                // mid-request; treat as normal cooperative cancellation, not a
+                // request failure.
+                throw e
             } catch (e: Exception) {
                 Timber.e(e, "Failed to refresh inbox from server")
                 if (_inboxState.value.messages.isEmpty()) initializeMockInbox()
@@ -177,6 +191,7 @@ object AttentiveSdk {
             timestamp = timestampMs,
             isRead = isRead,
             imageUrl = imageUrl,
+            actionUrl = actionUrl,
             style = if (imageUrl != null) Style.Large else Style.Small,
         )
     }

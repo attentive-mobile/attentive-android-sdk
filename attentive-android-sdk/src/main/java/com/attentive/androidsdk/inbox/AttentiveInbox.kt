@@ -117,7 +117,12 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    AttentiveSdk.initializeInbox()
+    // initializeInbox returns true only on the very first call across the app's
+    // lifetime — in that case it already kicked off the initial fetch, so we
+    // must not fire another on the first ON_RESUME (which would double-request
+    // on cold launch). Anchor a remember to keep this flag stable across
+    // recompositions.
+    val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
     val listState = rememberLazyListState()
@@ -125,9 +130,14 @@ fun AttentiveInbox(
     val lifecycleOwner = LocalLifecycleOwner.current
     val refreshScope = rememberCoroutineScope()
     DisposableEffect(lifecycleOwner) {
+        var skipNextResume = didFirstTimeInit
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                refreshScope.launch { AttentiveSdk.refreshInbox() }
+                if (skipNextResume) {
+                    skipNextResume = false
+                } else {
+                    refreshScope.launch { AttentiveSdk.refreshInbox() }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

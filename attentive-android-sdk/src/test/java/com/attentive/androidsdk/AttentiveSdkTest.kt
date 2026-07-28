@@ -74,6 +74,12 @@ class AttentiveSdkTest {
         val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
         inboxApiField.isAccessible = true
         inboxApiField.set(AttentiveSdk, null)
+        val inboxStateField = AttentiveSdk::class.java.getDeclaredField("_inboxState")
+        inboxStateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val flow = inboxStateField.get(AttentiveSdk)
+            as kotlinx.coroutines.flow.MutableStateFlow<com.attentive.androidsdk.inbox.InboxState>
+        flow.value = com.attentive.androidsdk.inbox.InboxState()
     }
 
     @Test
