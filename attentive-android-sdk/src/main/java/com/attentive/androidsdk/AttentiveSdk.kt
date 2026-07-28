@@ -6,7 +6,8 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.annotation.RestrictTo
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
@@ -63,12 +64,6 @@ object AttentiveSdk {
      * Subscribe to the inbox state stream to receive updates when messages change.
      * This StateFlow emits a new InboxState whenever messages are updated.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
 
     // Inbox server API (created from manifest meta-data if present)
@@ -91,19 +86,17 @@ object AttentiveSdk {
     private var nextPageToken: String? = null
 
     /**
-     * Initializes the inbox by fetching the first page from the server if configured,
-     * otherwise falls back to mock data.
+     * One-time inbox setup: builds the Retrofit client and kicks off the first-page
+     * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
+     */
+    /**
+     * @return true if this call performed first-time setup (and kicked off the
+     *   initial fetch); false if the inbox was already initialized.
      */
     @SuppressLint("DefaultLocale")
-    internal fun initializeInbox() {
-        if (inboxApi != null) {
-            Timber.d("Inbox already initialized; skipping")
-            return
-        }
+    internal fun initializeInbox(): Boolean {
+        if (inboxApi != null) return false
         val context = config.applicationContext
-        val appInfo = context.packageManager.getApplicationInfo(
-            context.packageName, PackageManager.GET_META_DATA,
-        )
         val inboxBaseUrl = DEFAULT_INBOX_HOST
         inboxHost = inboxBaseUrl
         val client = ClassFactory.buildOkHttpClient(
@@ -118,33 +111,53 @@ object AttentiveSdk {
             .create(RetrofitInboxApiService::class.java)
         Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
-        val inboxApi = this.inboxApi
-        if (inboxApi != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val request = buildGetMessagesRequest(pageToken = null) ?: run {
-                        Timber.w("Skipping initial inbox fetch — no visitor id")
-                        return@launch
-                    }
-                    val response = inboxApi.getMessages(inboxMessagesUrl, request)
-                    val messages = response.messages.map { it.toMessage() }
-                    nextPageToken = response.nextPageToken
-                    _inboxState.value = InboxState(
-                        messages = messages,
-                        unreadCount = messages.count { !it.isRead },
-                        currentOffset = messages.size,
-                        hasMoreMessages = response.nextPageToken != null,
-                    )
-                    Timber.d("Initialized inbox from server with ${messages.size} messages")
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to fetch inbox from server, falling back to mock data")
-                    initializeMockInbox()
-                }
-                refreshInboxUnreadCount()
-            }
-        } else {
-            initializeMockInbox()
+        // Kick off the very first fetch so non-inbox-screen callers (e.g. a toolbar
+        // badge reading getUnreadCount) see real data. Subsequent refreshes come
+        // from the AttentiveInbox composable's ON_RESUME observer and from
+        // sendNotification() on push receipt.
+        CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        return true
+    }
+
+    /**
+     * Refetches the first page of inbox messages and the unread count, replacing
+     * [inboxState]. Safe to call repeatedly (e.g., on screen resume or push receipt).
+     */
+    internal suspend fun refreshInbox() {
+        val inboxApi = inboxApi ?: run {
+            Timber.d("Skipping refreshInbox — inbox API not configured")
+            return
         }
+        paginationLock.withLock {
+            if (_inboxState.value.isLoadingMore) {
+                Timber.d("Skipping refreshInbox — pagination fetch in flight")
+                return
+            }
+            try {
+                val request = buildGetMessagesRequest(pageToken = null) ?: run {
+                    Timber.w("Skipping inbox refresh — no visitor id")
+                    return
+                }
+                val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                val messages = response.messages.map { it.toMessage() }
+                nextPageToken = response.nextPageToken
+                _inboxState.value = InboxState(
+                    messages = messages,
+                    unreadCount = messages.count { !it.isRead },
+                    currentOffset = messages.size,
+                    hasMoreMessages = response.nextPageToken != null,
+                )
+                Timber.d("Refreshed inbox from server with ${messages.size} messages")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Caller scope (e.g. the AttentiveInbox composable) was cancelled
+                // mid-request; treat as normal cooperative cancellation, not a
+                // request failure.
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to refresh inbox from server")
+            }
+        }
+        refreshInboxUnreadCount()
     }
 
     private fun fcmPushToken(): String? =
@@ -174,9 +187,7 @@ object AttentiveSdk {
             timestamp = timestampMs,
             isRead = isRead,
             imageUrl = imageUrl,
-            // TODO(MSDK-201): remove override — backend mock currently returns "myapp://..." which
-            // bonni cannot resolve. Force a known-good bonni deep link so click handling can be tested.
-            actionUrl = "bonni://cart",
+            actionUrl = actionUrl,
             style = if (imageUrl != null) Style.Large else Style.Small,
         )
     }
@@ -271,12 +282,6 @@ object AttentiveSdk {
      * Call this when the user scrolls near the end of the message list.
      * Uses the server API when configured, otherwise falls back to mock data.
      */
-    @Suppress("DEPRECATION")
-    @Deprecated(
-        message = "Inbox is not yet available for public use.",
-        level = DeprecationLevel.WARNING,
-    )
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     suspend fun loadMoreInboxMessages() {
         paginationLock.withLock {
             val currentState = _inboxState.value
@@ -527,6 +532,11 @@ object AttentiveSdk {
             return
         }
         AttentivePush.getInstance().sendNotification(remoteMessage)
+        val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(Lifecycle.State.STARTED)
+        if (inboxApi != null && isForeground) {
+            CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
+        }
     }
 
     @VisibleForTesting
@@ -768,8 +778,7 @@ object AttentiveSdk {
     /**
      * Refreshes the unread inbox message count from the server and updates [inboxState].
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    suspend fun refreshInboxUnreadCount() {
+    internal suspend fun refreshInboxUnreadCount() {
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
             return

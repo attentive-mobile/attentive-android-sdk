@@ -36,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +44,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +61,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,7 +69,6 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
@@ -98,12 +102,6 @@ import kotlin.math.roundToInt
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
  */
-@Suppress("DEPRECATION")
-@Deprecated(
-    message = "Inbox is not yet available for public use.",
-    level = DeprecationLevel.WARNING,
-)
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttentiveInbox(
@@ -119,10 +117,32 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    AttentiveSdk.initializeInbox()
+    // initializeInbox returns true only on the very first call across the app's
+    // lifetime — in that case it already kicked off the initial fetch, so we
+    // must not fire another on the first ON_RESUME (which would double-request
+    // on cold launch). Anchor a remember to keep this flag stable across
+    // recompositions.
+    val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
     val listState = rememberLazyListState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val refreshScope = rememberCoroutineScope()
+    DisposableEffect(lifecycleOwner) {
+        var skipNextResume = didFirstTimeInit
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (skipNextResume) {
+                    skipNextResume = false
+                } else {
+                    refreshScope.launch { AttentiveSdk.refreshInbox() }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Scroll detection for infinite scrolling
     LaunchedEffect(listState) {
@@ -623,6 +643,26 @@ private fun SmallMessageContent(
             Spacer(modifier = Modifier.width(20.dp))
         }
 
+        message.imageUrl?.let { imageUrl ->
+            val imageRequest =
+                ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)
+                    .build()
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = "Message image",
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = message.title,
@@ -642,27 +682,6 @@ private fun SmallMessageContent(
                 color = bodyTextColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        // Display image if available
-        message.imageUrl?.let { imageUrl ->
-            Spacer(modifier = Modifier.width(12.dp))
-            val imageRequest =
-                ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
-                    .crossfade(200)
-                    .build()
-
-            AsyncImage(
-                model = imageRequest,
-                contentDescription = "Message image",
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray),
             )
         }
 
@@ -770,6 +789,78 @@ private fun LargeMessageContent(
             }
         }
     }
+}
+
+@Preview(name = "Small · unread with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m1",
+            title = "Your cart is waiting",
+            body = "Pick up where you left off — free shipping on orders over \$50.",
+            timestamp = System.currentTimeMillis() - 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = "https://picsum.photos/200",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+
+@Preview(name = "Small · read with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_ReadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m2",
+            title = "Order shipped",
+            body = "Order #12345 is on the way.",
+            timestamp = System.currentTimeMillis() - 3 * 60 * 60 * 1000L,
+            isRead = true,
+            imageUrl = "https://picsum.photos/201",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+
+@Preview(name = "Small · unread no image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadNoImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m3",
+            title = "Welcome to Attentive",
+            body = "Thanks for joining — check out our latest offers.",
+            timestamp = System.currentTimeMillis() - 24 * 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = null,
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
 }
 
 private fun formatTimestamp(timestamp: Long): String {

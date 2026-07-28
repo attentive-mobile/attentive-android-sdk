@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
+import com.attentive.androidsdk.internal.network.InboxMessageDto
+import com.attentive.androidsdk.internal.network.InboxResponse
 import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import com.attentive.androidsdk.internal.network.UnreadCountRequest
 import com.attentive.androidsdk.internal.network.UnreadCountResponse
@@ -72,6 +74,12 @@ class AttentiveSdkTest {
         val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
         inboxApiField.isAccessible = true
         inboxApiField.set(AttentiveSdk, null)
+        val inboxStateField = AttentiveSdk::class.java.getDeclaredField("_inboxState")
+        inboxStateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val flow = inboxStateField.get(AttentiveSdk)
+            as kotlinx.coroutines.flow.MutableStateFlow<com.attentive.androidsdk.inbox.InboxState>
+        flow.value = com.attentive.androidsdk.inbox.InboxState()
     }
 
     @Test
@@ -123,6 +131,59 @@ class AttentiveSdkTest {
         runBlocking {
             verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    @Test
+    fun refreshInbox_populatesInboxStateFromServer() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any())).thenReturn(
+                InboxResponse(
+                    messages = listOf(
+                        InboxMessageDto(inboxMessageId = "m1", title = "hi", isRead = false),
+                        InboxMessageDto(inboxMessageId = "m2", title = "there", isRead = true),
+                    ),
+                    nextPageToken = "next",
+                ),
+            )
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(1))
+        }
+        val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
+        inboxApiField.isAccessible = true
+        inboxApiField.set(AttentiveSdk, inboxApi)
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+
+        val state = AttentiveSdk.inboxState.value
+        assertEquals(2, state.messages.size)
+        assertEquals("m1", state.messages[0].id)
+        assertEquals(2, state.currentOffset)
+        assertTrue(state.hasMoreMessages)
+    }
+
+    @Test
+    fun refreshInbox_skips_whenInboxApiNotConfigured() {
+        // inboxApi is null in @Before; refreshInbox should be a no-op with no network calls.
+        runBlocking { AttentiveSdk.refreshInbox() }
+        // Nothing to verify beyond "no throw"; asserting no state mutation.
+        assertEquals(0, AttentiveSdk.inboxState.value.messages.size)
+    }
+
+    @Test
+    fun refreshInbox_swallowsApiException() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any())).thenThrow(RuntimeException("boom"))
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
+        inboxApiField.isAccessible = true
+        inboxApiField.set(AttentiveSdk, inboxApi)
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+        // API errors are logged and swallowed; state stays untouched (no
+        // silent mock fallback).
+        assertEquals(0, AttentiveSdk.inboxState.value.messages.size)
     }
 
     @Test

@@ -115,6 +115,7 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     androidTestImplementation(libs.androidx.test.runner)
 
     // Google Material
@@ -148,6 +149,8 @@ dependencies {
     // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose.sdk)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.compose.ui.tooling.preview)
 
     // Image loading
     implementation(libs.bundles.coil)
