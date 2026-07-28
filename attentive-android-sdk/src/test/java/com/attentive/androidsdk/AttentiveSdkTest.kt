@@ -181,8 +181,9 @@ class AttentiveSdkTest {
         inboxApiField.set(AttentiveSdk, inboxApi)
 
         runBlocking { AttentiveSdk.refreshInbox() }
-        // Falls back to mock inbox when state was empty; must not crash.
-        assertTrue(AttentiveSdk.inboxState.value.messages.isNotEmpty())
+        // API errors are logged and swallowed; state stays untouched (no
+        // silent mock fallback).
+        assertEquals(0, AttentiveSdk.inboxState.value.messages.size)
     }
 
     @Test
