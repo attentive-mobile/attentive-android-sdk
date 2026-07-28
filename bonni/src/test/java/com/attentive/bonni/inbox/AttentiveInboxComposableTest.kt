@@ -43,26 +43,25 @@ class AttentiveInboxComposableTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    @org.junit.Before
-    fun setUp() {
-        // Prevent the composable's initializeInbox()/ON_RESUME observer from
-        // firing real network calls — CI runners don't have outbound network.
-        setDisableAutoFetch(true)
-    }
-
     @After
     fun tearDown() {
         setInboxState(InboxState())
-        setDisableAutoFetch(false)
         val inboxApiField = AttentiveSdk::class.java.getDeclaredField("inboxApi")
         inboxApiField.isAccessible = true
         inboxApiField.set(AttentiveSdk, null)
     }
 
-    private fun setDisableAutoFetch(disabled: Boolean) {
-        val field = AttentiveSdk::class.java.getDeclaredField("disableInboxAutoFetchForTest")
-        field.isAccessible = true
-        field.setBoolean(AttentiveSdk, disabled)
+    companion object {
+        @JvmStatic
+        @org.junit.BeforeClass
+        fun setUpClass() {
+            // Set the flag once for the whole test class so queued ON_RESUME
+            // refresh coroutines can't race past a per-test reset and hit real
+            // network on CI. Never reset — flag is a test-only escape hatch.
+            val field = AttentiveSdk::class.java.getDeclaredField("disableInboxAutoFetchForTest")
+            field.isAccessible = true
+            field.setBoolean(AttentiveSdk, true)
+        }
     }
 
     @Test
