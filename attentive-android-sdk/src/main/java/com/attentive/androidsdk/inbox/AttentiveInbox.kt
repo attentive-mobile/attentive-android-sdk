@@ -133,7 +133,13 @@ fun AttentiveInbox(
                 if (skipNextResume) {
                     skipNextResume = false
                 } else {
-                    refreshScope.launch { AttentiveSdk.refreshInbox() }
+                    refreshScope.launch {
+                        AttentiveSdk.refreshInbox()
+                        // Snap to the top on re-entry so the user doesn't have to
+                        // scroll up when the refreshed list is shorter than the
+                        // previous scroll offset.
+                        listState.scrollToItem(0)
+                    }
                 }
             }
         }
