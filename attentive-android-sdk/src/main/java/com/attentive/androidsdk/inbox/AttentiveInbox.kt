@@ -6,6 +6,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -35,13 +37,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.Lifecycle
@@ -72,9 +77,14 @@ import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+// Maximum time the pull-to-refresh spinner stays visible before we let the user
+// go, even if the underlying refresh is still retrying under the hood.
+private const val REFRESH_UI_TIMEOUT_MS = 8_000L
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -183,44 +193,64 @@ fun AttentiveInbox(
             }
     }
 
-    if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
-        EmptyInboxView(
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            modifier = modifier,
-        )
-    } else {
-        MessageList(
-            messages = inboxState.messages,
-            isLoadingMore = inboxState.isLoadingMore,
-            listState = listState,
-            backgroundColor = backgroundColor,
-            unreadIndicatorColor = unreadIndicatorColor,
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            timestampTextColor = timestampTextColor,
-            swipeBackgroundColor = swipeBackgroundColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            timestampFontFamily = timestampFontFamily,
-            onMessageClick =
-                onMessageClick ?: { message: Message ->
-                    if (!message.isRead) {
-                        AttentiveSdk.markRead(message.id)
+    var isRefreshing by remember { mutableStateOf(false) }
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            refreshScope.launch {
+                isRefreshing = true
+                try {
+                    // Cap the visible spinner regardless of how long the underlying
+                    // fetch takes — offline / retry-storm cases can leave OkHttp
+                    // spinning for tens of seconds via RetryInterceptor backoff, and
+                    // the user shouldn't stare at a loading indicator that whole time.
+                    withTimeoutOrNull(REFRESH_UI_TIMEOUT_MS) {
+                        AttentiveSdk.refreshInbox()
                     }
+                } finally {
+                    isRefreshing = false
+                }
+            }
+        },
+        modifier = modifier,
+    ) {
+        if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
+            EmptyInboxView(
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+            )
+        } else {
+            MessageList(
+                messages = inboxState.messages,
+                isLoadingMore = inboxState.isLoadingMore,
+                listState = listState,
+                backgroundColor = backgroundColor,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                swipeBackgroundColor = swipeBackgroundColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onMessageClick =
+                    onMessageClick ?: { message: Message ->
+                        if (!message.isRead) {
+                            AttentiveSdk.markRead(message.id)
+                        }
 
-                    // Handle deep link if actionUrl is present
-                    message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                        AttentiveSdk.trackInboxClick(message.id, url)
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
-                    }
-                    Unit
-                },
-            modifier = modifier,
-        )
+                        // Handle deep link if actionUrl is present
+                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
+                            AttentiveSdk.trackInboxClick(message.id, url)
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                        Unit
+                    },
+            )
+        }
     }
 }
 
@@ -236,6 +266,9 @@ private fun EmptyInboxView(
         modifier =
             modifier
                 .fillMaxSize()
+                // Make the empty state a nested-scroll source so PullToRefreshBox
+                // still sees the drag gesture when there are no messages.
+                .verticalScroll(rememberScrollState())
                 .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
