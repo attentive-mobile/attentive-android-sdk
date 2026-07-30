@@ -394,14 +394,17 @@ class AttentiveSdkTest {
 
         AttentiveSdk.markUnread("m1")
 
-        val local = AttentiveSdk.inboxState.value
-        assertFalse(local.messages.first().isRead)
-        assertEquals(1, local.unreadCount)
+        // Optimistic local update is synchronous and flips the message flag.
+        // Don't assert the interim unreadCount here — the fire-and-forget IO
+        // coroutine can race with this thread on fast CI runners and land the
+        // server-provided count before we can observe the optimistic one.
+        assertFalse(AttentiveSdk.inboxState.value.messages.first().isRead)
 
         Thread.sleep(150)
 
         runBlocking { verify(inboxApi).markMessagesUnread(any(), any()) }
-        // Server-provided unreadCount overrides the optimistic local one.
+        // Server-provided unreadCount overrides whatever the optimistic pass
+        // computed.
         assertEquals(2, AttentiveSdk.inboxState.value.unreadCount)
     }
 
