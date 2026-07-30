@@ -6,6 +6,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -253,6 +255,9 @@ private fun EmptyInboxView(
         modifier =
             modifier
                 .fillMaxSize()
+                // Make the empty state a nested-scroll source so PullToRefreshBox
+                // still sees the drag gesture when there are no messages.
+                .verticalScroll(rememberScrollState())
                 .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
