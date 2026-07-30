@@ -77,9 +77,14 @@ import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+// Maximum time the pull-to-refresh spinner stays visible before we let the user
+// go, even if the underlying refresh is still retrying under the hood.
+private const val REFRESH_UI_TIMEOUT_MS = 8_000L
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -195,7 +200,13 @@ fun AttentiveInbox(
             refreshScope.launch {
                 isRefreshing = true
                 try {
-                    AttentiveSdk.refreshInbox()
+                    // Cap the visible spinner regardless of how long the underlying
+                    // fetch takes — offline / retry-storm cases can leave OkHttp
+                    // spinning for tens of seconds via RetryInterceptor backoff, and
+                    // the user shouldn't stare at a loading indicator that whole time.
+                    withTimeoutOrNull(REFRESH_UI_TIMEOUT_MS) {
+                        AttentiveSdk.refreshInbox()
+                    }
                 } finally {
                     isRefreshing = false
                 }
