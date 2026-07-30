@@ -84,6 +84,7 @@ class AttentiveSdkTest {
         TokenProvider.getInstance().token = null
         setInboxApi(null)
         setInboxState(InboxState())
+        setNextPageToken(null)
     }
 
     private fun setInboxApi(api: RetrofitInboxApiService?) {
@@ -461,6 +462,69 @@ class AttentiveSdkTest {
         runBlocking { verify(inboxApi).trackClick(any(), bodyCaptor.capture()) }
         assertEquals("m1", bodyCaptor.firstValue.messageId)
         assertEquals("https://example.com/action", bodyCaptor.firstValue.actionUrl)
+    }
+
+    @Test
+    fun clearUser_resetsInboxStateToEmpty() {
+        setInboxState(
+            InboxState(
+                messages = listOf(fakeMessage("m1", isRead = false), fakeMessage("m2", isRead = true)),
+                unreadCount = 1,
+                currentOffset = 2,
+                hasMoreMessages = true,
+            ),
+        )
+        // Seed a non-null nextPageToken so we can assert it's cleared too.
+        setNextPageToken("token-abc")
+
+        AttentiveSdk.clearUser()
+
+        val state = AttentiveSdk.inboxState.value
+        assertEquals(0, state.messages.size)
+        assertEquals(0, state.unreadCount)
+        assertEquals(0, state.currentOffset)
+        // Reset returns a fresh InboxState() — hasMoreMessages defaults to true
+        // (we don't know yet), which is fine; the empty messages list is what matters.
+        assertNull(readNextPageToken())
+    }
+
+    @Test
+    fun refreshInbox_discardsResponseWhenIdentityChangesMidFlight() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any())).thenAnswer {
+                // Simulate an identity change occurring while the request is in flight.
+                AttentiveSdk.resetInboxForIdentityChange()
+                InboxResponse(
+                    messages = listOf(
+                        InboxMessageDto(inboxMessageId = "stale1", title = "stale", isRead = false),
+                    ),
+                    nextPageToken = "stale-token",
+                )
+            }
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        setInboxApi(inboxApi)
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+
+        // The stale response should NOT have populated state — resetInboxForIdentityChange
+        // ran mid-flight and bumped the generation, so refreshInbox discards the response.
+        val state = AttentiveSdk.inboxState.value
+        assertEquals(0, state.messages.size)
+        assertNull(readNextPageToken())
+    }
+
+    private fun setNextPageToken(token: String?) {
+        val field = AttentiveSdk::class.java.getDeclaredField("nextPageToken")
+        field.isAccessible = true
+        field.set(AttentiveSdk, token)
+    }
+
+    private fun readNextPageToken(): String? {
+        val field = AttentiveSdk::class.java.getDeclaredField("nextPageToken")
+        field.isAccessible = true
+        return field.get(AttentiveSdk) as String?
     }
 
     private fun fakeMessage(id: String, isRead: Boolean) =

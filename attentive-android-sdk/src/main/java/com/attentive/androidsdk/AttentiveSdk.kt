@@ -86,6 +86,14 @@ object AttentiveSdk {
     private var nextPageToken: String? = null
 
     /**
+     * Monotonic counter bumped by [resetInboxForIdentityChange]. Long-running inbox
+     * fetches capture this value before the network call and check on return — a
+     * response from a superseded identity is discarded instead of being merged into
+     * the new user's blank state.
+     */
+    private var inboxGeneration: Long = 0L
+
+    /**
      * One-time inbox setup: builds the Retrofit client and kicks off the first-page
      * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
      */
@@ -133,12 +141,17 @@ object AttentiveSdk {
                 Timber.d("Skipping refreshInbox — pagination fetch in flight")
                 return
             }
+            val generation = inboxGeneration
             try {
                 val request = buildGetMessagesRequest(pageToken = null) ?: run {
                     Timber.w("Skipping inbox refresh — no visitor id")
                     return
                 }
                 val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                if (generation != inboxGeneration) {
+                    Timber.d("Discarding refreshInbox response — identity changed mid-flight")
+                    return
+                }
                 val messages = response.messages.map { it.toMessage() }
                 nextPageToken = response.nextPageToken
                 _inboxState.value = InboxState(
@@ -158,6 +171,20 @@ object AttentiveSdk {
             }
         }
         refreshInboxUnreadCount()
+    }
+
+    /**
+     * Clears inbox state so a logged-out user's messages don't leak into the next
+     * identity's session. Bumps [inboxGeneration] so any in-flight [refreshInbox]
+     * or [loadMoreInboxMessages] response returning after this call is discarded.
+     * Does NOT auto-refetch — callers should trigger a refresh once the new
+     * identity has been established server-side.
+     */
+    internal fun resetInboxForIdentityChange() {
+        inboxGeneration += 1
+        nextPageToken = null
+        _inboxState.value = InboxState()
+        Timber.d("Inbox state reset for identity change (generation=$inboxGeneration)")
     }
 
     private fun fcmPushToken(): String? =
@@ -285,6 +312,7 @@ object AttentiveSdk {
             try {
                 val offsetToFetch = currentState.currentOffset
                 val inboxApi = inboxApi
+                val generation = inboxGeneration
 
                 if (inboxApi != null) {
                     val request = buildGetMessagesRequest(pageToken = nextPageToken) ?: run {
@@ -292,6 +320,10 @@ object AttentiveSdk {
                         return@withLock
                     }
                     val response = inboxApi.getMessages(inboxMessagesUrl, request)
+                    if (generation != inboxGeneration) {
+                        Timber.d("Discarding loadMoreInboxMessages response — identity changed mid-flight")
+                        return@withLock
+                    }
                     val newMessages = response.messages.map { it.toMessage() }
                     nextPageToken = response.nextPageToken
                     val latestState = _inboxState.value
@@ -655,6 +687,7 @@ object AttentiveSdk {
         }
 
         config.resetIdentifiers()
+        resetInboxForIdentityChange()
         val domain = config.domain
         val visitorId = config.userIdentifiers.visitorId
         val pushToken = TokenProvider.getInstance().token
@@ -692,6 +725,7 @@ object AttentiveSdk {
      */
     fun clearUser() {
         config.resetIdentifiers()
+        resetInboxForIdentityChange()
         val domain = config.domain
         val visitorId = config.userIdentifiers.visitorId
         val pushToken = TokenProvider.getInstance().token
