@@ -35,13 +35,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.Lifecycle
@@ -183,44 +186,58 @@ fun AttentiveInbox(
             }
     }
 
-    if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
-        EmptyInboxView(
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            modifier = modifier,
-        )
-    } else {
-        MessageList(
-            messages = inboxState.messages,
-            isLoadingMore = inboxState.isLoadingMore,
-            listState = listState,
-            backgroundColor = backgroundColor,
-            unreadIndicatorColor = unreadIndicatorColor,
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            timestampTextColor = timestampTextColor,
-            swipeBackgroundColor = swipeBackgroundColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            timestampFontFamily = timestampFontFamily,
-            onMessageClick =
-                onMessageClick ?: { message: Message ->
-                    if (!message.isRead) {
-                        AttentiveSdk.markRead(message.id)
-                    }
+    var isRefreshing by remember { mutableStateOf(false) }
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            refreshScope.launch {
+                isRefreshing = true
+                try {
+                    AttentiveSdk.refreshInbox()
+                } finally {
+                    isRefreshing = false
+                }
+            }
+        },
+        modifier = modifier,
+    ) {
+        if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
+            EmptyInboxView(
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+            )
+        } else {
+            MessageList(
+                messages = inboxState.messages,
+                isLoadingMore = inboxState.isLoadingMore,
+                listState = listState,
+                backgroundColor = backgroundColor,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                swipeBackgroundColor = swipeBackgroundColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onMessageClick =
+                    onMessageClick ?: { message: Message ->
+                        if (!message.isRead) {
+                            AttentiveSdk.markRead(message.id)
+                        }
 
-                    // Handle deep link if actionUrl is present
-                    message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                        AttentiveSdk.trackInboxClick(message.id, url)
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
-                    }
-                    Unit
-                },
-            modifier = modifier,
-        )
+                        // Handle deep link if actionUrl is present
+                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
+                            AttentiveSdk.trackInboxClick(message.id, url)
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                        Unit
+                    },
+            )
+        }
     }
 }
 
