@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -90,6 +92,15 @@ import kotlin.math.roundToInt
 private const val REFRESH_UI_TIMEOUT_MS = 8_000L
 
 /**
+ * Provides a single shared [ImageLoader] scoped to an [AttentiveInbox] tree so
+ * every message row's [AsyncImage] uses the same loader (and its caches, OkHttp
+ * client, and GIF decoder registration) instead of allocating a fresh one per
+ * row. Falls back to a lazily-built loader if the composable is used outside
+ * an [AttentiveInbox] tree.
+ */
+private val LocalInboxImageLoader = staticCompositionLocalOf<ImageLoader?> { null }
+
+/**
  * A Coil ImageLoader that registers GIF decoders so animated GIF inbox
  * message images play instead of rendering as a static first frame. Uses
  * platform ImageDecoder on API 28+ (efficient, hardware-accelerated) and
@@ -99,6 +110,31 @@ private const val REFRESH_UI_TIMEOUT_MS = 8_000L
  */
 @Composable
 private fun rememberInboxImageLoader(): ImageLoader {
+    val provided = LocalInboxImageLoader.current
+    val context = LocalPlatformContext.current
+    return remember(context, provided) {
+        provided ?: ImageLoader.Builder(context)
+            .components {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+}
+
+/**
+ * Builds the shared inbox [ImageLoader] once per [AttentiveInbox] tree.
+ * Separate from [rememberInboxImageLoader] so the composable hierarchy can
+ * plumb a single instance through [LocalInboxImageLoader] and downstream
+ * rows read from that provider instead of each calling [remember]
+ * independently — otherwise the lazy list allocates one loader per image
+ * row.
+ */
+@Composable
+private fun rememberTopLevelInboxImageLoader(): ImageLoader {
     val context = LocalPlatformContext.current
     return remember(context) {
         ImageLoader.Builder(context)
@@ -220,7 +256,13 @@ fun AttentiveInbox(
             }
     }
 
+    // Build the Coil ImageLoader once per AttentiveInbox tree and provide it
+    // via LocalInboxImageLoader so every row's AsyncImage reuses the same
+    // loader + caches + OkHttp client, instead of each row allocating its own.
+    val inboxImageLoader = rememberTopLevelInboxImageLoader()
+
     var isRefreshing by remember { mutableStateOf(false) }
+    CompositionLocalProvider(LocalInboxImageLoader provides inboxImageLoader) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = {
@@ -278,6 +320,7 @@ fun AttentiveInbox(
                     },
             )
         }
+    }
     }
 }
 
