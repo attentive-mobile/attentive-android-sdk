@@ -6,6 +6,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -35,14 +37,23 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,23 +68,86 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import androidx.annotation.RestrictTo
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.R
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+// Maximum time the pull-to-refresh spinner stays visible before we let the user
+// go, even if the underlying refresh is still retrying under the hood.
+private const val REFRESH_UI_TIMEOUT_MS = 8_000L
+
+/**
+ * Provides a single shared [ImageLoader] scoped to an [AttentiveInbox] tree so
+ * every message row's [AsyncImage] uses the same loader (and its caches, OkHttp
+ * client, and GIF decoder registration) instead of allocating a fresh one per
+ * row. Falls back to a lazily-built loader if the composable is used outside
+ * an [AttentiveInbox] tree.
+ */
+private val LocalInboxImageLoader = staticCompositionLocalOf<ImageLoader?> { null }
+
+/**
+ * A Coil ImageLoader that registers GIF decoders so animated GIF inbox
+ * message images play instead of rendering as a static first frame. Uses
+ * platform ImageDecoder on API 28+ (efficient, hardware-accelerated) and
+ * falls back to Coil's software GifDecoder on older devices.
+ *
+ * Remembered per PlatformContext so recompositions don't churn loaders.
+ */
+@Composable
+private fun rememberInboxImageLoader(): ImageLoader {
+    val provided = LocalInboxImageLoader.current
+    val context = LocalPlatformContext.current
+    return remember(context, provided) {
+        provided ?: ImageLoader.Builder(context)
+            .components {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+}
+
+/**
+ * Builds the shared inbox [ImageLoader] once per [AttentiveInbox] tree.
+ * Separate from [rememberInboxImageLoader] so the composable hierarchy can
+ * plumb a single instance through [LocalInboxImageLoader] and downstream
+ * rows read from that provider instead of each calling [remember]
+ * independently — otherwise the lazy list allocates one loader per image
+ * row.
+ */
+@Composable
+private fun rememberTopLevelInboxImageLoader(): ImageLoader {
+    val context = LocalPlatformContext.current
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+}
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -98,12 +172,6 @@ import kotlin.math.roundToInt
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
  */
-@Suppress("DEPRECATION")
-@Deprecated(
-    message = "Inbox is not yet available for public use.",
-    level = DeprecationLevel.WARNING,
-)
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttentiveInbox(
@@ -119,10 +187,38 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    AttentiveSdk.initializeInbox()
+    // initializeInbox returns true only on the very first call across the app's
+    // lifetime — in that case it already kicked off the initial fetch, so we
+    // must not fire another on the first ON_RESUME (which would double-request
+    // on cold launch). Anchor a remember to keep this flag stable across
+    // recompositions.
+    val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
     val listState = rememberLazyListState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val refreshScope = rememberCoroutineScope()
+    DisposableEffect(lifecycleOwner) {
+        var skipNextResume = didFirstTimeInit
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (skipNextResume) {
+                    skipNextResume = false
+                } else {
+                    refreshScope.launch {
+                        AttentiveSdk.refreshInbox()
+                        // Snap to the top on re-entry so the user doesn't have to
+                        // scroll up when the refreshed list is shorter than the
+                        // previous scroll offset.
+                        listState.scrollToItem(0)
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Scroll detection for infinite scrolling
     LaunchedEffect(listState) {
@@ -160,44 +256,71 @@ fun AttentiveInbox(
             }
     }
 
-    if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
-        EmptyInboxView(
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            modifier = modifier,
-        )
-    } else {
-        MessageList(
-            messages = inboxState.messages,
-            isLoadingMore = inboxState.isLoadingMore,
-            listState = listState,
-            backgroundColor = backgroundColor,
-            unreadIndicatorColor = unreadIndicatorColor,
-            titleTextColor = titleTextColor,
-            bodyTextColor = bodyTextColor,
-            timestampTextColor = timestampTextColor,
-            swipeBackgroundColor = swipeBackgroundColor,
-            titleFontFamily = titleFontFamily,
-            bodyFontFamily = bodyFontFamily,
-            timestampFontFamily = timestampFontFamily,
-            onMessageClick =
-                onMessageClick ?: { message: Message ->
-                    if (!message.isRead) {
-                        AttentiveSdk.markRead(message.id)
-                    }
+    // Build the Coil ImageLoader once per AttentiveInbox tree and provide it
+    // via LocalInboxImageLoader so every row's AsyncImage reuses the same
+    // loader + caches + OkHttp client, instead of each row allocating its own.
+    val inboxImageLoader = rememberTopLevelInboxImageLoader()
 
-                    // Handle deep link if actionUrl is present
-                    message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                        AttentiveSdk.trackInboxClick(message.id, url)
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
+    var isRefreshing by remember { mutableStateOf(false) }
+    CompositionLocalProvider(LocalInboxImageLoader provides inboxImageLoader) {
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            refreshScope.launch {
+                isRefreshing = true
+                try {
+                    // Cap the visible spinner regardless of how long the underlying
+                    // fetch takes — offline / retry-storm cases can leave OkHttp
+                    // spinning for tens of seconds via RetryInterceptor backoff, and
+                    // the user shouldn't stare at a loading indicator that whole time.
+                    withTimeoutOrNull(REFRESH_UI_TIMEOUT_MS) {
+                        AttentiveSdk.refreshInbox()
                     }
-                    Unit
-                },
-            modifier = modifier,
-        )
+                } finally {
+                    isRefreshing = false
+                }
+            }
+        },
+        modifier = modifier,
+    ) {
+        if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
+            EmptyInboxView(
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+            )
+        } else {
+            MessageList(
+                messages = inboxState.messages,
+                isLoadingMore = inboxState.isLoadingMore,
+                listState = listState,
+                backgroundColor = backgroundColor,
+                unreadIndicatorColor = unreadIndicatorColor,
+                titleTextColor = titleTextColor,
+                bodyTextColor = bodyTextColor,
+                timestampTextColor = timestampTextColor,
+                swipeBackgroundColor = swipeBackgroundColor,
+                titleFontFamily = titleFontFamily,
+                bodyFontFamily = bodyFontFamily,
+                timestampFontFamily = timestampFontFamily,
+                onMessageClick =
+                    onMessageClick ?: { message: Message ->
+                        if (!message.isRead) {
+                            AttentiveSdk.markRead(message.id)
+                        }
+
+                        // Handle deep link if actionUrl is present
+                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
+                            AttentiveSdk.trackInboxClick(message.id, url)
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                        Unit
+                    },
+            )
+        }
+    }
     }
 }
 
@@ -213,6 +336,9 @@ private fun EmptyInboxView(
         modifier =
             modifier
                 .fillMaxSize()
+                // Make the empty state a nested-scroll source so PullToRefreshBox
+                // still sees the drag gesture when there are no messages.
+                .verticalScroll(rememberScrollState())
                 .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -623,6 +749,27 @@ private fun SmallMessageContent(
             Spacer(modifier = Modifier.width(20.dp))
         }
 
+        message.imageUrl?.let { imageUrl ->
+            val imageRequest =
+                ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(200)
+                    .build()
+
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = "Message image",
+                contentScale = ContentScale.Crop,
+                imageLoader = rememberInboxImageLoader(),
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = message.title,
@@ -645,30 +792,9 @@ private fun SmallMessageContent(
             )
         }
 
-        // Display image if available
-        message.imageUrl?.let { imageUrl ->
-            Spacer(modifier = Modifier.width(12.dp))
-            val imageRequest =
-                ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
-                    .crossfade(200)
-                    .build()
-
-            AsyncImage(
-                model = imageRequest,
-                contentDescription = "Message image",
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray),
-            )
-        }
-
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = formatTimestamp(message.timestamp),
+            text = InboxTime.formatRelative(message.timestamp),
             fontSize = 12.sp,
             fontFamily = timestampFontFamily ?: FontFamily.Default,
             color = timestampTextColor,
@@ -724,6 +850,7 @@ private fun LargeMessageContent(
                     model = imageRequest,
                     contentDescription = "Message image",
                     contentScale = ContentScale.Crop,
+                    imageLoader = rememberInboxImageLoader(),
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -762,7 +889,7 @@ private fun LargeMessageContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = formatTimestamp(message.timestamp),
+                    text = InboxTime.formatRelative(message.timestamp),
                     fontSize = 12.sp,
                     fontFamily = timestampFontFamily ?: FontFamily.Default,
                     color = timestampTextColor,
@@ -772,15 +899,75 @@ private fun LargeMessageContent(
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-
-    return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m ago"
-        diff < 86400_000 -> "${diff / 3600_000}h ago"
-        diff < 604800_000 -> "${diff / 86400_000}d ago"
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
-    }
+@Preview(name = "Small · unread with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m1",
+            title = "Your cart is waiting",
+            body = "Pick up where you left off — free shipping on orders over \$50.",
+            timestamp = System.currentTimeMillis() - 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = "https://picsum.photos/200",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
 }
+
+@Preview(name = "Small · read with image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_ReadWithImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m2",
+            title = "Order shipped",
+            body = "Order #12345 is on the way.",
+            timestamp = System.currentTimeMillis() - 3 * 60 * 60 * 1000L,
+            isRead = true,
+            imageUrl = "https://picsum.photos/201",
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+
+@Preview(name = "Small · unread no image", showBackground = true, widthDp = 360)
+@Composable
+private fun SmallMessagePreview_UnreadNoImage() {
+    SmallMessageContent(
+        message = Message(
+            id = "m3",
+            title = "Welcome to Attentive",
+            body = "Thanks for joining — check out our latest offers.",
+            timestamp = System.currentTimeMillis() - 24 * 60 * 60 * 1000L,
+            isRead = false,
+            imageUrl = null,
+            style = Style.Small,
+        ),
+        unreadIndicatorColor = Color(0xFF1E88E5),
+        titleTextColor = Color.Black,
+        bodyTextColor = Color(0xFF666666),
+        timestampTextColor = Color(0xFF999999),
+        titleFontFamily = null,
+        bodyFontFamily = null,
+        timestampFontFamily = null,
+        onClick = {},
+    )
+}
+

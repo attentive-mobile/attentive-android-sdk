@@ -505,11 +505,12 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
             purchaseMetadataDto.orderId =
                 purchaseEvent.order.orderId // Assuming orderId is non-nullable
             purchaseMetadataDto.cartTotal =
-                cartTotalString // Assuming cartTotalString is non-nullable
+                purchaseEvent.cart?.cartTotal ?: cartTotalString
 
             if (purchaseEvent.cart != null) {
                 purchaseMetadataDto.cartId = purchaseEvent.cart.cartId
                 purchaseMetadataDto.cartCoupon = purchaseEvent.cart.cartCoupon
+                purchaseMetadataDto.cartDiscount = purchaseEvent.cart.cartDiscount
             }
             eventRequests.add(EventRequest(purchaseMetadataDto, EventRequest.Type.PURCHASE))
         }
@@ -518,7 +519,8 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
         val ocMetadata = OrderConfirmedMetadataDto()
         ocMetadata.orderId = purchaseEvent.order.orderId
         ocMetadata.currency = purchaseEvent.items[0]?.price?.currency?.currencyCode
-        ocMetadata.cartTotal = cartTotalString
+        ocMetadata.cartTotal = purchaseEvent.cart?.cartTotal ?: cartTotalString
+        ocMetadata.cartDiscount = purchaseEvent.cart?.cartDiscount
         val products: MutableList<ProductDto> = ArrayList()
         for (item in purchaseEvent.items) {
             val product = ProductDto()
@@ -612,12 +614,13 @@ private fun mapPurchaseEvent(
     val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     val products = event.items.map { item -> itemToProduct(item) }
-    val cart = event.cart?.let { cartToCartModel(it) }
+    val computedCartTotal = calculateCartTotal(event.items)
+    val cart = cartToCartModel(event.cart, computedCartTotal)
 
     val purchaseMetadata = PurchaseMetadata(
         orderId = event.order.orderId,
         currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
-        orderTotal = calculateCartTotal(event.items),
+        orderTotal = computedCartTotal,
         cart = cart,
         products = products
     )
@@ -1161,12 +1164,15 @@ internal fun itemToProduct(item: Item): Product {
 }
 
 @VisibleForTesting
-internal fun cartToCartModel(cart: com.attentive.androidsdk.events.Cart): Cart {
+internal fun cartToCartModel(
+    cart: com.attentive.androidsdk.events.Cart?,
+    computedCartTotal: String? = null,
+): Cart {
     return Cart(
-        cartTotal = null,
-        cartCoupon = cart.cartCoupon,
-        cartDiscount = null,
-        cartId = cart.cartId
+        cartTotal = cart?.cartTotal ?: computedCartTotal,
+        cartCoupon = cart?.cartCoupon,
+        cartDiscount = cart?.cartDiscount,
+        cartId = cart?.cartId
     )
 }
 

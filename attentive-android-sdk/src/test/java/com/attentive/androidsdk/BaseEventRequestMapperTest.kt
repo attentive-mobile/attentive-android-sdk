@@ -474,6 +474,8 @@ class BaseEventRequestMapperTest {
             Cart.Builder()
                 .cartId("CART123")
                 .cartCoupon("SUMMER20")
+                .cartTotal("42.00")
+                .cartDiscount("5.00")
                 .build()
 
         // Act
@@ -482,8 +484,103 @@ class BaseEventRequestMapperTest {
         // Assert
         assertEquals("CART123", result.cartId)
         assertEquals("SUMMER20", result.cartCoupon)
-        assertNull(result.cartTotal)
+        assertEquals("42.00", result.cartTotal)
+        assertEquals("5.00", result.cartDiscount)
+    }
+
+    @Test
+    fun cartToCartModel_withoutCartTotal_fallsBackToComputedValue() {
+        // Arrange
+        val cart = Cart.Builder().cartId("CART123").build()
+
+        // Act
+        val result = attentiveApi.cartToCartModel(cart, computedCartTotal = "12.34")
+
+        // Assert
+        assertEquals("12.34", result.cartTotal)
         assertNull(result.cartDiscount)
+    }
+
+    @Test
+    fun cartToCartModel_hostProvidedCartTotal_overridesComputedValue() {
+        // Arrange
+        val cart =
+            Cart.Builder()
+                .cartId("CART123")
+                .cartTotal("99.99")
+                .build()
+
+        // Act
+        val result = attentiveApi.cartToCartModel(cart, computedCartTotal = "12.34")
+
+        // Assert - host-provided value wins over SDK-computed fallback
+        assertEquals("99.99", result.cartTotal)
+    }
+
+    @Test
+    fun mapPurchaseEvent_withoutHostCartTotal_populatesFromComputedTotal() {
+        // Arrange
+        val purchaseEvent = buildPurchaseEventWithAllFields()
+        val userIdentifiers = buildAllUserIdentifiers()
+
+        // Act
+        val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+
+        // Assert
+        val metadata = result[0].eventMetadata as PurchaseMetadata
+        assertNotNull(metadata.cart)
+        // buildPurchaseEventWithAllFields uses a single item at 15.99
+        assertEquals("15.99", metadata.cart?.cartTotal)
+        assertEquals(metadata.orderTotal, metadata.cart?.cartTotal)
+    }
+
+    @Test
+    fun mapPurchaseEvent_hostCartTotalAndDiscount_roundTripToWireCart() {
+        // Arrange
+        val purchaseEvent =
+            PurchaseEvent.Builder(
+                listOf(buildItemWithAllFields()),
+                Order.Builder().orderId("ORDER123").build(),
+            ).cart(
+                Cart.Builder()
+                    .cartId("CART123")
+                    .cartTotal("999.99")
+                    .cartDiscount("5.00")
+                    .build(),
+            ).build()
+        val userIdentifiers = buildAllUserIdentifiers()
+
+        // Act
+        val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+
+        // Assert - host-provided cartTotal wins over item-sum; discount rides along
+        val metadata = result[0].eventMetadata as PurchaseMetadata
+        assertNotNull(metadata.cart)
+        assertEquals("999.99", metadata.cart?.cartTotal)
+        assertEquals("5.00", metadata.cart?.cartDiscount)
+        // orderTotal stays as the SDK-computed item sum (15.99), independent of host cartTotal
+        assertEquals("15.99", metadata.orderTotal)
+    }
+
+    @Test
+    fun mapPurchaseEvent_withNoCart_stillSynthesizesWireCartWithComputedTotal() {
+        // Arrange - PurchaseEvent with no Cart at all
+        val purchaseEvent =
+            PurchaseEvent.Builder(
+                listOf(buildItemWithAllFields()),
+                Order.Builder().orderId("ORDER123").build(),
+            ).build()
+        val userIdentifiers = buildAllUserIdentifiers()
+
+        // Act
+        val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+
+        // Assert - parity with iOS: even without a host cart, wire cart carries computed total
+        val metadata = result[0].eventMetadata as PurchaseMetadata
+        assertNotNull(metadata.cart)
+        assertEquals("15.99", metadata.cart?.cartTotal)
+        assertNull(metadata.cart?.cartId)
+        assertNull(metadata.cart?.cartDiscount)
     }
 
     // Test calculateCartTotal
