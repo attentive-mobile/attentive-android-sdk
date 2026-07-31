@@ -45,6 +45,7 @@ object ProductListSerializer : KSerializer<List<ProductDto>?> {
 class OrderConfirmedMetadataDto : Metadata() {
     var orderId: String? = null
     var cartTotal: String? = null
+    var cartDiscount: String? = null
     var currency: String? = null
 
     /**
