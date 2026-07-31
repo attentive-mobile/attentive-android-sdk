@@ -70,8 +70,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.attentive.androidsdk.AttentiveSdk
@@ -85,6 +88,30 @@ import kotlin.math.roundToInt
 // Maximum time the pull-to-refresh spinner stays visible before we let the user
 // go, even if the underlying refresh is still retrying under the hood.
 private const val REFRESH_UI_TIMEOUT_MS = 8_000L
+
+/**
+ * A Coil ImageLoader that registers GIF decoders so animated GIF inbox
+ * message images play instead of rendering as a static first frame. Uses
+ * platform ImageDecoder on API 28+ (efficient, hardware-accelerated) and
+ * falls back to Coil's software GifDecoder on older devices.
+ *
+ * Remembered per PlatformContext so recompositions don't churn loaders.
+ */
+@Composable
+private fun rememberInboxImageLoader(): ImageLoader {
+    val context = LocalPlatformContext.current
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+}
 
 /**
  * A ready-to-use inbox UI component that displays messages from the Attentive SDK.
@@ -690,6 +717,7 @@ private fun SmallMessageContent(
                 model = imageRequest,
                 contentDescription = "Message image",
                 contentScale = ContentScale.Crop,
+                imageLoader = rememberInboxImageLoader(),
                 modifier =
                     Modifier
                         .size(72.dp)
@@ -779,6 +807,7 @@ private fun LargeMessageContent(
                     model = imageRequest,
                     contentDescription = "Message image",
                     contentScale = ContentScale.Crop,
+                    imageLoader = rememberInboxImageLoader(),
                     modifier =
                         Modifier
                             .fillMaxWidth()
