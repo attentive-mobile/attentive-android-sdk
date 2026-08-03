@@ -499,6 +499,100 @@ override fun onNewIntent(intent: Intent?) {
 
 Without this, the SDK cannot detect notification taps when the app is brought from background, because `singleTask` activities receive new intents via `onNewIntent()` rather than being recreated.
 
+## Step 5 (optional) - Inbox
+
+The SDK ships an in-app message inbox — a Jetpack Compose component (`AttentiveInbox`) that displays messages sent to the user, backed by a `StateFlow` you can also observe directly for things like a badge count on your tab bar.
+
+The inbox lazily initializes the first time it is used (either via the composable or via `AttentiveSdk.getUnreadCount()`), fetches the first page of messages in the background, and refreshes automatically when the containing screen resumes.
+
+### Show the inbox UI
+
+Drop the composable anywhere in your Compose hierarchy — it observes SDK state internally and requires no wiring:
+
+```kotlin
+import com.attentive.androidsdk.inbox.AttentiveInbox
+
+@Composable
+fun InboxScreen() {
+    AttentiveInbox(
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+```
+
+Features:
+
+- Message list with title, body, timestamp, and optional image (static or animated GIF)
+- Unread indicator dot on unread rows
+- Pull-to-refresh
+- Swipe left to mark a message unread, swipe right to delete
+- Tap to mark read and follow the message's deep link
+- Infinite scroll pagination
+- Empty state when there are no messages
+
+### Customize the appearance
+
+All colors and fonts are overridable via composable parameters. Any parameter you leave unset falls back to the SDK's default color resources (see `attentive_inbox_*` in the SDK's `colors.xml`).
+
+```kotlin
+AttentiveInbox(
+    modifier = Modifier.fillMaxSize(),
+    backgroundColor = Color.White,
+    unreadIndicatorColor = Color(0xFF1E88E5),
+    titleTextColor = Color.Black,
+    bodyTextColor = Color(0xFF666666),
+    timestampTextColor = Color(0xFF999999),
+    swipeBackgroundColor = Color(0xFFFFC5B9),
+    titleFontFamily = FontFamily.SansSerif,
+    bodyFontFamily = FontFamily.SansSerif,
+    timestampFontFamily = FontFamily.SansSerif,
+)
+```
+
+You can also intercept the tap behavior with `onMessageClick`. If you provide a callback, the default (mark-as-read + open deep link) is replaced — call `AttentiveSdk.markRead` and handle the deep link yourself if you want to keep that behavior:
+
+```kotlin
+AttentiveInbox(
+    onMessageClick = { message ->
+        // your custom navigation here
+    },
+)
+```
+
+### Unread badge count
+
+Observe `AttentiveSdk.inboxState` to drive a badge in your tab bar or navigation:
+
+```kotlin
+@Composable
+fun InboxTabBadge() {
+    val state by AttentiveSdk.inboxState.collectAsState()
+    if (state.unreadCount > 0) {
+        Badge { Text(state.unreadCount.toString()) }
+    }
+}
+```
+
+If you need a one-shot count outside of Compose, call `AttentiveSdk.getUnreadCount()`. The first call kicks off inbox initialization asynchronously, so it may return `0` on cold start — subscribe to `inboxState` if you need the value as soon as it lands.
+
+### Programmatic actions
+
+If you build a custom inbox UI, you can drive it with the same actions the built-in composable uses:
+
+```kotlin
+AttentiveSdk.markRead(messageId)
+AttentiveSdk.markUnread(messageId)
+AttentiveSdk.deleteMessage(messageId)
+AttentiveSdk.trackInboxClick(messageId, actionUrl)   // report a click on a message link
+AttentiveSdk.loadMoreInboxMessages()                 // fetch the next page
+```
+
+Each of these updates `inboxState` immediately (optimistic) and syncs to the Attentive backend in the background.
+
+### Behavior on logout
+
+`AttentiveSdk.clearUser()` and `AttentiveSdk.updateUser()` clear the inbox so that the previous user's messages don't leak into the next session. Any inbox network requests already in flight are ignored on completion.
+
 ## Other functionality
 
 ### Change domain
