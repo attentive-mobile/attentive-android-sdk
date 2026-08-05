@@ -89,9 +89,6 @@ class Creative internal constructor(
     internal val isCreativeOpening = AtomicBoolean(false)
     internal val isCreativeDestroyed = AtomicBoolean(false)
 
-    // Bounding rectangle for touch event filtering (in pixels)
-    private var creativeBounds: android.graphics.Rect? = null
-
     init {
         Timber.i(
             "Calling constructor of Creative with parameters: %s, %s, %s, %s, %s",
@@ -146,43 +143,8 @@ class Creative internal constructor(
         val width = parentView.width
         val height = parentView.height
         val layoutParams = ViewGroup.LayoutParams(width, height)
-        webView?.let { view ->
-            view.setBackgroundColor(Color.TRANSPARENT)
-            Timber.d("Set webview background color to transparent")
-
-            // Set up touch listener to filter events based on creative bounds
-            // Suppress ClickableViewAccessibility: We're only filtering touches by bounds, not implementing
-            // click logic. Touches inside bounds return false to let WebView handle them normally (including
-            // accessibility), touches outside are intentionally blocked with no action needed.
-            @SuppressLint("ClickableViewAccessibility")
-            view.setOnTouchListener { _, event ->
-                val bounds = creativeBounds
-
-                // If no bounds set or creative not open, pass all touches through
-                if (bounds == null || !isCreativeOpen.get()) {
-                    Timber.i("No bounds or creative not open - passing touch through")
-                    return@setOnTouchListener false
-                }
-
-                val x = event.x.toInt()
-                val y = event.y.toInt()
-
-                // Check if touch is within the creative's bounding rectangle
-                val isInBounds = bounds.contains(x, y)
-
-                if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                    Timber.i("Touch at ($x, $y) - inBounds=$isInBounds (bounds=$bounds)")
-                }
-
-                if (isInBounds) {
-                    // Touch is inside creative - let WebView handle it
-                    false // Return false to let WebView's normal touch handling work
-                } else {
-                    // Touch is outside creative - consume it so it doesn't reach WebView
-                    true
-                }
-            }
-        }
+        webView?.setBackgroundColor(Color.TRANSPARENT)
+        Timber.d("Set webview background color to transparent")
 
         (parentView as ViewGroup).addView(webView, layoutParams)
     }
@@ -297,7 +259,7 @@ class Creative internal constructor(
      */
     internal fun createWebView(parentView: View): WebView? {
         return try {
-            val view = WebView(activity)
+            val view = PassThroughWebView(activity)
             val webSettings = view.settings
 
             // Security settings, allow JavaScript to run
@@ -378,7 +340,10 @@ class Creative internal constructor(
                 super.onPageFinished(view, url)
 
                 Timber.i("onPageFinished: %s %s", webView, url)
-                if (view.progress == 100) {
+                // Skip the listener injection on about:blank (used to reset the WebView on
+                // timeout/close) — CREATIVE_LISTENER is only bound for creatives.attn.tv,
+                // so evaluating the JS anywhere else throws a ReferenceError.
+                if (view.progress == 100 && url.startsWith("https://creatives.attn.tv")) {
                     Timber.i("Page finished loading")
                     view.loadUrl(CREATIVE_LISTENER_JS)
                 }
@@ -386,19 +351,32 @@ class Creative internal constructor(
 
             override fun shouldOverrideUrlLoading(
                 view: WebView,
+                request: WebResourceRequest,
+            ): Boolean {
+                // The WebResourceRequest overload fires for subframe navigations too — required
+                // because creatives render inside an `attentive_creative` iframe, and the
+                // deprecated String overload is main-frame only.
+                return handleUrlLoading(view, request.url.toString())
+            }
+
+            @Deprecated("Fallback for API < 24; main-frame only")
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                uri: String,
+            ): Boolean {
+                return handleUrlLoading(view, uri)
+            }
+
+            private fun handleUrlLoading(
+                view: WebView,
                 uri: String,
             ): Boolean {
                 Timber.i("shouldOverrideUrlLoading: %s %s", webView, uri)
-                val lowercaseUri = uri.lowercase(Locale.getDefault())
-                if (lowercaseUri.startsWith("sms://") || lowercaseUri.startsWith("http://") ||
-                    lowercaseUri.startsWith(
-                        "https://",
-                    )
-                ) {
+                val scheme = Uri.parse(uri).scheme?.lowercase(Locale.getDefault())
+                if (scheme in EXTERNAL_APP_SCHEMES) {
                     try {
-                        // This tells Android to open the URI in an app that is relevant for the URI.
-                        // i.e. for "sms://" it will open the messaging app and for "http://" it will
-                        // open the browser
+                        // Hand off to whichever app handles the scheme (messaging app for
+                        // sms:/smsto:, dialer for tel:, mail app for mailto:, browser for http(s):).
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
                         // Usually, our Creative will be rendered inside of an Activity. However, this is not required,
                         // and some clients may choose not to do so (for example they can be rendered directly in the
@@ -434,6 +412,11 @@ class Creative internal constructor(
             val messageData = message.data
             Timber.i("Creative message data %s", messageData)
             if (messageData != null) {
+                // Non-JSON string messages (posted directly as string literals by the injected JS)
+                if (messageData == "TIMED OUT") {
+                    onCreativeTimedOut()
+                    return@WebMessageListener
+                }
                 // Try to parse as JSON for structured messages
                 try {
                     if (messageData.startsWith("{")) {
@@ -493,7 +476,6 @@ class Creative internal constructor(
                             }
                             "IMPRESSION" -> Timber.d("Impression: %s", messageData)
                             "CLOSE" -> closeCreative()
-                            "TIMED OUT" -> onCreativeTimedOut()
                             else -> Timber.d("Unknown action: %s", action)
                         }
                         return@WebMessageListener
@@ -507,11 +489,19 @@ class Creative internal constructor(
 
     private fun onCreativeTimedOut() {
         Timber.e("Creative timed out. Not showing WebView.")
-        triggerCallback?.let {
-            Timber.e("Trigger callback is not null")
-            it.onCreativeNotOpened()
+        CoroutineScope(Dispatchers.Main).launch {
+            isCreativeOpen.set(false)
+            isCreativeOpening.set(false)
+            (webView as? PassThroughWebView)?.creativeBounds = null
+            webView?.let { view ->
+                changeWebViewVisibility(false)
+                view.stopLoading()
+            }
+            triggerCallback?.let {
+                Timber.e("Trigger callback is not null")
+                it.onCreativeNotOpened()
+            }
         }
-        isCreativeOpen.set(false)
     }
 
     internal fun openCreative(
@@ -528,17 +518,20 @@ class Creative internal constructor(
             // called just before this callback is executed. If destroy was previously called then it's
             // okay to ignore these callbacks since the host app has told us the creative should no longer
             // be displayed.
-            if (webView != null) {
+            val currentWebView = webView
+            if (currentWebView != null) {
                 // Set the bounding rectangle for touch event filtering
-                // WebView stays fullscreen, but touches outside this rect will be ignored
-                creativeBounds =
+                // WebView stays fullscreen, but touches outside this rect are dispatched to
+                // views underneath instead of being consumed by the WebView.
+                val bounds =
                     android.graphics.Rect(
                         left,
                         top,
                         left + width,
                         top + height,
                     )
-                Timber.i("Set creative bounds: left=$left, top=$top, width=$width, height=$height (bounds=$creativeBounds)")
+                (currentWebView as? PassThroughWebView)?.creativeBounds = bounds
+                Timber.i("Set creative bounds: left=$left, top=$top, width=$width, height=$height (bounds=$bounds)")
 
                 // Make WebView visible
                 changeWebViewVisibility(true)
@@ -563,7 +556,7 @@ class Creative internal constructor(
         CoroutineScope(Dispatchers.Main).launch {
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
-            creativeBounds = null // Clear bounding rectangle so touches pass through
+            (webView as? PassThroughWebView)?.creativeBounds = null
             Timber.i("Cleared creative bounds")
             if (webView != null) {
                 changeWebViewVisibility(false)
@@ -594,6 +587,7 @@ class Creative internal constructor(
 
     companion object {
         private val CREATIVE_LISTENER_ALLOWED_ORIGINS = setOf("https://creatives.attn.tv")
+        private val EXTERNAL_APP_SCHEMES = setOf("sms", "smsto", "tel", "mailto", "http", "https")
         private const val CREATIVE_LISTENER_JS =
             "javascript:(async function() {\n" +
                 "    window.addEventListener('visibilitychange', \n" +
