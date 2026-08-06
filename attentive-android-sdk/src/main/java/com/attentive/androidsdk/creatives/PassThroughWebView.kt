@@ -17,7 +17,7 @@ import timber.log.Timber
  * still lets the WebView's own `onTouchEvent` consume the event; only returning `false` from
  * `onTouchEvent` itself allows pass-through.
  */
-internal class PassThroughWebView
+open class PassThroughWebView
     @JvmOverloads
     constructor(
         context: Context,

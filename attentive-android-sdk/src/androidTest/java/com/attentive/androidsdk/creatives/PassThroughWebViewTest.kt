@@ -1,37 +1,34 @@
 package com.attentive.androidsdk.creatives
 
 import android.app.Activity
+import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.Gravity
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.Button
 import android.widget.FrameLayout
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Regression guard for MSDK-456. Confirms that [PassThroughWebView.onTouchEvent] routes taps
- * based on [PassThroughWebView.creativeBounds]:
- *  - taps outside the bounds propagate to views behind the WebView;
- *  - taps with bounds unset are consumed by the WebView.
- *
- * The previous inline `setOnTouchListener` in `Creative` returned `true` for out-of-bounds
- * touches, blocking the underlying UI from receiving them.
+ * Regression guard for MSDK-456. Dispatches synthetic touches directly at the WebView
+ * (bypassing the framework's input-injection pipeline, which is unreliable under
+ * instrumentation) and asserts that [PassThroughWebView.onTouchEvent] routes them based
+ * on [PassThroughWebView.creativeBounds]:
+ *  - taps outside the bounds return false, letting the framework propagate the event to
+ *    views behind the WebView;
+ *  - taps with bounds unset are delegated to `super.onTouchEvent`, so the WebView owns
+ *    the event.
  */
 @RunWith(AndroidJUnit4::class)
 class PassThroughWebViewTest {
@@ -39,84 +36,148 @@ class PassThroughWebViewTest {
     val activityRule = ActivityScenarioRule(PassThroughWebViewTestActivity::class.java)
 
     @Test
-    fun tapOutsideCreativeBounds_reachesViewBehindWebView() {
-        val clicked = AtomicBoolean(false)
+    fun tapOutsideCreativeBounds_shortCircuitsToFalse() {
+        val activity = getActivity()
+        activity.setCreativeBounds(Rect(0, 0, 0, 0))
+        // Zero-sized bounds → every point is outside → PassThroughWebView must return false.
 
-        activityRule.scenario.onActivity { activity ->
-            activity.onClicked = { clicked.set(true) }
-            // Zero-sized bounds → every tap is "outside" the creative and should pass through.
-            activity.setCreativeBounds(Rect(0, 0, 0, 0))
-        }
+        val downHandled = dispatchDownAtWebViewCenter()
 
-        onView(withId(PassThroughWebViewTestActivity.BUTTON_ID)).perform(click())
-
-        assertTrue("Button behind PassThroughWebView should receive the tap", clicked.get())
+        assertTrue(
+            "PassThroughWebView.onTouchEvent should have run",
+            activity.recordingWebView.touchEventInvocations.get() > 0,
+        )
+        assertTrue(
+            "Touches outside bounds must be reported as pass-through",
+            activity.recordingWebView.shortCircuited.get(),
+        )
+        assertFalse(
+            "Out-of-bounds ACTION_DOWN must return false so the event propagates behind the WebView",
+            downHandled,
+        )
     }
 
     @Test
-    fun tapWithBoundsUnset_webViewConsumesEvent() {
-        val clicked = AtomicBoolean(false)
+    fun tapWithBoundsUnset_delegatesToSuper() {
+        val activity = getActivity()
+        activity.setCreativeBounds(null)
 
-        activityRule.scenario.onActivity { activity ->
-            activity.onClicked = { clicked.set(true) }
-            activity.setCreativeBounds(null)
-            // A page-less WebView doesn't reliably consume touches — load a minimal HTML page
-            // so the WebView has interactive content to swallow the tap.
-            activity.loadInteractivePage()
-        }
-        val latchRef = arrayOfNulls<CountDownLatch>(1)
-        activityRule.scenario.onActivity { activity ->
-            latchRef[0] = activity.pageLoadedLatch
-        }
-        // Await off the main thread — onPageFinished dispatches to the main thread, so
-        // blocking there would deadlock the WebView callback we're waiting on.
+        dispatchDownAtWebViewCenter()
+
         assertTrue(
-            "WebView page did not finish loading in time",
-            latchRef[0]!!.await(10, TimeUnit.SECONDS),
+            "PassThroughWebView.onTouchEvent should have run",
+            activity.recordingWebView.touchEventInvocations.get() > 0,
         )
+        assertFalse(
+            "PassThroughWebView must not short-circuit when bounds are null",
+            activity.recordingWebView.shortCircuited.get(),
+        )
+        assertTrue(
+            "PassThroughWebView must record that it delegated to super",
+            activity.recordingWebView.delegatedToSuper.get(),
+        )
+    }
 
-        onView(withId(PassThroughWebViewTestActivity.BUTTON_ID)).perform(click())
+    @Test
+    fun tapInsideCreativeBounds_delegatesToSuper() {
+        val activity = getActivity()
+        // Bounds cover the entire WebView, so the tap at its center is inside.
+        activity.setCreativeBounds(Rect(0, 0, 10_000, 10_000))
 
-        assertFalse("WebView should consume the tap when bounds are unset", clicked.get())
+        dispatchDownAtWebViewCenter()
+
+        assertTrue(
+            "PassThroughWebView.onTouchEvent should have run",
+            activity.recordingWebView.touchEventInvocations.get() > 0,
+        )
+        assertFalse(
+            "Touches inside bounds must not short-circuit",
+            activity.recordingWebView.shortCircuited.get(),
+        )
+        assertTrue(
+            "PassThroughWebView must delegate in-bounds touches to super",
+            activity.recordingWebView.delegatedToSuper.get(),
+        )
+    }
+
+    private fun getActivity(): PassThroughWebViewTestActivity {
+        val ref = arrayOfNulls<PassThroughWebViewTestActivity>(1)
+        activityRule.scenario.onActivity { ref[0] = it }
+        return ref[0]!!
+    }
+
+    /**
+     * Dispatches an ACTION_DOWN + ACTION_UP pair at the center of the WebView and returns
+     * whether the ACTION_DOWN was handled by [PassThroughWebView.dispatchTouchEvent].
+     */
+    private fun dispatchDownAtWebViewCenter(): Boolean {
+        val activity = getActivity()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val resultRef = booleanArrayOf(false)
+        instrumentation.runOnMainSync {
+            val wv = activity.recordingWebView
+            val x = wv.width / 2f
+            val y = wv.height / 2f
+            val downTime = SystemClock.uptimeMillis()
+            val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
+            val up = MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, x, y, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
+            resultRef[0] = wv.dispatchTouchEvent(down)
+            wv.dispatchTouchEvent(up)
+            down.recycle()
+            up.recycle()
+        }
+        instrumentation.waitForIdleSync()
+        return resultRef[0]
+    }
+}
+
+/**
+ * PassThroughWebView subclass that records how each touch was routed: whether onTouchEvent
+ * was invoked, whether shouldPassThrough short-circuited the event, and whether the
+ * subclass ended up delegating to super.
+ */
+class RecordingPassThroughWebView(context: Context) : PassThroughWebView(context) {
+    val touchEventInvocations = java.util.concurrent.atomic.AtomicInteger(0)
+    val shortCircuited = java.util.concurrent.atomic.AtomicBoolean(false)
+    val delegatedToSuper = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        touchEventInvocations.incrementAndGet()
+        val bounds = creativeBounds
+        val passThrough =
+            bounds != null &&
+                PassThroughWebView.shouldPassThrough(
+                    bounds.left,
+                    bounds.top,
+                    bounds.right,
+                    bounds.bottom,
+                    event.x.toInt(),
+                    event.y.toInt(),
+                )
+        if (passThrough) {
+            shortCircuited.set(true)
+            return false
+        }
+        delegatedToSuper.set(true)
+        return super.onTouchEvent(event)
     }
 }
 
 class PassThroughWebViewTestActivity : Activity() {
-    private lateinit var webView: PassThroughWebView
-    private lateinit var button: Button
-    var onClicked: (() -> Unit)? = null
-    val pageLoadedLatch = CountDownLatch(1)
+    lateinit var rootLayout: FrameLayout
+    lateinit var recordingWebView: RecordingPassThroughWebView
 
-    internal fun setCreativeBounds(bounds: Rect?) {
-        webView.creativeBounds = bounds
-    }
-
-    internal fun loadInteractivePage() {
-        webView.webViewClient =
-            object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) {
-                    pageLoadedLatch.countDown()
-                }
-            }
-        // A full-viewport clickable body ensures the WebView has hit-testable interactive
-        // content covering the whole area, so it consumes ACTION_DOWN.
-        val html =
-            """
-            <!doctype html>
-            <html>
-              <body style="margin:0;padding:0;width:100vw;height:100vh;background:transparent">
-                <a href="#" style="display:block;width:100%;height:100%">tap</a>
-              </body>
-            </html>
-            """.trimIndent()
-        webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+    fun setCreativeBounds(bounds: Rect?) {
+        recordingWebView.creativeBounds = bounds
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // The CI AVD runs in no-window mode; without these flags the activity often fails
-        // to gain window focus, causing Espresso's RootViewWithoutFocusException.
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
@@ -124,7 +185,7 @@ class PassThroughWebViewTestActivity : Activity() {
                 WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD,
         )
 
-        val root =
+        rootLayout =
             FrameLayout(this).apply {
                 layoutParams =
                     ViewGroup.LayoutParams(
@@ -133,34 +194,17 @@ class PassThroughWebViewTestActivity : Activity() {
                     )
             }
 
-        button =
-            Button(this).apply {
-                id = BUTTON_ID
-                text = "Behind"
+        recordingWebView =
+            RecordingPassThroughWebView(this).apply {
                 layoutParams =
                     FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
                         Gravity.CENTER,
                     )
-                setOnClickListener { onClicked?.invoke() }
             }
-        root.addView(button)
+        rootLayout.addView(recordingWebView)
 
-        webView =
-            PassThroughWebView(this).apply {
-                layoutParams =
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
-            }
-        root.addView(webView)
-
-        setContentView(root)
-    }
-
-    companion object {
-        const val BUTTON_ID = 0x00abc001
+        setContentView(rootLayout)
     }
 }
