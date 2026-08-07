@@ -283,6 +283,11 @@ jobs:
           github_app_client_id: ${GITHUB_APP_CLIENT_ID}
           github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
           github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
+      # cimg/android does not bundle the gh CLI, and `gh pr create` / `gh release create`
+      # below need it. Auth comes from GITHUB_TOKEN, already minted above, which gh reads
+      # from the environment — so `install` is enough and `setup` would re-auth needlessly.
+      - github-cli/install:
+          version: "2.97.0"
       - run:
           name: Switch git remote to HTTPS with App token
           command: |
