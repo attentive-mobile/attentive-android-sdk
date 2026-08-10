@@ -58,6 +58,16 @@ object AttentiveSdk {
                     "Please call AttentiveSdk.initialize() in your Application.onCreate() method.",
             )
 
+    private const val PUSH_DISABLED_MESSAGE =
+        "Push is disabled via AttentiveConfig.Builder.pushEnabled(false)"
+
+    /**
+     * True only when a config is present and has push turned off. An uninitialized SDK is
+     * not treated as disabled — those calls keep failing the way they always have rather
+     * than being silently swallowed by this gate.
+     */
+    private fun isPushDisabled(): Boolean = _config?.pushEnabled == false
+
     // Inbox state management
     private val _inboxState = MutableStateFlow(InboxState())
 
@@ -579,6 +589,9 @@ object AttentiveSdk {
      * Fetches the current FCM push token, optionally prompting the user for notification
      * permission first.
      *
+     * Returns a failed [Result] without fetching or prompting if push is disabled via
+     * [AttentiveConfig.Builder.pushEnabled].
+     *
      * @param application Application context, used to request permission if needed.
      * @param requestPermission If `true`, prompts for `POST_NOTIFICATIONS` on Android 13+
      *   before fetching.
@@ -587,11 +600,18 @@ object AttentiveSdk {
         application: Application,
         requestPermission: Boolean,
     ): Result<TokenFetchResult> {
+        if (isPushDisabled()) {
+            Timber.d("$PUSH_DISABLED_MESSAGE; skipping push token fetch")
+            return Result.failure(IllegalStateException(PUSH_DISABLED_MESSAGE))
+        }
         return AttentivePush.getInstance().fetchPushToken(application, requestPermission)
     }
 
     /**
      * Callback-based variant of [getPushToken] for Java interop.
+     *
+     * Invokes [PushTokenCallback.onFailure] without fetching or prompting if push is
+     * disabled via [AttentiveConfig.Builder.pushEnabled].
      */
     @JvmStatic
     fun getPushTokenWithCallback(
@@ -599,6 +619,11 @@ object AttentiveSdk {
         requestPermission: Boolean,
         callback: PushTokenCallback,
     ) {
+        if (isPushDisabled()) {
+            Timber.d("$PUSH_DISABLED_MESSAGE; skipping push token fetch")
+            callback.onFailure(IllegalStateException(PUSH_DISABLED_MESSAGE))
+            return
+        }
         Timber.d("Synchronously fetching push token with requestPermission: $requestPermission")
         CoroutineScope(Dispatchers.IO).launch {
             try {

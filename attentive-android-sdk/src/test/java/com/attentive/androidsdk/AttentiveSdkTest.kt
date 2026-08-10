@@ -20,6 +20,8 @@ import com.attentive.androidsdk.internal.network.UnreadCountResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import retrofit2.Response
 import com.attentive.androidsdk.internal.util.Constants
+import com.attentive.androidsdk.push.AttentivePush
+import com.attentive.androidsdk.push.TokenFetchResult
 import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.runBlocking
@@ -48,6 +50,7 @@ class AttentiveSdkTest {
     private lateinit var callback: AttentiveSdk.PushTokenCallback
     private lateinit var factoryMocks: FactoryMocks
     private var mockedAppInfo: MockedStatic<AppInfo>? = null
+    private var mockedAttentivePush: Boolean = false
     @Before
     fun setUp() {
         remoteMessage = mock(RemoteMessage::class.java)
@@ -79,6 +82,7 @@ class AttentiveSdkTest {
 
     @After
     fun tearDown() {
+        restoreAttentivePushInstance()
         factoryMocks.close()
         mockedAppInfo?.close()
         TokenProvider.getInstance().token = null
@@ -110,6 +114,63 @@ class AttentiveSdkTest {
     fun isAttentiveFirebaseMessage_returnsFalse_whenNoAttentiveKey() {
         whenever(remoteMessage.data).thenReturn(mapOf("other_key" to "Test"))
         assertFalse(AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage))
+    }
+
+    @Test
+    fun getPushToken_whenPushDisabled_doesNotFetchToken() {
+        setConfig(pushEnabled = false)
+        val push = mockAttentivePushInstance()
+
+        val result = runBlocking { AttentiveSdk.getPushToken(application, requestPermission = true) }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        runBlocking { verify(push, never()).fetchPushToken(any(), any()) }
+    }
+
+    @Test
+    fun getPushToken_whenPushEnabled_fetchesToken() {
+        setConfig(pushEnabled = true)
+        val push = mockAttentivePushInstance()
+        val expected = TokenFetchResult(PUSH_TOKEN, permissionGranted = true)
+        runBlocking {
+            whenever(push.fetchPushToken(any(), any())).thenReturn(Result.success(expected))
+        }
+
+        val result = runBlocking { AttentiveSdk.getPushToken(application, requestPermission = true) }
+
+        assertEquals(expected, result.getOrNull())
+    }
+
+    @Test
+    fun getPushTokenWithCallback_whenPushDisabled_invokesOnFailureWithoutFetching() {
+        setConfig(pushEnabled = false)
+        val push = mockAttentivePushInstance()
+
+        AttentiveSdk.getPushTokenWithCallback(application, requestPermission = true, callback)
+
+        // The gate returns synchronously, before the Dispatchers.IO launch.
+        verify(callback).onFailure(any())
+        verify(callback, never()).onSuccess(any())
+        runBlocking { verify(push, never()).fetchPushToken(any(), any()) }
+    }
+
+    @Test
+    fun getPushTokenWithCallback_whenPushEnabled_fetchesTokenAndInvokesOnSuccess() {
+        setConfig(pushEnabled = true)
+        val push = mockAttentivePushInstance()
+        val expected = TokenFetchResult(PUSH_TOKEN, permissionGranted = true)
+        runBlocking {
+            whenever(push.fetchPushToken(any(), any())).thenReturn(Result.success(expected))
+        }
+
+        AttentiveSdk.getPushTokenWithCallback(application, requestPermission = true, callback)
+
+        // The fetch is launched on Dispatchers.IO; give it time to execute.
+        Thread.sleep(100)
+
+        verify(callback).onSuccess(eq(expected))
+        verify(callback, never()).onFailure(any())
     }
 
     @Test
@@ -513,6 +574,44 @@ class AttentiveSdkTest {
         val state = AttentiveSdk.inboxState.value
         assertEquals(0, state.messages.size)
         assertNull(readNextPageToken())
+    }
+
+    /**
+     * Replaces the config on [AttentiveSdk] with one built at the given [pushEnabled] setting.
+     * Set directly by reflection for the same reason as [setUp] — AttentiveEventTracker.initialize
+     * requires the main looper.
+     */
+    private fun setConfig(pushEnabled: Boolean) {
+        val config = AttentiveConfig.Builder()
+            .domain(DOMAIN)
+            .mode(AttentiveConfig.Mode.DEBUG)
+            .applicationContext(mock(Application::class.java))
+            .pushEnabled(pushEnabled)
+            .build()
+        val field = AttentiveSdk::class.java.getDeclaredField("_config")
+        field.isAccessible = true
+        field.set(AttentiveSdk, config)
+    }
+
+    /**
+     * Swaps the [AttentivePush] singleton for a mock so the gate can be asserted on without
+     * touching FCM. Restored in [tearDown] via [restoreAttentivePushInstance].
+     */
+    private fun mockAttentivePushInstance(): AttentivePush {
+        val mockPush = mock(AttentivePush::class.java)
+        val field = AttentivePush::class.java.getDeclaredField("INSTANCE")
+        field.isAccessible = true
+        field.set(null, mockPush)
+        mockedAttentivePush = true
+        return mockPush
+    }
+
+    private fun restoreAttentivePushInstance() {
+        if (!mockedAttentivePush) return
+        val field = AttentivePush::class.java.getDeclaredField("INSTANCE")
+        field.isAccessible = true
+        field.set(null, AttentivePush())
+        mockedAttentivePush = false
     }
 
     private fun setNextPageToken(token: String?) {
