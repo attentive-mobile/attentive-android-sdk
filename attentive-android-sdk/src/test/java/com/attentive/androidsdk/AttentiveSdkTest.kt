@@ -35,7 +35,9 @@ import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.stubbing.Answer
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
@@ -114,6 +116,8 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_callsSendUserUpdateWithNullIdentifiers() {
+        seedUserIdentifiers(email = EMAIL)
+
         AttentiveSdk.clearUser()
 
         // sendUserUpdate is launched on Dispatchers.IO; give it time to execute
@@ -128,9 +132,135 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_resetsIdentifiers() {
+        seedUserIdentifiers(email = EMAIL)
+
         AttentiveSdk.clearUser()
 
         verify(factoryMocks.visitorService).createNewVisitorId()
+    }
+
+    @Test
+    fun clearUser_withOnlyVisitorId_isNoOp() {
+        // Fresh config from @Before holds nothing but a visitor ID — there is no user to clear.
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    @Test
+    fun clearUser_withOnlyCustomIdentifiers_clearsAndEmits() {
+        sdkConfig().userIdentifiers = UserIdentifiers(
+            visitorId = VISITOR_ID,
+            customIdentifiers = mapOf("loyaltyId" to "abc123"),
+        )
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withIdenticalIdentifiers_isNoOp() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    @Test
+    fun updateUser_withDifferentEmail_regeneratesAndEmits() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = OTHER_EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(OTHER_EMAIL), eq(PHONE), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withPhoneRemoved_regeneratesAndEmits() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withMatchingEmailButExtraStoredIdentifier_regeneratesAndEmits() {
+        // A client user ID would be dropped by a real update, so skipping isn't equivalent.
+        sdkConfig().userIdentifiers = UserIdentifiers(
+            visitorId = VISITOR_ID,
+            email = EMAIL,
+            clientUserId = "client-123",
+        )
+        stubSendUserUpdate(Result.success(Unit))
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_afterFailedUpdate_retriesInsteadOfBeingGuarded() {
+        // The real AttentiveApi.sendUserUpdate stores the identifiers before the request
+        // completes, so reproduce that here to exercise the failure-path rollback.
+        answerSendUserUpdate {
+            sdkConfig().identify(UserIdentifiers.Builder().withEmail(EMAIL).build())
+            unboxed(Result.failure(RuntimeException("boom")))
+        }
+
+        val first = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+        assertTrue(first.isFailure)
+        // The API stores identifiers before the request completes; the failure path must undo
+        // that so an identical retry isn't swallowed by the no-op guard.
+        assertNull(sdkConfig().userIdentifiers.email)
+
+        stubSendUserUpdate(Result.success(Unit))
+        val second = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(second.isSuccess)
+        runBlocking {
+            verify(factoryMocks.attentiveApi, Mockito.times(2)).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
     }
 
     @Test
@@ -466,6 +596,7 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_resetsInboxStateToEmpty() {
+        seedUserIdentifiers(email = EMAIL)
         setInboxState(
             InboxState(
                 messages = listOf(fakeMessage("m1", isRead = false), fakeMessage("m2", isRead = true)),
@@ -515,6 +646,48 @@ class AttentiveSdkTest {
         assertNull(readNextPageToken())
     }
 
+    private fun sdkConfig(): AttentiveConfig {
+        val field = AttentiveSdk::class.java.getDeclaredField("_config")
+        field.isAccessible = true
+        return field.get(AttentiveSdk) as AttentiveConfig
+    }
+
+    /** Puts the SDK into a "logged in" state without going through the network. */
+    private fun seedUserIdentifiers(email: String? = null, phone: String? = null) {
+        sdkConfig().userIdentifiers =
+            UserIdentifiers(visitorId = VISITOR_ID, email = email, phone = phone)
+    }
+
+    private fun stubSendUserUpdate(result: Result<Unit>) {
+        answerSendUserUpdate { unboxed(result) }
+    }
+
+    /**
+     * Stubs `sendUserUpdate` using the `doAnswer` form, which — unlike `whenever` — doesn't
+     * invoke the mock (and therefore any previously installed answer) while stubbing.
+     */
+    private fun answerSendUserUpdate(answer: () -> Any?) {
+        runBlocking {
+            Mockito.doAnswer(Answer<Any?> { answer() })
+                .`when`(factoryMocks.attentiveApi)
+                .sendUserUpdate(
+                    anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(),
+                )
+        }
+    }
+
+    /**
+     * A suspend function returning [Result] is erased to its *unboxed* underlying value, so a
+     * Mockito answer must hand back that value. Returning a boxed [Result] instead leaves the
+     * caller holding a Result wrapping a Result, which always looks like a success.
+     */
+    private fun unboxed(result: Result<Unit>): Any? {
+        val boxed: Any = result
+        return boxed.javaClass.getDeclaredField("value")
+            .apply { isAccessible = true }
+            .get(boxed)
+    }
+
     private fun setNextPageToken(token: String?) {
         val field = AttentiveSdk::class.java.getDeclaredField("nextPageToken")
         field.isAccessible = true
@@ -544,5 +717,8 @@ class AttentiveSdkTest {
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
         private const val PUSH_TOKEN = "testPushToken"
+        private const val EMAIL = "user@example.com"
+        private const val OTHER_EMAIL = "other@example.com"
+        private const val PHONE = "+15551234567"
     }
 }

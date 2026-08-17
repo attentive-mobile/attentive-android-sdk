@@ -639,6 +639,9 @@ object AttentiveSdk {
      * available, the network call is skipped (see
      * [MSDK-345](https://attentivemobile.atlassian.net/browse/MSDK-345)).
      *
+     * No-op when the given identifiers already match the current user — see
+     * [updateUserSuspend].
+     *
      * Errors are logged but not surfaced. Use [updateUserSuspend] for coroutine-aware
      * error handling.
      */
@@ -657,6 +660,12 @@ object AttentiveSdk {
     /**
      * Suspend variant of [updateUser]. Returns success or wrapped failure once the network
      * call completes.
+     *
+     * Host apps commonly call this on every launch "to be safe". When the incoming
+     * identifiers already match the current user the call is a no-op — the visitor ID is
+     * left alone and no `/user-update` is sent — so repeat calls no longer grow the
+     * identity graph server-side. Returns success in that case, since the requested state
+     * already holds.
      */
     suspend fun updateUserSuspend(
         email: String? = null,
@@ -699,6 +708,11 @@ object AttentiveSdk {
             return Result.failure(IllegalArgumentException(msg))
         }
 
+        if (config.userIdentifiers.matchesUser(validatedEmail, validatedNumber)) {
+            Timber.i("Skipping user update: identifiers already match the current user")
+            return Result.success(Unit)
+        }
+
         config.resetIdentifiers()
         resetInboxForIdentityChange()
         val domain = config.domain
@@ -708,7 +722,14 @@ object AttentiveSdk {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        return config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
+        val result = config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
+        if (result.isFailure) {
+            // sendUserUpdate stores the identifiers before the request completes, so a failed
+            // update leaves them looking current. Drop them again or an identical retry would
+            // be swallowed by the guard above.
+            config.userIdentifiers = config.userIdentifiers.copy(email = null, phone = null)
+        }
+        return result
     }
 
     /**
@@ -735,8 +756,18 @@ object AttentiveSdk {
      *
      * Prefer this over the deprecated `AttentiveConfig.clearUser()`, which only clears local
      * state.
+     *
+     * No-op when there is no user to clear — that is, when the only identifier held is the
+     * visitor ID. Host apps that call this on every launch "to be safe" would otherwise mint
+     * a fresh visitor ID and POST `/user-update` each time, growing the identity graph
+     * server-side for no benefit.
      */
     fun clearUser() {
+        if (config.userIdentifiers.hasNoUserScopedIdentifiers()) {
+            Timber.i("Skipping clear user: no user-scoped identifiers to clear")
+            return
+        }
+
         config.resetIdentifiers()
         resetInboxForIdentityChange()
         val domain = config.domain
@@ -768,6 +799,35 @@ object AttentiveSdk {
 
         fun onFailure(exception: Exception)
     }
+
+    /**
+     * True when this set holds nothing but a visitor ID — nothing identifying a person.
+     * Push-token presence is deliberately not considered; the token is tracked separately.
+     */
+    private fun UserIdentifiers.hasNoUserScopedIdentifiers(): Boolean =
+        email == null &&
+            phone == null &&
+            clientUserId == null &&
+            shopifyId == null &&
+            klaviyoId == null &&
+            customIdentifiers.isEmpty()
+
+    /**
+     * True when [email] and [phone] are byte-for-byte what this set already holds and no other
+     * user-scoped identifier is present. Comparison is exact — no case folding, no phone
+     * normalization — so any difference falls through to a regular update.
+     *
+     * The "no other identifier" condition matters because a real update resets the whole set:
+     * if a client user ID or custom identifier is attached, skipping would not be equivalent
+     * to proceeding.
+     */
+    private fun UserIdentifiers.matchesUser(email: String?, phone: String?): Boolean =
+        this.email == email &&
+            this.phone == phone &&
+            clientUserId == null &&
+            shopifyId == null &&
+            klaviyoId == null &&
+            customIdentifiers.isEmpty()
 
     private fun dispatchResult(result: Result<Unit>, callback: AttentiveCallback) {
         result.fold(
