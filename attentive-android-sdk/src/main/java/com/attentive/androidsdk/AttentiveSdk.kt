@@ -43,6 +43,7 @@ import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
+import kotlin.coroutines.cancellation.CancellationException
 
 object AttentiveSdk {
     private var _config: AttentiveConfig? = null
@@ -722,14 +723,37 @@ object AttentiveSdk {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        val result = config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
+        val result =
+            try {
+                config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
+            } catch (e: CancellationException) {
+                // sendUserUpdate stores the identifiers before it rethrows, so cancellation
+                // exits without reaching the rollback below.
+                rollBackStoredContactInfo(visitorId)
+                throw e
+            }
         if (result.isFailure) {
-            // sendUserUpdate stores the identifiers before the request completes, so a failed
-            // update leaves them looking current. Drop them again or an identical retry would
-            // be swallowed by the guard above.
-            config.userIdentifiers = config.userIdentifiers.copy(email = null, phone = null)
+            rollBackStoredContactInfo(visitorId)
         }
         return result
+    }
+
+    /**
+     * Undoes the email/phone that [AttentiveApi.sendUserUpdate] stores before its request
+     * completes. Without this, a failed or cancelled update leaves the identifiers looking
+     * current and an identical retry would be swallowed by the no-op guard in
+     * [updateUserSuspend].
+     *
+     * Only rolls back while [visitorId] is still the current one, so an update that lost a race
+     * to a newer one can't strip contact info off the newer user.
+     */
+    private fun rollBackStoredContactInfo(visitorId: String) {
+        val current = config.userIdentifiers
+        if (current.visitorId != visitorId) {
+            Timber.i("Not rolling back user update: a newer identity change has since landed")
+            return
+        }
+        config.userIdentifiers = current.copy(email = null, phone = null)
     }
 
     /**

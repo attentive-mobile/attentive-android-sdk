@@ -28,6 +28,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.mockito.MockedStatic
@@ -42,6 +43,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.whenever
+import kotlin.coroutines.cancellation.CancellationException
 
 class AttentiveSdkTest {
     private lateinit var remoteMessage: RemoteMessage
@@ -261,6 +263,44 @@ class AttentiveSdkTest {
                 eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
             )
         }
+    }
+
+    @Test
+    fun updateUser_afterCancelledUpdate_rollsBackStoredIdentifiers() {
+        // sendUserUpdate stores the identifiers and then rethrows CancellationException, so the
+        // cancellation path has to roll back too or an identical retry is guarded away.
+        answerSendUserUpdate {
+            sdkConfig().identify(UserIdentifiers.Builder().withEmail(EMAIL).build())
+            throw CancellationException("caller went away")
+        }
+
+        try {
+            runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+            fail("Expected CancellationException to propagate")
+        } catch (e: CancellationException) {
+            // expected
+        }
+
+        assertNull(sdkConfig().userIdentifiers.email)
+    }
+
+    @Test
+    fun updateUser_failureDoesNotRollBackANewerIdentity() {
+        // Simulate losing a race: while this update is in flight a newer one lands and installs
+        // its own visitor ID and contact info. The loser must not strip that back off.
+        answerSendUserUpdate {
+            sdkConfig().userIdentifiers =
+                UserIdentifiers(visitorId = "newerVisitorId", email = OTHER_EMAIL, phone = PHONE)
+            unboxed(Result.failure(RuntimeException("boom")))
+        }
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(result.isFailure)
+        val identifiers = sdkConfig().userIdentifiers
+        assertEquals("newerVisitorId", identifiers.visitorId)
+        assertEquals(OTHER_EMAIL, identifiers.email)
+        assertEquals(PHONE, identifiers.phone)
     }
 
     @Test
