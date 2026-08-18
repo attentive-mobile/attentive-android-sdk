@@ -14,6 +14,8 @@ import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.identity.IdentitySyncDecision
+import com.attentive.androidsdk.internal.identity.IdentitySyncStore
 import com.attentive.androidsdk.internal.network.DeleteMessageRequest
 import com.attentive.androidsdk.internal.network.GetMessagesRequest
 import com.attentive.androidsdk.internal.network.InboxMessageDto
@@ -43,7 +45,6 @@ import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
-import kotlin.coroutines.cancellation.CancellationException
 
 object AttentiveSdk {
     private var _config: AttentiveConfig? = null
@@ -87,6 +88,10 @@ object AttentiveSdk {
     private val inboxMessagesReadUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages/read"
     private val inboxMessagesUnreadUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages/unread"
     private val inboxEventsClickedUrl get() = "${inboxHost.trimEnd('/')}/inbox/events/clicked"
+
+    // Guards identity decisions and the visitor-ID rotation that follows them. A plain monitor
+    // rather than a Mutex because clearUser() is not a suspend function.
+    private val identityLock = Any()
 
     // Pagination management
     private val paginationLock = Mutex()
@@ -662,11 +667,15 @@ object AttentiveSdk {
      * Suspend variant of [updateUser]. Returns success or wrapped failure once the network
      * call completes.
      *
-     * Host apps commonly call this on every launch "to be safe". When the incoming
-     * identifiers already match the current user the call is a no-op — the visitor ID is
-     * left alone and no `/user-update` is sent — so repeat calls no longer grow the
-     * identity graph server-side. Returns success in that case, since the requested state
-     * already holds.
+     * Host apps commonly call this on every launch "to be safe". When the incoming identifiers
+     * already match the current user *and* the last `/user-update` the backend confirmed carried
+     * exactly those identifiers and this push token, the call is a no-op — the visitor ID is left
+     * alone and nothing is sent — so repeat calls no longer grow the identity graph server-side.
+     * Returns success in that case, since the requested state already holds.
+     *
+     * When the identifiers match but the sync was never confirmed — a fresh launch, a failed
+     * request, or a rotated push token — the request is sent on the *existing* visitor ID rather
+     * than a new one, so a relaunch still reaches the backend without churning identity.
      */
     suspend fun updateUserSuspend(
         email: String? = null,
@@ -709,52 +718,76 @@ object AttentiveSdk {
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        if (config.userIdentifiers.matchesUser(validatedEmail, validatedNumber)) {
-            Timber.i("Skipping user update: identifiers already match the current user")
-            return Result.success(Unit)
+        val pushToken = TokenProvider.getInstance().token
+        when (planUpdateUser(validatedEmail, validatedNumber, pushToken)) {
+            IdentitySyncDecision.SKIP -> {
+                Timber.i("Skipping user update: identifiers already match the last confirmed sync")
+                return Result.success(Unit)
+            }
+
+            IdentitySyncDecision.RETRY_WITHOUT_ROTATION ->
+                Timber.i("Resending user update without rotating the visitor ID: sync not yet confirmed")
+
+            IdentitySyncDecision.ROTATED_AND_REPLACED -> resetInboxForIdentityChange()
         }
 
-        config.resetIdentifiers()
-        resetInboxForIdentityChange()
         val domain = config.domain
         val visitorId = config.userIdentifiers.visitorId
-        val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
             Timber.w("Skipping user update network call: visitorId=$visitorId, pushToken=$pushToken")
             return Result.failure(IllegalArgumentException("Visitor id $visitorId and pushToken $pushToken must not be null"))
         }
-        val result =
-            try {
-                config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
-            } catch (e: CancellationException) {
-                // sendUserUpdate stores the identifiers before it rethrows, so cancellation
-                // exits without reaching the rollback below.
-                rollBackStoredContactInfo(visitorId)
-                throw e
-            }
-        if (result.isFailure) {
-            rollBackStoredContactInfo(visitorId)
+        val result = config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
+        if (result.isSuccess) {
+            identitySyncStore().recordSuccessfulSync(validatedEmail, validatedNumber, pushToken)
         }
         return result
     }
 
     /**
-     * Undoes the email/phone that [AttentiveApi.sendUserUpdate] stores before its request
-     * completes. Without this, a failed or cancelled update leaves the identifiers looking
-     * current and an identical retry would be swallowed by the no-op guard in
-     * [updateUserSuspend].
+     * Decides what [updateUserSuspend] should do, rotating the visitor ID and installing the new
+     * identifiers when the change is genuine.
      *
-     * Only rolls back while [visitorId] is still the current one, so an update that lost a race
-     * to a newer one can't strip contact info off the newer user.
+     * Deciding and mutating happen under one lock so two concurrent callers passing the same
+     * identifiers can't each mint a visitor ID — the loser sees the winner's state and falls
+     * through to [IdentitySyncDecision.RETRY_WITHOUT_ROTATION] at worst.
      */
-    private fun rollBackStoredContactInfo(visitorId: String) {
-        val current = config.userIdentifiers
-        if (current.visitorId != visitorId) {
-            Timber.i("Not rolling back user update: a newer identity change has since landed")
-            return
+    private fun planUpdateUser(
+        email: String?,
+        phone: String?,
+        pushToken: String?,
+    ): IdentitySyncDecision =
+        synchronized(identityLock) {
+            if (!config.userIdentifiers.matchesUser(email, phone)) {
+                config.resetIdentifiers()
+                config.userIdentifiers = config.userIdentifiers.copy(email = email, phone = phone)
+                return IdentitySyncDecision.ROTATED_AND_REPLACED
+            }
+            if (identitySyncStore().matchesLastSync(email, phone, pushToken)) {
+                IdentitySyncDecision.SKIP
+            } else {
+                IdentitySyncDecision.RETRY_WITHOUT_ROTATION
+            }
         }
-        config.userIdentifiers = current.copy(email = null, phone = null)
-    }
+
+    /**
+     * Decides what [clearUser] should do. Same locking rationale as [planUpdateUser].
+     */
+    private fun planClearUser(pushToken: String?): IdentitySyncDecision =
+        synchronized(identityLock) {
+            if (!config.userIdentifiers.hasNoUserScopedIdentifiers()) {
+                config.resetIdentifiers()
+                return IdentitySyncDecision.ROTATED_AND_REPLACED
+            }
+            if (identitySyncStore().matchesLastSync(null, null, pushToken)) {
+                IdentitySyncDecision.SKIP
+            } else {
+                IdentitySyncDecision.RETRY_WITHOUT_ROTATION
+            }
+        }
+
+    private fun identitySyncStore(): IdentitySyncStore =
+        IdentitySyncStore(ClassFactory.buildPersistentStorage(config.applicationContext))
 
     /**
      * Callback-based variant of [updateUserSuspend] for Java interop.
@@ -781,28 +814,42 @@ object AttentiveSdk {
      * Prefer this over the deprecated `AttentiveConfig.clearUser()`, which only clears local
      * state.
      *
-     * No-op when there is no user to clear — that is, when the only identifier held is the
-     * visitor ID. Host apps that call this on every launch "to be safe" would otherwise mint
-     * a fresh visitor ID and POST `/user-update` each time, growing the identity graph
-     * server-side for no benefit.
+     * No-op when there is no user to clear *and* the backend already knows it — that is, when
+     * the only identifier held is the visitor ID and the last confirmed `/user-update` already
+     * detached this push token. Host apps that call this on every launch "to be safe" would
+     * otherwise mint a fresh visitor ID and POST `/user-update` each time, growing the identity
+     * graph server-side for no benefit.
+     *
+     * When there is nothing to clear but the detach was never confirmed — a fresh install, a
+     * failed request, or a rotated push token — the request is sent again on the *existing*
+     * visitor ID rather than a new one.
      */
     fun clearUser() {
-        if (config.userIdentifiers.hasNoUserScopedIdentifiers()) {
-            Timber.i("Skipping clear user: no user-scoped identifiers to clear")
-            return
+        val pushToken = TokenProvider.getInstance().token
+        when (planClearUser(pushToken)) {
+            IdentitySyncDecision.SKIP -> {
+                Timber.i("Skipping clear user: nothing to clear and the detach is already confirmed")
+                return
+            }
+
+            IdentitySyncDecision.RETRY_WITHOUT_ROTATION ->
+                Timber.i("Resending clear user without rotating the visitor ID: detach not yet confirmed")
+
+            IdentitySyncDecision.ROTATED_AND_REPLACED -> resetInboxForIdentityChange()
         }
 
-        config.resetIdentifiers()
-        resetInboxForIdentityChange()
         val domain = config.domain
         val visitorId = config.userIdentifiers.visitorId
-        val pushToken = TokenProvider.getInstance().token
         if (visitorId == null || pushToken == null) {
             Timber.w("Skipping clear user: visitorId=$visitorId, pushToken=$pushToken")
             return
         }
+        val syncStore = identitySyncStore()
         CoroutineScope(Dispatchers.IO).launch {
-            config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken, logLabel = "clear user")
+            val result = config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken, logLabel = "clear user")
+            if (result.isSuccess) {
+                syncStore.recordSuccessfulSync(null, null, pushToken)
+            }
         }
     }
 
