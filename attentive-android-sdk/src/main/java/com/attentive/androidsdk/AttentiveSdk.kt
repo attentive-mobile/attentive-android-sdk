@@ -15,6 +15,7 @@ import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.identity.IdentitySyncDecision
+import com.attentive.androidsdk.internal.identity.IdentitySyncRecord
 import com.attentive.androidsdk.internal.identity.IdentitySyncStore
 import com.attentive.androidsdk.internal.network.DeleteMessageRequest
 import com.attentive.androidsdk.internal.network.GetMessagesRequest
@@ -673,9 +674,13 @@ object AttentiveSdk {
      * alone and nothing is sent — so repeat calls no longer grow the identity graph server-side.
      * Returns success in that case, since the requested state already holds.
      *
-     * When the identifiers match but the sync was never confirmed — a fresh launch, a failed
-     * request, or a rotated push token — the request is sent on the *existing* visitor ID rather
-     * than a new one, so a relaunch still reaches the backend without churning identity.
+     * This holds across process restarts, which is when host apps most often re-issue the call:
+     * the confirmed record is persisted, and a cold launch — where the in-memory email and phone
+     * are necessarily null — is recognised as the no-op it is rather than as a new user.
+     *
+     * When the identifiers match but the sync was never confirmed — a failed request, a rotated
+     * push token, or a [AttentiveConfig.changeDomain] since — the request is sent on the *existing*
+     * visitor ID rather than a new one, so it reaches the backend without churning identity.
      */
     suspend fun updateUserSuspend(
         email: String? = null,
@@ -739,7 +744,9 @@ object AttentiveSdk {
         }
         val result = config.attentiveApi.sendUserUpdate(domain, validatedEmail, validatedNumber, visitorId, pushToken)
         if (result.isSuccess) {
-            identitySyncStore().recordSuccessfulSync(validatedEmail, validatedNumber, pushToken)
+            identitySyncStore().recordSuccessfulSync(
+                IdentitySyncRecord(domain, visitorId, pushToken, validatedEmail, validatedNumber),
+            )
         }
         return result
     }
@@ -758,12 +765,26 @@ object AttentiveSdk {
         pushToken: String?,
     ): IdentitySyncDecision =
         synchronized(identityLock) {
+            val syncStore = identitySyncStore()
+            // A cold launch rebuilds userIdentifiers from the persisted visitor ID alone
+            // (AttentiveConfig), so the in-memory email and phone are *always* null no matter what
+            // the previous process sent. Without this check, a host that re-issues the same
+            // updateUser on every launch would look like a genuine identity change every time and
+            // rotate the visitor ID — the exact churn this guard exists to stop. The confirmed
+            // record says the backend already holds these identifiers on this visitor, in this
+            // domain, for this token, so adopt them locally instead of treating the gap as news.
+            if (config.userIdentifiers.hasNoUserScopedIdentifiers() &&
+                syncStore.matches(syncRecord(email, phone, pushToken))
+            ) {
+                config.userIdentifiers = config.userIdentifiers.copy(email = email, phone = phone)
+                return IdentitySyncDecision.SKIP
+            }
             if (!config.userIdentifiers.matchesUser(email, phone)) {
                 config.resetIdentifiers()
                 config.userIdentifiers = config.userIdentifiers.copy(email = email, phone = phone)
                 return IdentitySyncDecision.ROTATED_AND_REPLACED
             }
-            if (identitySyncStore().matchesLastSync(email, phone, pushToken)) {
+            if (syncStore.matches(syncRecord(email, phone, pushToken))) {
                 IdentitySyncDecision.SKIP
             } else {
                 IdentitySyncDecision.RETRY_WITHOUT_ROTATION
@@ -772,6 +793,10 @@ object AttentiveSdk {
 
     /**
      * Decides what [clearUser] should do. Same locking rationale as [planUpdateUser].
+     *
+     * No cold-launch special case is needed here: a relaunch rebuilds the identifiers with nothing
+     * user-scoped attached, which is already the state [clearUser] is asking for, so the confirmed
+     * record decides on its own.
      */
     private fun planClearUser(pushToken: String?): IdentitySyncDecision =
         synchronized(identityLock) {
@@ -779,12 +804,32 @@ object AttentiveSdk {
                 config.resetIdentifiers()
                 return IdentitySyncDecision.ROTATED_AND_REPLACED
             }
-            if (identitySyncStore().matchesLastSync(null, null, pushToken)) {
+            if (identitySyncStore().matches(syncRecord(null, null, pushToken))) {
                 IdentitySyncDecision.SKIP
             } else {
                 IdentitySyncDecision.RETRY_WITHOUT_ROTATION
             }
         }
+
+    /**
+     * The sync [email] and [phone] would produce if sent right now, or null when the SDK can't
+     * assemble a complete one — no push token or no visitor ID yet — in which case there is
+     * nothing meaningful to compare against the confirmed record.
+     */
+    private fun syncRecord(
+        email: String?,
+        phone: String?,
+        pushToken: String?,
+    ): IdentitySyncRecord? {
+        val visitorId = config.userIdentifiers.visitorId ?: return null
+        return IdentitySyncRecord(
+            domain = config.domain,
+            visitorId = visitorId,
+            pushToken = pushToken ?: return null,
+            email = email,
+            phone = phone,
+        )
+    }
 
     private fun identitySyncStore(): IdentitySyncStore =
         IdentitySyncStore(ClassFactory.buildPersistentStorage(config.applicationContext))
@@ -848,7 +893,7 @@ object AttentiveSdk {
         CoroutineScope(Dispatchers.IO).launch {
             val result = config.attentiveApi.sendUserUpdate(domain, null, null, visitorId, pushToken, logLabel = "clear user")
             if (result.isSuccess) {
-                syncStore.recordSuccessfulSync(null, null, pushToken)
+                syncStore.recordSuccessfulSync(IdentitySyncRecord(domain, visitorId, pushToken, null, null))
             }
         }
     }

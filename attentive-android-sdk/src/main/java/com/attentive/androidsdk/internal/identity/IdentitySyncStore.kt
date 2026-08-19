@@ -3,8 +3,27 @@ package com.attentive.androidsdk.internal.identity
 import com.attentive.androidsdk.PersistentStorage
 
 /**
- * What the SDK last successfully told the backend about this device: the push token it was
- * carrying and the contact info attached to it.
+ * One `/user-update` the backend accepted, in full: the domain and visitor it was sent for, the
+ * push token it carried, and the contact info attached to that token.
+ *
+ * Every field is part of the identity of the sync, because changing any one of them means the
+ * backend has *not* been told the resulting state:
+ * - [domain] — a different Attentive account entirely. The same user must be re-associated after
+ *   [com.attentive.androidsdk.AttentiveConfig.changeDomain].
+ * - [visitorId] — the association hangs off the visitor. Once the visitor rotates, the backend
+ *   has never seen this contact info on the new one.
+ * - [pushToken] — a rotated token has to be re-attached or push goes to the old token.
+ */
+internal data class IdentitySyncRecord(
+    val domain: String,
+    val visitorId: String,
+    val pushToken: String,
+    val email: String?,
+    val phone: String?,
+)
+
+/**
+ * What the SDK last successfully told the backend about this device.
  *
  * Local identifiers alone can't answer "does the backend already know this?" — they're rebuilt
  * from nothing on every launch and they're set optimistically, before the request completes. This
@@ -16,28 +35,40 @@ import com.attentive.androidsdk.PersistentStorage
  */
 internal class IdentitySyncStore(private val persistentStorage: PersistentStorage) {
     /**
-     * True when the last confirmed sync carried exactly this push token and contact info, meaning
-     * another `/user-update` would tell the backend nothing new.
+     * True when the last confirmed sync was exactly [candidate], meaning another `/user-update`
+     * would tell the backend nothing new.
      *
-     * A null [pushToken] never matches: without a token there is nothing to compare the record
-     * against, so the caller should proceed rather than guess.
+     * A null [candidate] never matches: the caller couldn't assemble a complete record (no push
+     * token or no visitor ID yet), so there is nothing to compare and it should proceed rather
+     * than guess.
      */
-    fun matchesLastSync(email: String?, phone: String?, pushToken: String?): Boolean {
-        if (pushToken == null) {
-            return false
-        }
-        return persistentStorage.read(PUSH_TOKEN_KEY) == pushToken &&
-            persistentStorage.read(EMAIL_KEY) == email &&
-            persistentStorage.read(PHONE_KEY) == phone
+    fun matches(candidate: IdentitySyncRecord?): Boolean = candidate != null && read() == candidate
+
+    /**
+     * The last confirmed sync, or null if none was ever recorded or the record is incomplete.
+     */
+    fun read(): IdentitySyncRecord? {
+        val domain = persistentStorage.read(DOMAIN_KEY) ?: return null
+        val visitorId = persistentStorage.read(VISITOR_ID_KEY) ?: return null
+        val pushToken = persistentStorage.read(PUSH_TOKEN_KEY) ?: return null
+        return IdentitySyncRecord(
+            domain = domain,
+            visitorId = visitorId,
+            pushToken = pushToken,
+            email = persistentStorage.read(EMAIL_KEY),
+            phone = persistentStorage.read(PHONE_KEY),
+        )
     }
 
     /**
      * Records a `/user-update` the backend accepted. Call only on success.
      */
-    fun recordSuccessfulSync(email: String?, phone: String?, pushToken: String) {
-        persistentStorage.save(PUSH_TOKEN_KEY, pushToken)
-        write(EMAIL_KEY, email)
-        write(PHONE_KEY, phone)
+    fun recordSuccessfulSync(sync: IdentitySyncRecord) {
+        persistentStorage.save(DOMAIN_KEY, sync.domain)
+        persistentStorage.save(VISITOR_ID_KEY, sync.visitorId)
+        persistentStorage.save(PUSH_TOKEN_KEY, sync.pushToken)
+        write(EMAIL_KEY, sync.email)
+        write(PHONE_KEY, sync.phone)
     }
 
     private fun write(key: String, value: String?) {
@@ -49,6 +80,8 @@ internal class IdentitySyncStore(private val persistentStorage: PersistentStorag
     }
 
     companion object {
+        internal const val DOMAIN_KEY = "com.attentive.androidsdk.LAST_SYNCED_DOMAIN"
+        internal const val VISITOR_ID_KEY = "com.attentive.androidsdk.LAST_SYNCED_VISITOR_ID"
         internal const val PUSH_TOKEN_KEY = "com.attentive.androidsdk.LAST_SYNCED_PUSH_TOKEN"
         internal const val EMAIL_KEY = "com.attentive.androidsdk.LAST_SYNCED_EMAIL"
         internal const val PHONE_KEY = "com.attentive.androidsdk.LAST_SYNCED_PHONE"

@@ -274,6 +274,123 @@ class AttentiveSdkTest {
         assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
     }
 
+    /**
+     * The cold-launch case. [setUp] leaves the SDK in exactly the state a recreated process is in:
+     * identifiers rebuilt from the persisted visitor ID alone, with no email or phone in memory —
+     * deliberately *without* [seedUserIdentifiers], since a relaunch cannot produce that state.
+     *
+     * A host that re-issues the same updateUser on every launch must not rotate the visitor ID
+     * here, or every cold start grows the identity graph — the churn this guard exists to stop.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_withConfirmedSync_isNoOp() {
+        seedLastSync(email = EMAIL, phone = PHONE)
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    /**
+     * Same cold launch, but the confirmed identifiers are adopted in memory rather than left null,
+     * so events recorded after the skipped update still carry the user's contact info.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_restoresTheConfirmedIdentifiersLocally() {
+        seedLastSync(email = EMAIL, phone = PHONE)
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertEquals(EMAIL, sdkConfig().userIdentifiers.email)
+        assertEquals(PHONE, sdkConfig().userIdentifiers.phone)
+    }
+
+    /**
+     * A cold launch for a *different* user is a genuine identity change and still rotates — the
+     * confirmed record doesn't match, so the missing in-memory state isn't excused.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_withDifferentUser_regenerates() {
+        seedLastSync(email = "someoneelse@email.com", phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /**
+     * A confirmed sync belongs to the domain it was sent for. After [AttentiveConfig.changeDomain]
+     * the new Attentive account has never heard of this user, so an identical updateUser has to
+     * reach the backend — on the existing visitor ID, since the identity itself didn't change.
+     */
+    @Test
+    fun updateUser_afterDomainChange_resendsForTheNewDomain() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE, domain = "previousDomain")
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /**
+     * The association hangs off the visitor, so a record from a rotated-away visitor ID says
+     * nothing about the current one.
+     */
+    @Test
+    fun updateUser_withSyncConfirmedForAnotherVisitorId_resendsWithoutRotating() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE, visitorId = "rotatedAwayVisitorId")
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /** Same domain scoping for the logout path. */
+    @Test
+    fun clearUser_afterDomainChange_resendsForTheNewDomain() {
+        seedLastSync(domain = "previousDomain")
+        stubSendUserUpdate(Result.success(Unit))
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
     @Test
     fun updateUser_withDifferentEmail_regeneratesAndEmits() {
         seedUserIdentifiers(email = EMAIL, phone = PHONE)
@@ -327,8 +444,10 @@ class AttentiveSdkTest {
 
     @Test
     fun updateUser_withIdenticalIdentifiers_butNoConfirmedSync_resendsWithoutRotating() {
-        // The relaunch case: local identifiers were restored by the host app, but nothing on disk
-        // says the backend ever heard about them. Resend on the existing visitor ID.
+        // Same process, identifiers already installed, but nothing on disk says the backend ever
+        // heard about them — a failed or in-flight earlier attempt. Resend on the existing visitor
+        // ID. (The cold-launch variant, where the identifiers are *not* installed, is covered by
+        // updateUser_afterProcessRecreation_* below.)
         seedUserIdentifiers(email = EMAIL, phone = PHONE)
         stubSendUserUpdate(Result.success(Unit))
 
@@ -846,7 +965,11 @@ class AttentiveSdkTest {
         email: String? = null,
         phone: String? = null,
         pushToken: String = PUSH_TOKEN,
+        domain: String = DOMAIN,
+        visitorId: String = VISITOR_ID,
     ) {
+        storedValues[IdentitySyncStore.DOMAIN_KEY] = domain
+        storedValues[IdentitySyncStore.VISITOR_ID_KEY] = visitorId
         storedValues[IdentitySyncStore.PUSH_TOKEN_KEY] = pushToken
         email?.let { storedValues[IdentitySyncStore.EMAIL_KEY] = it }
         phone?.let { storedValues[IdentitySyncStore.PHONE_KEY] = it }
