@@ -69,7 +69,13 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
 
     private val baseEventRequestJson = Json {
         ignoreUnknownKeys = true
-        encodeDefaults = true  // Must encode defaults to include eventType field
+        encodeDefaults = true // Must encode defaults so optional metadata fields are included
+        // EventMetadata is a sealed hierarchy, so kotlinx writes a polymorphic discriminator into
+        // every eventMetadata object. The events backend declares that discriminator as
+        // `eventType` (lib-analytics-event/schemas.yaml), so name it to match - otherwise we emit
+        // a stray `"type": "<Kotlin FQCN>"` that isn't in the schema, and `type` is unavailable
+        // for MobileCustomEventMetadata's host-supplied event name.
+        classDiscriminator = "eventType"
     }
 
     private val retrofitEventsEndpoint: HttpUrl.Builder
@@ -370,7 +376,7 @@ private fun internalSendUserIdentifiersCollectedEventAsync(
     }
 
     eventsApi.sendEvent(
-        version = "mobile-app",
+        version = TAG_VERSION_MOBILE_APP,
         externalVendorIds = externalVendorIdsJson,
         domain = domain,
         eventType = "idn",
@@ -620,7 +626,11 @@ private fun mapPurchaseEvent(
     val purchaseMetadata = PurchaseMetadata(
         orderId = event.order.orderId,
         currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
-        orderTotal = computedCartTotal,
+        // A host-supplied cart total wins over the summed item prices, matching the `cartTotal` the
+        // legacy `/e` path puts on both its Purchase and OrderConfirmed requests. The backend turns
+        // this into the OrderConfirmed billing totals, so ignoring the override would understate
+        // orders whose total includes shipping or tax.
+        orderTotal = event.cart?.cartTotal ?: computedCartTotal,
         cart = cart,
         products = products
     )
@@ -628,7 +638,7 @@ private fun mapPurchaseEvent(
     return listOf(
         BaseEventRequest(
             visitorId = visitorId,
-            version = AppInfo.attentiveSDKVersion,
+            version = TAG_VERSION_MOBILE_APP,
             attentiveDomain = domain,
             eventType = EventType.Purchase,
             timestamp = timestamp,
@@ -663,14 +673,17 @@ private fun mapProductViewEvent(
 
         BaseEventRequest(
             visitorId = visitorId,
-            version = AppInfo.attentiveSDKVersion,
+            version = TAG_VERSION_MOBILE_APP,
             attentiveDomain = domain,
             eventType = EventType.ProductView,
             timestamp = timestamp,
             identifiers = identifiers,
             eventMetadata = productViewMetadata,
             sourceType = SourceType.mobile,
-            referrer = event.deeplink ?: "",
+            // The deeplink travels as `locationHref` only — that is the field the backend reads the
+            // legacy `pd` parameter into. The legacy path never sends a referrer (`r`) from mobile,
+            // so neither does this one; the backend derives the referrer from `locationHref` itself.
+            referrer = "",
             locationHref = event.deeplink
         )
     }
@@ -698,14 +711,16 @@ private fun mapAddToCartEvent(
 
         BaseEventRequest(
             visitorId = visitorId,
-            version = AppInfo.attentiveSDKVersion,
+            version = TAG_VERSION_MOBILE_APP,
             attentiveDomain = domain,
             eventType = EventType.AddToCart,
             timestamp = timestamp,
             identifiers = identifiers,
             eventMetadata = addToCartMetadata,
             sourceType = SourceType.mobile,
-            referrer = event.deeplink ?: "",
+            // See mapProductViewEvent: `locationHref` is the `pd` equivalent, referrer stays empty
+            // so the event's request referrer matches the legacy path's.
+            referrer = "",
             locationHref = event.deeplink
         )
     }
@@ -721,13 +736,14 @@ private fun mapCustomEvent(
     val visitorId = userIdentifiers.visitorId!! // Safe because we validate it's not null in recordEvent
 
     val customEventMetadata = MobileCustomEventMetadata(
+        type = event.type,
         customProperties = event.properties.ifEmpty { null }
     )
 
     return listOf(
         BaseEventRequest(
             visitorId = visitorId,
-            version = AppInfo.attentiveSDKVersion,
+            version = TAG_VERSION_MOBILE_APP,
             attentiveDomain = domain,
             eventType = EventType.MobileCustomEvent,
             timestamp = timestamp,
@@ -814,7 +830,7 @@ private fun sendEventInternalAsync(
     Timber.i("Send event type: %s, domain: %s", eventRequest.type.abbreviation, domain)
 
     eventsApi.sendEvent(
-        version = "mobile-app",
+        version = TAG_VERSION_MOBILE_APP,
         externalVendorIds = externalVendorIdsJson,
         domain = domain,
         eventType = eventRequest.type.abbreviation,
@@ -1188,6 +1204,15 @@ internal fun calculateCartTotal(items: List<Item>): String {
 companion object {
     const val ATTENTIVE_EVENTS_ENDPOINT_HOST: String = "events.attentivemobile.com"
     const val ATTENTIVE_MOBILE_ENDPOINT_HOST: String = "mobile.attentivemobile.com"
+
+    /**
+     * The tag version both event paths report: the legacy `/e` path sends it as `v`, the `/mobile`
+     * path as `BaseEventRequest.version`. It ends up on the event's `request.sdkVersion`, which
+     * several backend services compare against this exact literal to recognise mobile-app traffic
+     * (purchase-blocking exemption, app-specific cart links). Sending the SDK's semver here would
+     * silently reclassify `/mobile` events as web-tag traffic, so both paths send the same value.
+     */
+    internal const val TAG_VERSION_MOBILE_APP: String = "mobile-app"
 //        const val ATTENTIVE_DEV_MOBILE_ENDPOINT: String = "mobile.dev.attentivemobile.com"
 
     private fun getProductViewMetadataDto(item: Item): ProductViewMetadataDto {

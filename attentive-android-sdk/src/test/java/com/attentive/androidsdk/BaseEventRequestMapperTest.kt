@@ -201,8 +201,11 @@ class BaseEventRequestMapperTest {
 
         // Assert
         assertEquals(1, result.size)
-        assertEquals("app://product/123", result[0].referrer)
         assertEquals("app://product/123", result[0].locationHref)
+        // The legacy /e path only sends the deeplink as `pd` (locationHref) and leaves the referrer
+        // empty, so /mobile has to as well. The backend's RequestResolver already prefers
+        // locationHref over referrer for ProductView.
+        assertEquals("", result[0].referrer)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -275,8 +278,9 @@ class BaseEventRequestMapperTest {
 
         // Assert
         assertEquals(1, result.size)
-        assertEquals("app://cart", result[0].referrer)
         assertEquals("app://cart", result[0].locationHref)
+        // Same as ProductView: the deeplink rides in locationHref only, matching legacy `pd`.
+        assertEquals("", result[0].referrer)
     }
 
     // Test mapCustomEvent
@@ -558,8 +562,9 @@ class BaseEventRequestMapperTest {
         assertNotNull(metadata.cart)
         assertEquals("999.99", metadata.cart?.cartTotal)
         assertEquals("5.00", metadata.cart?.cartDiscount)
-        // orderTotal stays as the SDK-computed item sum (15.99), independent of host cartTotal
-        assertEquals("15.99", metadata.orderTotal)
+        // orderTotal follows the host cartTotal too: the backend's PurchaseProcessor turns it into
+        // the OrderConfirmed billing total, which the legacy path reports as the host cartTotal.
+        assertEquals("999.99", metadata.orderTotal)
     }
 
     @Test
