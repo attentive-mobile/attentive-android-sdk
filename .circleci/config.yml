@@ -288,6 +288,22 @@ jobs:
       # from the environment — so `install` is enough and `setup` would re-auth needlessly.
       - github-cli/install:
           version: "2.97.0"
+      # Diagnostic: `gh pr create` failed the 2.2.2 release with
+      # "GraphQL: must be a collaborator (createPullRequest)" even though the
+      # Attentive Mobile SDK App has read/write on code and pull requests for
+      # this repo, so the token is not the identity we think it is. Runs before
+      # any mutation and never fails the job; prints scope, never the token.
+      - run:
+          name: Verify token identity and scope
+          command: |
+            echo "Repos this installation token can see:"
+            gh api /installation/repositories --jq '.repositories[].full_name' || true
+            echo
+            echo "This repo's permissions for the token (expect push: true):"
+            gh api repos/attentive-mobile/attentive-android-sdk --jq '.permissions' || true
+            echo
+            echo "Authenticated as:"
+            gh api user --jq '.login' || echo "(no user — expected for an installation token)"
       - run:
           name: Switch git remote to HTTPS with App token
           command: |
@@ -334,12 +350,26 @@ jobs:
               git commit -m "Set version to $RELEASE_VERSION"
               git push --force origin "$BRANCH"
 
-              gh pr create \
+              # The PR is bookkeeping; the Maven Central publish below is the release.
+              # Never abort here: the branch is already pushed, so a failure would strand
+              # the release half-done — version bumped on the branch, nothing published.
+              if PR_OUTPUT=$(gh pr create \
                 --repo attentive-mobile/attentive-android-sdk \
                 --title "Release v$RELEASE_VERSION" \
                 --body "Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified." \
                 --head "$BRANCH" \
-                --base main
+                --base main 2>&1); then
+                echo "$PR_OUTPUT"
+              else
+                echo "$PR_OUTPUT"
+                echo
+                echo "WARNING: could not open the release PR — continuing with the publish."
+                echo "'must be a collaborator' means GITHUB_TOKEN has no push access here."
+                echo "See the 'Verify token identity and scope' step above for what the"
+                echo "token can actually see — the App itself does have code + PR write."
+                echo "Open the PR manually:"
+                echo "  https://github.com/attentive-mobile/attentive-android-sdk/compare/main...$BRANCH?expand=1"
+              fi
             fi
       - run:
           name: Clean
