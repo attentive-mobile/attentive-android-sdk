@@ -284,26 +284,56 @@ jobs:
           github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
           github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
       # cimg/android does not bundle the gh CLI, and `gh pr create` / `gh release create`
-      # below need it. Auth comes from GITHUB_TOKEN, already minted above, which gh reads
-      # from the environment — so `install` is enough and `setup` would re-auth needlessly.
+      # below need it. `install` is enough; `setup` would run a redundant gh auth login.
       - github-cli/install:
           version: "2.97.0"
-      # Diagnostic: `gh pr create` failed the 2.2.2 release with
-      # "GraphQL: must be a collaborator (createPullRequest)" even though the
-      # Attentive Mobile SDK App has read/write on code and pull requests for
-      # this repo, so the token is not the identity we think it is. Runs before
-      # any mutation and never fails the job; prints scope, never the token.
+      # Do NOT let gh fall back to GITHUB_TOKEN. The org-global context defines it as a
+      # classic PAT for the machine user circleci-attentive, which is read-only here
+      # (pull: true, push: false), so gh pr create fails with "must be a collaborator"
+      # and gh release create fails with a misleading "workflow scope may be required".
+      # That is what broke the 2.2.2 release (MSDK-485).
+      #
+      # The step above does mint a proper App installation token — the App has code and
+      # pull request write on this repo — but exports it under its own variable name.
+      # Rather than hardcode that name, find it by prefix: ghs_ is an App installation
+      # token, ghp_/gho_/ghu_/github_pat_ are user tokens. Hand it to gh as GH_TOKEN,
+      # which gh prefers over GITHUB_TOKEN.
       - run:
-          name: Verify token identity and scope
+          name: Select the App token for gh and verify write access
           command: |
-            echo "Repos this installation token can see:"
-            gh api /installation/repositories --jq '.repositories[].full_name' || true
-            echo
-            echo "This repo's permissions for the token (expect push: true):"
-            gh api repos/attentive-mobile/attentive-android-sdk --jq '.permissions' || true
-            echo
-            echo "Authenticated as:"
-            gh api user --jq '.login' || echo "(no user — expected for an installation token)"
+            echo "GitHub tokens visible in the environment (name and type prefix only):"
+            APP_TOKEN_VAR=""
+            for name in $(compgen -v); do
+              val="${!name-}"
+              case "$val" in
+                ghs_*)
+                  echo "  $name = ghs_… (App installation token)"
+                  [ -n "$APP_TOKEN_VAR" ] || APP_TOKEN_VAR="$name"
+                  ;;
+                ghp_*|gho_*|ghu_*|github_pat_*)
+                  echo "  $name = ${val%%_*}_… (user token — not usable for the release)"
+                  ;;
+              esac
+            done
+
+            if [ -z "$APP_TOKEN_VAR" ]; then
+              echo "ERROR: no App installation token (ghs_…) found in the environment."
+              echo "The 'Generate ephemeral app-based github token' step should provide one."
+              exit 1
+            fi
+
+            echo "Using \$$APP_TOKEN_VAR as GH_TOKEN"
+            export GH_TOKEN="${!APP_TOKEN_VAR}"
+            echo "export GH_TOKEN=\"\$$APP_TOKEN_VAR\"" >> "$BASH_ENV"
+
+            # Fail here rather than after publishing: a read-only token previously got
+            # as far as pushing a tag and uploading to Maven Central before dying.
+            PUSH=$(gh api repos/attentive-mobile/attentive-android-sdk --jq '.permissions.push' 2>/dev/null || echo "unknown")
+            echo "push access for this repo: $PUSH"
+            if [ "$PUSH" != "true" ]; then
+              echo "ERROR: token cannot write to this repo; aborting before any mutation."
+              exit 1
+            fi
       - run:
           name: Switch git remote to HTTPS with App token
           command: |
@@ -364,9 +394,8 @@ jobs:
                 echo "$PR_OUTPUT"
                 echo
                 echo "WARNING: could not open the release PR — continuing with the publish."
-                echo "'must be a collaborator' means GITHUB_TOKEN has no push access here."
-                echo "See the 'Verify token identity and scope' step above for what the"
-                echo "token can actually see — the App itself does have code + PR write."
+                echo "See 'Select the App token for gh and verify write access' above for"
+                echo "which token gh is using and whether it has write access here."
                 echo "Open the PR manually:"
                 echo "  https://github.com/attentive-mobile/attentive-android-sdk/compare/main...$BRANCH?expand=1"
               fi
