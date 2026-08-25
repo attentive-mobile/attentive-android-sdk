@@ -61,7 +61,6 @@ class AttentiveConfigTest {
         val visitorId = config.userIdentifiers.visitorId
         Assert.assertTrue(!visitorId.isNullOrEmpty())
         Assert.assertNotNull(config.attentiveApi)
-        Assert.assertFalse(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
             argThat { arg: Event? -> arg is InfoEvent },
@@ -74,11 +73,11 @@ class AttentiveConfigTest {
     }
 
     @Test
-    fun constructor_validParams_gettersReturnConstructorParams_skipFatigueAsTrue() {
+    @Suppress("DEPRECATION")
+    fun skipFatigueOnCreatives_isNoOp_configStillBuildsAndReportsFalse() {
         // Arrange
 
         // Act
-
         val config =
             AttentiveConfig.Builder()
                 .domain(DOMAIN)
@@ -93,7 +92,7 @@ class AttentiveConfigTest {
         val visitorId = config.userIdentifiers.visitorId
         Assert.assertTrue(!visitorId.isNullOrEmpty())
         Assert.assertNotNull(config.attentiveApi)
-        Assert.assertTrue(config.skipFatigueOnCreatives())
+        Assert.assertFalse(config.skipFatigueOnCreatives())
 
         Mockito.verify(factoryMocks.attentiveApi).sendEvent(
             argThat { arg: Event? -> arg is InfoEvent },

@@ -15,7 +15,15 @@ interface AttentiveConfigInterface {
     var notificationIconBackgroundColorResource: Int
     var logLevel: AttentiveLogLevel?
 
-    fun skipFatigueOnCreatives(): Boolean
+    /**
+     * No-op. Always returns `false`. Fatigue rules are no longer skippable from the SDK.
+     */
+    @Deprecated(
+        "Fatigue is no longer skippable from the SDK; this always returns false and will be " +
+            "removed in a future major version.",
+        level = DeprecationLevel.WARNING,
+    )
+    fun skipFatigueOnCreatives(): Boolean = false
 
     fun identify(clientUserId: String)
 

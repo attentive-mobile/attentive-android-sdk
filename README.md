@@ -373,18 +373,14 @@ creative.destroy()
 __*** NOTE 1: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources.***__
 __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the destroy lifecycle callback of the activity if the activity is provided to automatically clear up resources and avoid memory leaks.***__
 
-#### 4. Skip Fatigue on Creative
+#### 4. Fatigue Rules
 
-For debugging purposes, you can skip fatigue rule evaluation to show your creative every time. Default value is `false`.
+Fatigue rules are evaluated by the Attentive backend and can't be skipped from the SDK.
+`AttentiveConfig.Builder.skipFatigueOnCreatives()` is deprecated, has no effect, and will be
+removed in a future major version.
 
-```kotlin
-val attentiveConfig = AttentiveConfig.Builder()
-    .applicationContext(getApplicationContext())
-    .domain("YOUR_ATTENTIVE_DOMAIN")
-    .mode(AttentiveConfig.Mode.DEBUG)
-    .skipFatigueOnCreatives(true)
-    .build()
-```
+To force a specific creative to display while debugging, trigger it by creative ID as shown in
+[Trigger a Specific Creative](#trigger-a-specific-creative) above.
 
 ## Step 4 (optional) - Integrate With Push
 
