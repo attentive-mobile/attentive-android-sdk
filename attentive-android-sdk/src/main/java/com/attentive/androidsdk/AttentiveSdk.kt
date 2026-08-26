@@ -31,10 +31,11 @@ import com.attentive.androidsdk.push.TokenProvider
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -64,8 +65,25 @@ object AttentiveSdk {
     /**
      * Subscribe to the inbox state stream to receive updates when messages change.
      * This StateFlow emits a new InboxState whenever messages are updated.
+     *
+     * Collecting this flow opts the app in to the inbox: the first collector lazily
+     * initializes the inbox API client and kicks off a background fetch of the first
+     * page of messages plus the unread count. Reading [StateFlow.value] does **not**
+     * trigger that setup — callers that never collect (Java, bridge layers) should
+     * call [startInbox] explicitly.
      */
-    val inboxState: StateFlow<InboxState> = _inboxState.asStateFlow()
+    // Implemented by delegation so that only collect() is customized and every other
+    // member — including any added in future coroutines releases — forwards to the
+    // backing MutableStateFlow. That keeps `value` reads synchronous, which stateIn()
+    // would not: a derived flow only publishes through its sharing coroutine.
+    @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+    val inboxState: StateFlow<InboxState> =
+        object : StateFlow<InboxState> by _inboxState {
+            override suspend fun collect(collector: FlowCollector<InboxState>): Nothing {
+                initializeInbox()
+                _inboxState.collect(collector)
+            }
+        }
 
     // Inbox server API (created from manifest meta-data if present)
     private var inboxApi: RetrofitInboxApiService? = null
@@ -95,22 +113,47 @@ object AttentiveSdk {
     private var inboxGeneration: Long = 0L
 
     /**
+     * Opts this app in to the inbox: builds the inbox API client and kicks off a
+     * background fetch of the first page of messages plus the unread count. Observe
+     * [inboxState] to receive the results.
+     *
+     * Calling this is only necessary for callers that never collect [inboxState] —
+     * Java consumers and bridge layers that read [StateFlow.value] directly. Kotlin
+     * consumers collecting [inboxState], and the [com.attentive.androidsdk.inbox.AttentiveInbox]
+     * composable, opt in automatically.
+     *
+     * Idempotent: subsequent calls are no-ops. Use [refreshInbox] to reload.
+     */
+    fun startInbox() {
+        initializeInbox()
+    }
+
+    /**
      * One-time inbox setup: builds the Retrofit client and kicks off the first-page
      * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
-     */
-    /**
+     *
+     * Synchronized because [inboxState] collectors can trigger setup from arbitrary
+     * dispatchers, and two concurrent first collectors must not each build a client
+     * and fire a duplicate initial fetch.
+     *
      * @return true if this call performed first-time setup (and kicked off the
      *   initial fetch); false if the inbox was already initialized.
      */
     @SuppressLint("DefaultLocale")
+    @Synchronized
     internal fun initializeInbox(): Boolean {
         if (inboxApi != null) return false
         val context = config.applicationContext
         val inboxBaseUrl = DEFAULT_INBOX_HOST
         inboxHost = inboxBaseUrl
+        // context is passed explicitly as null: inbox requests deliberately skip the
+        // offline request buffer, which buildOkHttpClient installs only when given a
+        // context. Naming the argument also avoids Kotlin's default-argument bridge,
+        // which static mocking cannot stub.
         val client = ClassFactory.buildOkHttpClient(
             config.logLevel,
             ClassFactory.buildUserAgentInterceptor(context),
+            null,
         )
         inboxApi = Retrofit.Builder()
             .baseUrl(inboxBaseUrl)
@@ -120,10 +163,9 @@ object AttentiveSdk {
             .create(RetrofitInboxApiService::class.java)
         Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
-        // Kick off the very first fetch so non-inbox-screen callers (e.g. a toolbar
-        // badge reading getUnreadCount) see real data. Subsequent refreshes come
-        // from the AttentiveInbox composable's ON_RESUME observer and from
-        // sendNotification() on push receipt.
+        // Kick off the very first fetch so callers that only observe inboxState (e.g. a
+        // toolbar badge) see real data. Subsequent refreshes come from the AttentiveInbox
+        // composable's ON_RESUME observer and from sendNotification() on push receipt.
         CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
         return true
     }
@@ -786,17 +828,6 @@ object AttentiveSdk {
     // Inbox Message Functions
 
     /**
-     * Gets all messages from the current inbox state.
-     * This is a lightweight operation that returns the current snapshot of messages.
-     * Call this function every time the app comes to the foreground.
-     *
-     * @return List of all messages in the inbox
-     */
-    fun getAllMessages(): List<Message> {
-        return inboxState.value.messages
-    }
-
-    /**
      * Refreshes the unread inbox message count from the server and updates [inboxState].
      */
     internal suspend fun refreshInboxUnreadCount() {
@@ -826,23 +857,6 @@ object AttentiveSdk {
         } catch (e: Exception) {
             Timber.e(e, "Failed to refresh inbox unread count")
         }
-    }
-
-    /**
-     * Gets the count of unread messages from the current inbox state.
-     *
-     * The first call opts this app in to the inbox: it lazily initializes the inbox
-     * API client and kicks off a background fetch of the first page of messages plus
-     * the unread count. That fetch is async, so the first invocation returns the
-     * current snapshot (0 on cold start); callers observing [inboxState] will see
-     * the real count emit shortly after. Subsequent calls are cheap — inbox
-     * initialization is idempotent.
-     *
-     * @return The number of unread messages currently in state
-     */
-    fun getUnreadCount(): Int {
-        initializeInbox()
-        return inboxState.value.unreadCount
     }
 
     /**

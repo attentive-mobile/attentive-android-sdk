@@ -503,7 +503,7 @@ Without this, the SDK cannot detect notification taps when the app is brought fr
 
 The SDK ships an in-app message inbox — a Jetpack Compose component (`AttentiveInbox`) that displays messages sent to the user, backed by a `StateFlow` you can also observe directly for things like a badge count on your tab bar.
 
-The inbox lazily initializes the first time it is used (either via the composable or via `AttentiveSdk.getUnreadCount()`), fetches the first page of messages in the background, and refreshes automatically when the containing screen resumes.
+The inbox lazily initializes the first time it is used, fetches the first page of messages in the background, and refreshes automatically when the containing screen resumes. Rendering the `AttentiveInbox` composable or collecting `AttentiveSdk.inboxState` opts you in automatically; callers that never collect the flow can opt in explicitly with `AttentiveSdk.startInbox()`.
 
 ### Show the inbox UI
 
@@ -573,7 +573,19 @@ fun InboxTabBadge() {
 }
 ```
 
-If you need a one-shot count outside of Compose, call `AttentiveSdk.getUnreadCount()`. The first call kicks off inbox initialization asynchronously, so it may return `0` on cold start — subscribe to `inboxState` if you need the value as soon as it lands.
+Collecting `inboxState` is what opts the app in to the inbox, so the snippet above needs no other setup: the first collector kicks off initialization and the badge updates when the first page lands.
+
+Outside Compose, collect the flow from any coroutine scope:
+
+```kotlin
+scope.launch {
+    AttentiveSdk.inboxState.collect { state ->
+        updateBadge(state.unreadCount)
+    }
+}
+```
+
+Reading `AttentiveSdk.inboxState.value` gives you a synchronous snapshot, but — unlike collecting — it does not trigger initialization, so on a cold start it returns an empty state. If you only ever read `value`, call `AttentiveSdk.startInbox()` once during setup so the inbox is populated.
 
 ### Programmatic actions
 
