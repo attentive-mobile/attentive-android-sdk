@@ -191,14 +191,10 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    // Collecting inboxState opts the app in to the inbox on its own, but we initialize
-    // explicitly here — and during composition, before the collector below subscribes —
-    // so this composable deterministically learns whether *it* performed first-time
-    // setup. In that case setup already kicked off the initial fetch, so we must not
-    // fire another on the first ON_RESUME (which would double-request on cold launch).
-    // If some other observer initialized the inbox earlier, this returns false and the
-    // ON_RESUME refresh proceeds, which is what we want on entering the screen.
-    // Anchor a remember to keep the flag stable across recompositions.
+    // Initialize during composition, ahead of the collector below, so this composable
+    // learns whether *it* performed first-time setup. If it did, that setup already
+    // fetched, so the first ON_RESUME refresh is skipped to avoid double-requesting on
+    // cold launch. remember keeps the flag stable across recompositions.
     val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()

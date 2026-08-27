@@ -63,19 +63,14 @@ object AttentiveSdk {
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**
-     * Subscribe to the inbox state stream to receive updates when messages change.
-     * This StateFlow emits a new InboxState whenever messages are updated.
+     * Stream of inbox state. Emits a new [InboxState] whenever the messages or unread
+     * count change.
      *
-     * Collecting this flow opts the app in to the inbox: the first collector lazily
-     * initializes the inbox API client and kicks off a background fetch of the first
-     * page of messages plus the unread count. Reading [StateFlow.value] does **not**
-     * trigger that setup — callers that never collect (Java, bridge layers) should
-     * call [startInbox] explicitly.
+     * Collecting opts this app in to the inbox and triggers the initial fetch. Reading
+     * [StateFlow.value] does not — callers that never collect should call [startInbox].
      */
-    // Implemented by delegation so that only collect() is customized and every other
-    // member — including any added in future coroutines releases — forwards to the
-    // backing MutableStateFlow. That keeps `value` reads synchronous, which stateIn()
-    // would not: a derived flow only publishes through its sharing coroutine.
+    // Delegation rather than stateIn(): keeps `value` reads synchronous, and forwards
+    // any members added in future coroutines releases.
     @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
     val inboxState: StateFlow<InboxState> =
         object : StateFlow<InboxState> by _inboxState {
@@ -113,16 +108,11 @@ object AttentiveSdk {
     private var inboxGeneration: Long = 0L
 
     /**
-     * Opts this app in to the inbox: builds the inbox API client and kicks off a
-     * background fetch of the first page of messages plus the unread count. Observe
-     * [inboxState] to receive the results.
+     * Opts this app in to the inbox: builds the API client and fetches the first page of
+     * messages plus the unread count in the background. Observe [inboxState] for results.
      *
-     * Calling this is only necessary for callers that never collect [inboxState] —
-     * Java consumers and bridge layers that read [StateFlow.value] directly. Kotlin
-     * consumers collecting [inboxState], and the [com.attentive.androidsdk.inbox.AttentiveInbox]
-     * composable, opt in automatically.
-     *
-     * Idempotent: subsequent calls are no-ops. Use [refreshInbox] to reload.
+     * Only needed by callers that never collect [inboxState], since collecting opts in on
+     * its own. Idempotent — use [refreshInbox] to reload.
      */
     fun startInbox() {
         initializeInbox()
@@ -130,14 +120,11 @@ object AttentiveSdk {
 
     /**
      * One-time inbox setup: builds the Retrofit client and kicks off the first-page
-     * fetch. Subsequent calls are no-ops — use [refreshInbox] to reload.
+     * fetch. Subsequent calls are no-ops. Synchronized because collectors can trigger
+     * setup from any dispatcher.
      *
-     * Synchronized because [inboxState] collectors can trigger setup from arbitrary
-     * dispatchers, and two concurrent first collectors must not each build a client
-     * and fire a duplicate initial fetch.
-     *
-     * @return true if this call performed first-time setup (and kicked off the
-     *   initial fetch); false if the inbox was already initialized.
+     * @return true if this call performed the setup; false if the inbox was already
+     *   initialized.
      */
     @SuppressLint("DefaultLocale")
     @Synchronized
@@ -146,10 +133,9 @@ object AttentiveSdk {
         val context = config.applicationContext
         val inboxBaseUrl = DEFAULT_INBOX_HOST
         inboxHost = inboxBaseUrl
-        // context is passed explicitly as null: inbox requests deliberately skip the
-        // offline request buffer, which buildOkHttpClient installs only when given a
-        // context. Naming the argument also avoids Kotlin's default-argument bridge,
-        // which static mocking cannot stub.
+        // context is deliberately null — inbox requests skip the offline request buffer,
+        // which buildOkHttpClient installs only when given a context. Passed explicitly
+        // (not via the default) so static mocks can stub the call.
         val client = ClassFactory.buildOkHttpClient(
             config.logLevel,
             ClassFactory.buildUserAgentInterceptor(context),
@@ -163,9 +149,9 @@ object AttentiveSdk {
             .create(RetrofitInboxApiService::class.java)
         Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
-        // Kick off the very first fetch so callers that only observe inboxState (e.g. a
-        // toolbar badge) see real data. Subsequent refreshes come from the AttentiveInbox
-        // composable's ON_RESUME observer and from sendNotification() on push receipt.
+        // Initial fetch so observers see real data without any further calls. Later
+        // refreshes come from the AttentiveInbox composable's ON_RESUME observer and
+        // from sendNotification() on push receipt.
         CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
         return true
     }

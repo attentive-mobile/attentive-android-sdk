@@ -76,8 +76,8 @@ fun ProductScreenContent(
 ) {
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val items by viewModel.productItemsFlow.collectAsState()
-    // Collecting inboxState opts this app in to the inbox: the first collector triggers
-    // a background fetch that populates unreadCount for the toolbar badge.
+    // Collecting inboxState opts this app in to the inbox and populates unreadCount
+    // for the toolbar badge.
     val inboxState by AttentiveSdk.inboxState.collectAsState()
 
     Column {
