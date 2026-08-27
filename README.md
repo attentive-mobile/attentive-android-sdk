@@ -375,12 +375,12 @@ __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the des
 
 #### 4. Fatigue Rules
 
-Fatigue rules are evaluated by the Attentive backend and can't be skipped from the SDK.
+Fatigue rules are evaluated by the Attentive backend.
 `AttentiveConfig.Builder.skipFatigueOnCreatives()` is deprecated, has no effect, and will be
 removed in a future major version.
 
 To force a specific creative to display while debugging, trigger it by creative ID as shown in
-[Trigger a Specific Creative](#trigger-a-specific-creative) above.
+[Trigger a Specific Creative](#trigger-a-specific-creative) above. This will ignore all fatigue rules evaluated by the Attentive backend.
 
 ## Step 4 (optional) - Integrate With Push
 
