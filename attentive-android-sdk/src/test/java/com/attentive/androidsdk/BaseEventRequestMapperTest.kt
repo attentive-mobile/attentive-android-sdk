@@ -30,7 +30,7 @@ class BaseEventRequestMapperTest {
     @Before
     fun setup() {
         okHttpClient = OkHttpClient()
-        attentiveApi = AttentiveApi(okHttpClient, "test-domain")
+        attentiveApi = AttentiveApi(okHttpClient, "test-domain", FakeAttentiveIdentityProvider())
     }
 
     // Test mapPurchaseEvent

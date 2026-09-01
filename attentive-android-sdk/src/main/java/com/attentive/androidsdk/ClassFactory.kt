@@ -93,8 +93,9 @@ object ClassFactory {
     internal fun buildAttentiveApi(
         okHttpClient: OkHttpClient,
         domain: String,
+        identityProvider: AttentiveIdentityProvider,
     ): AttentiveApi {
-        return AttentiveApi(okHttpClient, domain)
+        return AttentiveApi(okHttpClient, domain, identityProvider)
     }
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {
