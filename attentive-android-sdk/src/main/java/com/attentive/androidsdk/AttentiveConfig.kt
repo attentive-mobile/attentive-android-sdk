@@ -235,7 +235,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             _notificationIconBackgroundColorResource = colorResourceId
         }
 
-        private val allowApiVersionOverride = false
+        private val allowApiVersionOverride = true
 
         /**
          * Currently a no-op for integrators — gated behind a private flag.

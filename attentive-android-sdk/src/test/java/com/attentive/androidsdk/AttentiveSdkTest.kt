@@ -6,6 +6,7 @@ import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.internal.util.AppInfo.isDebuggable
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.identity.IdentitySyncStore
 import com.attentive.androidsdk.internal.network.DeleteMessageRequest
 import com.attentive.androidsdk.internal.network.DeleteMessageResponse
 import com.attentive.androidsdk.internal.network.InboxMessageDto
@@ -28,6 +29,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.mockito.MockedStatic
@@ -35,11 +37,14 @@ import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.stubbing.Answer
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.whenever
+import kotlin.coroutines.cancellation.CancellationException
 
 class AttentiveSdkTest {
     private lateinit var remoteMessage: RemoteMessage
@@ -48,6 +53,8 @@ class AttentiveSdkTest {
     private lateinit var callback: AttentiveSdk.PushTokenCallback
     private lateinit var factoryMocks: FactoryMocks
     private var mockedAppInfo: MockedStatic<AppInfo>? = null
+    private val storedValues = mutableMapOf<String, String>()
+
     @Before
     fun setUp() {
         remoteMessage = mock(RemoteMessage::class.java)
@@ -58,6 +65,7 @@ class AttentiveSdkTest {
         factoryMocks = FactoryMocks.mockFactoryObjects()
         Mockito.doReturn(VISITOR_ID).`when`(factoryMocks.visitorService).visitorId
         Mockito.doReturn(NEW_VISITOR_ID).`when`(factoryMocks.visitorService).createNewVisitorId()
+        backPersistentStorageWithMap()
 
         mockedAppInfo = Mockito.mockStatic(AppInfo::class.java)
         Mockito.`when`(isDebuggable(any())).thenReturn(false)
@@ -77,8 +85,29 @@ class AttentiveSdkTest {
         field.set(AttentiveSdk, config)
     }
 
+    /**
+     * Makes the mocked [PersistentStorage] behave like a real one so the identity-sync record
+     * written after a successful `/user-update` is visible to the next read.
+     */
+    private fun backPersistentStorageWithMap() {
+        storedValues.clear()
+        Mockito.doAnswer { storedValues[it.getArgument<String>(0)] }
+            .`when`(factoryMocks.persistentStorage).read(anyOrNull())
+        Mockito.doAnswer { invocation ->
+            val key = invocation.getArgument<String?>(0)
+            val value = invocation.getArgument<String?>(1)
+            if (key != null && value != null) {
+                storedValues[key] = value
+            }
+            null
+        }.`when`(factoryMocks.persistentStorage).save(anyOrNull<String>(), anyOrNull<String>())
+        Mockito.doAnswer { storedValues.remove(it.getArgument<String>(0)) }
+            .`when`(factoryMocks.persistentStorage).delete(anyOrNull())
+    }
+
     @After
     fun tearDown() {
+        storedValues.clear()
         factoryMocks.close()
         mockedAppInfo?.close()
         TokenProvider.getInstance().token = null
@@ -114,6 +143,8 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_callsSendUserUpdateWithNullIdentifiers() {
+        seedUserIdentifiers(email = EMAIL)
+
         AttentiveSdk.clearUser()
 
         // sendUserUpdate is launched on Dispatchers.IO; give it time to execute
@@ -128,9 +159,407 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_resetsIdentifiers() {
+        seedUserIdentifiers(email = EMAIL)
+
         AttentiveSdk.clearUser()
 
         verify(factoryMocks.visitorService).createNewVisitorId()
+    }
+
+    @Test
+    fun clearUser_withOnlyVisitorId_andConfirmedDetach_isNoOp() {
+        // Fresh config from @Before holds nothing but a visitor ID — there is no user to clear —
+        // and the backend already confirmed this token carries no contact info.
+        seedLastSync()
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    @Test
+    fun clearUser_withOnlyVisitorId_andNoConfirmedDetach_sendsWithoutRotating() {
+        // Nothing to clear locally, but the backend never confirmed the detach (fresh install, or
+        // a prior request that failed), so the request goes out on the existing visitor ID.
+        stubSendUserUpdate(Result.success(Unit))
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun clearUser_withRotatedPushToken_sendsAgainWithoutRotating() {
+        // The record matches on contact info but not on the token, so the new token still needs
+        // detaching — without minting a visitor ID for it.
+        seedLastSync(pushToken = "staleToken")
+        stubSendUserUpdate(Result.success(Unit))
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun clearUser_afterSuccess_isNoOpOnTheSecondCall() {
+        seedUserIdentifiers(email = EMAIL)
+        stubSendUserUpdate(Result.success(Unit))
+
+        AttentiveSdk.clearUser()
+        Thread.sleep(100)
+        AttentiveSdk.clearUser()
+        Thread.sleep(100)
+
+        // The first call cleared a real user; the second had nothing to do and the detach was
+        // already confirmed, so it sent nothing.
+        runBlocking {
+            verify(factoryMocks.attentiveApi, Mockito.times(1)).sendUserUpdate(
+                any(), anyOrNull(), anyOrNull(), any(), any(), any()
+            )
+        }
+        verify(factoryMocks.visitorService, Mockito.times(1)).createNewVisitorId()
+    }
+
+    @Test
+    fun clearUser_withOnlyCustomIdentifiers_clearsAndEmits() {
+        sdkConfig().userIdentifiers = UserIdentifiers(
+            visitorId = VISITOR_ID,
+            customIdentifiers = mapOf("loyaltyId" to "abc123"),
+        )
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withIdenticalIdentifiers_andConfirmedSync_isNoOp() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE)
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    /**
+     * The cold-launch case. [setUp] leaves the SDK in exactly the state a recreated process is in:
+     * identifiers rebuilt from the persisted visitor ID alone, with no email or phone in memory —
+     * deliberately *without* [seedUserIdentifiers], since a relaunch cannot produce that state.
+     *
+     * A host that re-issues the same updateUser on every launch must not rotate the visitor ID
+     * here, or every cold start grows the identity graph — the churn this guard exists to stop.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_withConfirmedSync_isNoOp() {
+        seedLastSync(email = EMAIL, phone = PHONE)
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
+        }
+        assertEquals(VISITOR_ID, sdkConfig().userIdentifiers.visitorId)
+    }
+
+    /**
+     * Same cold launch, but the confirmed identifiers are adopted in memory rather than left null,
+     * so events recorded after the skipped update still carry the user's contact info.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_restoresTheConfirmedIdentifiersLocally() {
+        seedLastSync(email = EMAIL, phone = PHONE)
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertEquals(EMAIL, sdkConfig().userIdentifiers.email)
+        assertEquals(PHONE, sdkConfig().userIdentifiers.phone)
+    }
+
+    /**
+     * A cold launch for a *different* user is a genuine identity change and still rotates — the
+     * confirmed record doesn't match, so the missing in-memory state isn't excused.
+     */
+    @Test
+    fun updateUser_afterProcessRecreation_withDifferentUser_regenerates() {
+        seedLastSync(email = "someoneelse@email.com", phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /**
+     * A confirmed sync belongs to the domain it was sent for. After [AttentiveConfig.changeDomain]
+     * the new Attentive account has never heard of this user, so an identical updateUser has to
+     * reach the backend — on the existing visitor ID, since the identity itself didn't change.
+     */
+    @Test
+    fun updateUser_afterDomainChange_resendsForTheNewDomain() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE, domain = "previousDomain")
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /**
+     * The association hangs off the visitor, so a record from a rotated-away visitor ID says
+     * nothing about the current one.
+     */
+    @Test
+    fun updateUser_withSyncConfirmedForAnotherVisitorId_resendsWithoutRotating() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE, visitorId = "rotatedAwayVisitorId")
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    /** Same domain scoping for the logout path. */
+    @Test
+    fun clearUser_afterDomainChange_resendsForTheNewDomain() {
+        seedLastSync(domain = "previousDomain")
+        stubSendUserUpdate(Result.success(Unit))
+
+        AttentiveSdk.clearUser()
+
+        Thread.sleep(100)
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), isNull(), isNull(), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withDifferentEmail_regeneratesAndEmits() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = OTHER_EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(OTHER_EMAIL), eq(PHONE), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withPhoneRemoved_regeneratesAndEmits() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withMatchingEmailButExtraStoredIdentifier_regeneratesAndEmits() {
+        // A client user ID would be dropped by a real update, so skipping isn't equivalent.
+        sdkConfig().userIdentifiers = UserIdentifiers(
+            visitorId = VISITOR_ID,
+            email = EMAIL,
+            clientUserId = "client-123",
+        )
+        stubSendUserUpdate(Result.success(Unit))
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        verify(factoryMocks.visitorService).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withIdenticalIdentifiers_butNoConfirmedSync_resendsWithoutRotating() {
+        // Same process, identifiers already installed, but nothing on disk says the backend ever
+        // heard about them — a failed or in-flight earlier attempt. Resend on the existing visitor
+        // ID. (The cold-launch variant, where the identifiers are *not* installed, is covered by
+        // updateUser_afterProcessRecreation_* below.)
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        stubSendUserUpdate(Result.success(Unit))
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        assertTrue(result.isSuccess)
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_withRotatedPushToken_resendsWithoutRotatingVisitorId() {
+        seedUserIdentifiers(email = EMAIL, phone = PHONE)
+        seedLastSync(email = EMAIL, phone = PHONE, pushToken = "staleToken")
+        stubSendUserUpdate(Result.success(Unit))
+
+        runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL, phoneNumber = PHONE) }
+
+        verify(factoryMocks.visitorService, never()).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), eq(PHONE), eq(VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_afterSuccess_isNoOpOnTheSecondCall() {
+        stubSendUserUpdate(Result.success(Unit))
+
+        val first = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+        val second = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(first.isSuccess)
+        assertTrue(second.isSuccess)
+        verify(factoryMocks.visitorService, Mockito.times(1)).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, Mockito.times(1)).sendUserUpdate(
+                any(), anyOrNull(), anyOrNull(), any(), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_afterFailedUpdate_retriesWithoutRotatingAgain() {
+        // The real AttentiveApi.sendUserUpdate stores the identifiers before the request
+        // completes, so a failed update leaves local state looking current. Nothing was recorded
+        // as synced, so the retry still fires — on the same visitor ID.
+        answerSendUserUpdate { unboxed(Result.failure(RuntimeException("boom"))) }
+
+        val first = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+        assertTrue(first.isFailure)
+
+        stubSendUserUpdate(Result.success(Unit))
+        val second = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(second.isSuccess)
+        // Only the first call was a genuine identity change; the retry reused its visitor ID.
+        verify(factoryMocks.visitorService, Mockito.times(1)).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, Mockito.times(2)).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_afterCancelledUpdate_retriesWithoutRotatingAgain() {
+        // sendUserUpdate rethrows CancellationException without recording a sync, so the next
+        // identical call still reaches the backend rather than being treated as a no-op.
+        answerSendUserUpdate { throw CancellationException("caller went away") }
+
+        try {
+            runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+            fail("Expected CancellationException to propagate")
+        } catch (e: CancellationException) {
+            // expected
+        }
+
+        stubSendUserUpdate(Result.success(Unit))
+        val retry = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(retry.isSuccess)
+        verify(factoryMocks.visitorService, Mockito.times(1)).createNewVisitorId()
+        runBlocking {
+            verify(factoryMocks.attentiveApi, Mockito.times(2)).sendUserUpdate(
+                eq(DOMAIN), eq(EMAIL), isNull(), eq(NEW_VISITOR_ID), any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun updateUser_failureDoesNotClobberANewerIdentity() {
+        // Simulate losing a race: while this update is in flight a newer one lands and installs
+        // its own visitor ID and contact info. The loser must leave that alone.
+        answerSendUserUpdate {
+            sdkConfig().userIdentifiers =
+                UserIdentifiers(visitorId = "newerVisitorId", email = OTHER_EMAIL, phone = PHONE)
+            unboxed(Result.failure(RuntimeException("boom")))
+        }
+
+        val result = runBlocking { AttentiveSdk.updateUserSuspend(email = EMAIL) }
+
+        assertTrue(result.isFailure)
+        val identifiers = sdkConfig().userIdentifiers
+        assertEquals("newerVisitorId", identifiers.visitorId)
+        assertEquals(OTHER_EMAIL, identifiers.email)
+        assertEquals(PHONE, identifiers.phone)
     }
 
     @Test
@@ -466,6 +895,7 @@ class AttentiveSdkTest {
 
     @Test
     fun clearUser_resetsInboxStateToEmpty() {
+        seedUserIdentifiers(email = EMAIL)
         setInboxState(
             InboxState(
                 messages = listOf(fakeMessage("m1", isRead = false), fakeMessage("m2", isRead = true)),
@@ -515,6 +945,66 @@ class AttentiveSdkTest {
         assertNull(readNextPageToken())
     }
 
+    private fun sdkConfig(): AttentiveConfig {
+        val field = AttentiveSdk::class.java.getDeclaredField("_config")
+        field.isAccessible = true
+        return field.get(AttentiveSdk) as AttentiveConfig
+    }
+
+    /** Puts the SDK into a "logged in" state without going through the network. */
+    private fun seedUserIdentifiers(email: String? = null, phone: String? = null) {
+        sdkConfig().userIdentifiers =
+            UserIdentifiers(visitorId = VISITOR_ID, email = email, phone = phone)
+    }
+
+    /**
+     * Pretends the backend already confirmed a `/user-update` carrying these values, which is what
+     * makes an identical call a no-op rather than a resend.
+     */
+    private fun seedLastSync(
+        email: String? = null,
+        phone: String? = null,
+        pushToken: String = PUSH_TOKEN,
+        domain: String = DOMAIN,
+        visitorId: String = VISITOR_ID,
+    ) {
+        storedValues[IdentitySyncStore.DOMAIN_KEY] = domain
+        storedValues[IdentitySyncStore.VISITOR_ID_KEY] = visitorId
+        storedValues[IdentitySyncStore.PUSH_TOKEN_KEY] = pushToken
+        email?.let { storedValues[IdentitySyncStore.EMAIL_KEY] = it }
+        phone?.let { storedValues[IdentitySyncStore.PHONE_KEY] = it }
+    }
+
+    private fun stubSendUserUpdate(result: Result<Unit>) {
+        answerSendUserUpdate { unboxed(result) }
+    }
+
+    /**
+     * Stubs `sendUserUpdate` using the `doAnswer` form, which — unlike `whenever` — doesn't
+     * invoke the mock (and therefore any previously installed answer) while stubbing.
+     */
+    private fun answerSendUserUpdate(answer: () -> Any?) {
+        runBlocking {
+            Mockito.doAnswer(Answer<Any?> { answer() })
+                .`when`(factoryMocks.attentiveApi)
+                .sendUserUpdate(
+                    anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(),
+                )
+        }
+    }
+
+    /**
+     * A suspend function returning [Result] is erased to its *unboxed* underlying value, so a
+     * Mockito answer must hand back that value. Returning a boxed [Result] instead leaves the
+     * caller holding a Result wrapping a Result, which always looks like a success.
+     */
+    private fun unboxed(result: Result<Unit>): Any? {
+        val boxed: Any = result
+        return boxed.javaClass.getDeclaredField("value")
+            .apply { isAccessible = true }
+            .get(boxed)
+    }
+
     private fun setNextPageToken(token: String?) {
         val field = AttentiveSdk::class.java.getDeclaredField("nextPageToken")
         field.isAccessible = true
@@ -544,5 +1034,8 @@ class AttentiveSdkTest {
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
         private const val PUSH_TOKEN = "testPushToken"
+        private const val EMAIL = "user@example.com"
+        private const val OTHER_EMAIL = "other@example.com"
+        private const val PHONE = "+15551234567"
     }
 }
