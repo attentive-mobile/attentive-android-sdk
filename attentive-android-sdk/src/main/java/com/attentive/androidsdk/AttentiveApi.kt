@@ -626,11 +626,7 @@ private fun mapPurchaseEvent(
     val purchaseMetadata = PurchaseMetadata(
         orderId = event.order.orderId,
         currency = event.items.firstOrNull()?.price?.currency?.currencyCode,
-        // A host-supplied cart total wins over the summed item prices, matching the `cartTotal` the
-        // legacy `/e` path puts on both its Purchase and OrderConfirmed requests. The backend turns
-        // this into the OrderConfirmed billing totals, so ignoring the override would understate
-        // orders whose total includes shipping or tax.
-        orderTotal = event.cart?.cartTotal ?: computedCartTotal,
+        orderTotal = resolveOrderTotal(event.cart?.cartTotal, computedCartTotal),
         cart = cart,
         products = products
     )
@@ -1190,6 +1186,45 @@ internal fun cartToCartModel(
         cartDiscount = cart?.cartDiscount,
         cartId = cart?.cartId
     )
+}
+
+/**
+ * Resolves the `orderTotal` carried by a v2 Purchase event.
+ *
+ * A host-supplied [com.attentive.androidsdk.events.Cart.cartTotal] wins over the summed item
+ * prices, matching the `cartTotal` the legacy `/e` path puts on both its Purchase and
+ * OrderConfirmed requests — ignoring the override would understate orders whose total includes
+ * shipping or tax.
+ *
+ * Unparseable overrides are the exception. The backend feeds this field straight into
+ * `new BigDecimal(...)` to build the OrderConfirmed billing totals and substitutes $0.00 when that
+ * throws, so a display-formatted total (`"$99.99"`, `"1.299,00"`, `""`) would zero the order rather
+ * than merely being ignored. Falling back to the computed sum keeps revenue attribution intact: an
+ * override we cannot parse is worse than no override at all.
+ *
+ * Parseable values are forwarded verbatim rather than normalised, so `"99.9"` stays `"99.9"`.
+ */
+@VisibleForTesting
+internal fun resolveOrderTotal(
+    hostCartTotal: String?,
+    computedCartTotal: String,
+): String {
+    if (hostCartTotal == null) {
+        return computedCartTotal
+    }
+
+    return try {
+        BigDecimal(hostCartTotal)
+        hostCartTotal
+    } catch (e: NumberFormatException) {
+        Timber.w(
+            "Cart total '%s' is not a parseable decimal, so the backend would bill this order as " +
+                "0. Falling back to the computed item total '%s' for orderTotal.",
+            hostCartTotal,
+            computedCartTotal,
+        )
+        computedCartTotal
+    }
 }
 
 @VisibleForTesting

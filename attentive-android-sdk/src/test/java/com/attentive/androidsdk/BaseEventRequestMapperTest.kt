@@ -568,6 +568,65 @@ class BaseEventRequestMapperTest {
     }
 
     @Test
+    fun mapPurchaseEvent_unparseableHostCartTotal_fallsBackToComputedOrderTotal() {
+        val userIdentifiers = buildAllUserIdentifiers()
+
+        // Values a host might reasonably hand us that `new BigDecimal(...)` rejects on the backend,
+        // where an unparseable orderTotal is billed as 0 rather than ignored.
+        for (badTotal in listOf("$99.99", "1.299,00", "99.99 USD", "", " ")) {
+            val purchaseEvent =
+                PurchaseEvent.Builder(
+                    listOf(buildItemWithAllFields()),
+                    Order.Builder().orderId("ORDER123").build(),
+                ).cart(
+                    Cart.Builder()
+                        .cartId("CART123")
+                        .cartTotal(badTotal)
+                        .build(),
+                ).build()
+
+            val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+            val metadata = result[0].eventMetadata as PurchaseMetadata
+
+            // orderTotal falls back to the computed item sum so the order isn't zeroed...
+            assertEquals(
+                "orderTotal should fall back for cartTotal '$badTotal'",
+                "15.99",
+                metadata.orderTotal,
+            )
+            // ...while cart.cartTotal still forwards the host value verbatim, matching what the
+            // legacy `/e` path puts on the wire (the backend leaves an unparseable cart total unset
+            // rather than zeroing it).
+            assertEquals(badTotal, metadata.cart?.cartTotal)
+        }
+    }
+
+    @Test
+    fun mapPurchaseEvent_parseableHostCartTotalVariants_areForwardedVerbatim() {
+        val userIdentifiers = buildAllUserIdentifiers()
+
+        // Anything BigDecimal accepts is a valid override and must not be normalised or dropped.
+        for (goodTotal in listOf("999.99", "99.9", "0", "0.00", "1E3", "+42.00", "42.000000")) {
+            val purchaseEvent =
+                PurchaseEvent.Builder(
+                    listOf(buildItemWithAllFields()),
+                    Order.Builder().orderId("ORDER123").build(),
+                ).cart(
+                    Cart.Builder()
+                        .cartId("CART123")
+                        .cartTotal(goodTotal)
+                        .build(),
+                ).build()
+
+            val result = invokeGetBaseEventRequestsFromEvent(purchaseEvent, userIdentifiers, "test")
+            val metadata = result[0].eventMetadata as PurchaseMetadata
+
+            assertEquals(goodTotal, metadata.orderTotal)
+            assertEquals(goodTotal, metadata.cart?.cartTotal)
+        }
+    }
+
+    @Test
     fun mapPurchaseEvent_withNoCart_stillSynthesizesWireCartWithComputedTotal() {
         // Arrange - PurchaseEvent with no Cart at all
         val purchaseEvent =
