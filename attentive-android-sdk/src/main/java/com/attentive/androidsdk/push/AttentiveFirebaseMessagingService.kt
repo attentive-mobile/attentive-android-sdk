@@ -25,7 +25,7 @@ class AttentiveFirebaseMessagingService : FirebaseMessagingService() {
         )
 
         if (AttentiveSdk.isAttentiveFirebaseMessage(remoteMessage)) {
-            AttentiveSdk.sendNotification(remoteMessage)
+            AttentiveSdk.sendNotification(remoteMessage, this)
         }
     }
 }

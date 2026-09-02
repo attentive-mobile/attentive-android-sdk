@@ -564,12 +564,12 @@ object AttentiveSdk {
      * need to call this — the SDK's built-in service receives Attentive messages and
      * displays the notification automatically.
      */
-    fun sendNotification(remoteMessage: RemoteMessage) {
+    fun sendNotification(remoteMessage: RemoteMessage, context: Context) {
         if (!AttentiveEventTracker.instance.isPushEnabled()) {
             Timber.d("Push is disabled via AttentiveConfig.Builder.pushEnabled(false); dropping incoming notification")
             return
         }
-        AttentivePush.getInstance().sendNotification(remoteMessage)
+        AttentivePush.getInstance().sendNotification(remoteMessage, context)
         val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
             .isAtLeast(Lifecycle.State.STARTED)
         if (inboxApi != null && isForeground) {
