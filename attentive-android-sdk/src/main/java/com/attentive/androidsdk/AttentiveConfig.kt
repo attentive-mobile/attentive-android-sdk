@@ -36,7 +36,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
 
     internal val attentiveApi: AttentiveApi
-    private val skipFatigueOnCreatives: Boolean = builder.skipFatigueOnCreatives
     private val settingsService: SettingsService =
         ClassFactory.buildSettingsService(ClassFactory.buildPersistentStorage(builder._context))
 
@@ -56,10 +55,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
             )
         attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
         sendInfoEvent()
-    }
-
-    override fun skipFatigueOnCreatives(): Boolean {
-        return skipFatigueOnCreatives
     }
 
     override fun identify(clientUserId: String) {
@@ -192,7 +187,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         @ColorRes
         internal var _notificationIconBackgroundColorResource: Int = 0
         internal var okHttpClient: OkHttpClient? = null
-        internal var skipFatigueOnCreatives: Boolean = false
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
         internal var _pushEnabled: Boolean = true
 
@@ -252,9 +246,23 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 this.okHttpClient = okHttpClient
             }
 
+        /**
+         * No-op. Fatigue rules are no longer skippable from the SDK — the backend ignores the
+         * flag. To force a specific creative to display for debugging, trigger it by creative ID
+         * with `Creative.trigger(creativeId = ...)` instead.
+         */
+        @Deprecated(
+            "Fatigue is no longer skippable from the SDK; this call has no effect and will be " +
+                "removed in a future major version. Trigger a creative by ID to force it to display.",
+            level = DeprecationLevel.WARNING,
+        )
         fun skipFatigueOnCreatives(skipFatigueOnCreatives: Boolean) =
             apply {
-                this.skipFatigueOnCreatives = skipFatigueOnCreatives
+                Timber.w(
+                    "skipFatigueOnCreatives(%s) is a no-op and will be removed in a future " +
+                        "major version. Trigger a creative by ID to force it to display.",
+                    skipFatigueOnCreatives,
+                )
             }
 
         fun logLevel(logLevel: AttentiveLogLevel) =
@@ -300,7 +308,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                "skipFatigueOnCreatives=$skipFatigueOnCreatives, logLevel=$logLevel, pushEnabled=$_pushEnabled)"
+                "logLevel=$logLevel, pushEnabled=$_pushEnabled)"
         }
     }
 
