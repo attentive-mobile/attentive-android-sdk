@@ -191,11 +191,10 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    // initializeInbox returns true only on the very first call across the app's
-    // lifetime — in that case it already kicked off the initial fetch, so we
-    // must not fire another on the first ON_RESUME (which would double-request
-    // on cold launch). Anchor a remember to keep this flag stable across
-    // recompositions.
+    // Initialize during composition, ahead of the collector below, so this composable
+    // learns whether *it* performed first-time setup. If it did, that setup already
+    // fetched, so the first ON_RESUME refresh is skipped to avoid double-requesting on
+    // cold launch. remember keeps the flag stable across recompositions.
     val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
