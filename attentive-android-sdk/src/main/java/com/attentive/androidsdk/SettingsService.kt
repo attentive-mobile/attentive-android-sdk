@@ -16,9 +16,6 @@ class SettingsService(private val persistentStorage: PersistentStorage) {
 
     companion object {
         private const val LOG_LEVEL = "logLevel"
-
-        /** Retired setting. Kept in [SETTINGS] so stale stored values still get cleared. */
-        private const val LEGACY_SKIP_FATIGUE = "skipFatigue"
-        private val SETTINGS = arrayOf(LEGACY_SKIP_FATIGUE, LOG_LEVEL)
+        private val SETTINGS = arrayOf(LOG_LEVEL)
     }
 }
