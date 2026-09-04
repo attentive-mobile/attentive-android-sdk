@@ -32,6 +32,7 @@ import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +47,16 @@ import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
+    // Volatile because most reads (the `config` getter below) are unsynchronized, and
+    // initialize() can be raced by inbox collectors on arbitrary dispatchers.
+    @Volatile
     private var _config: AttentiveConfig? = null
+
+    // Single monitor for initialization. initialize() and initializeInbox() must share one
+    // lock: @Synchronized on an object member locks the instance while synchronized(
+    // AttentiveSdk::class.java) locks the Class, and two monitors give no happens-before
+    // edge between publishing _config and reading it during inbox setup.
+    private val initLock = Any()
 
     /**
      * Gets the initialized config. Throws if not initialized.
@@ -61,6 +71,16 @@ object AttentiveSdk {
 
     // Inbox state management
     private val _inboxState = MutableStateFlow(InboxState())
+
+    /**
+     * Scope for background work started by [initializeInbox]. Retained rather than an
+     * anonymous `CoroutineScope(Dispatchers.IO)` so in-flight refreshes are attributable and
+     * cancellable — tests cancel its children between cases so a refresh from one test can't
+     * mutate [_inboxState] during the next one's setup. [SupervisorJob] keeps one failed
+     * refresh from cancelling later ones.
+     */
+    @VisibleForTesting
+    internal val inboxScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Stream of inbox state. Emits a new [InboxState] whenever the messages or unread
@@ -112,7 +132,10 @@ object AttentiveSdk {
      * messages plus the unread count in the background. Observe [inboxState] for results.
      *
      * Only needed by callers that never collect [inboxState], since collecting opts in on
-     * its own. Idempotent — use [refreshInbox] to reload.
+     * its own. Idempotent — subsequent calls are no-ops.
+     *
+     * Refreshes are automatic: the [com.attentive.androidsdk.inbox.AttentiveInbox] composable
+     * refetches when its screen resumes, and an incoming Attentive push refetches too.
      */
     fun startInbox() {
         initializeInbox()
@@ -127,34 +150,34 @@ object AttentiveSdk {
      *   initialized.
      */
     @SuppressLint("DefaultLocale")
-    @Synchronized
-    internal fun initializeInbox(): Boolean {
-        if (inboxApi != null) return false
-        val context = config.applicationContext
-        val inboxBaseUrl = DEFAULT_INBOX_HOST
-        inboxHost = inboxBaseUrl
-        // context is deliberately null — inbox requests skip the offline request buffer,
-        // which buildOkHttpClient installs only when given a context. Passed explicitly
-        // (not via the default) so static mocks can stub the call.
-        val client = ClassFactory.buildOkHttpClient(
-            config.logLevel,
-            ClassFactory.buildUserAgentInterceptor(context),
-            null,
-        )
-        inboxApi = Retrofit.Builder()
-            .baseUrl(inboxBaseUrl)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(RetrofitInboxApiService::class.java)
-        Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
+    internal fun initializeInbox(): Boolean =
+        synchronized(initLock) {
+            if (inboxApi != null) return@synchronized false
+            val context = config.applicationContext
+            val inboxBaseUrl = DEFAULT_INBOX_HOST
+            inboxHost = inboxBaseUrl
+            // context is deliberately null — inbox requests skip the offline request buffer,
+            // which buildOkHttpClient installs only when given a context. Passed explicitly
+            // (not via the default) so static mocks can stub the call.
+            val client = ClassFactory.buildOkHttpClient(
+                config.logLevel,
+                ClassFactory.buildUserAgentInterceptor(context),
+                null,
+            )
+            inboxApi = Retrofit.Builder()
+                .baseUrl(inboxBaseUrl)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(RetrofitInboxApiService::class.java)
+            Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
-        // Initial fetch so observers see real data without any further calls. Later
-        // refreshes come from the AttentiveInbox composable's ON_RESUME observer and
-        // from sendNotification() on push receipt.
-        CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
-        return true
-    }
+            // Initial fetch so observers see real data without any further calls. Later
+            // refreshes come from the AttentiveInbox composable's ON_RESUME observer and
+            // from sendNotification() on push receipt.
+            inboxScope.launch { refreshInbox() }
+            true
+        }
 
     /**
      * Refetches the first page of inbox messages and the unread count, replacing
@@ -413,7 +436,7 @@ object AttentiveSdk {
     @Suppress("DEPRECATION")
     @JvmStatic
     fun initialize(config: AttentiveConfig) {
-        synchronized(AttentiveSdk::class.java) {
+        synchronized(initLock) {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)

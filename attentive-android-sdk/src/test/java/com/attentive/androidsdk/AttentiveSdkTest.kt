@@ -17,6 +17,8 @@ import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import com.attentive.androidsdk.internal.network.TrackClickRequest
 import com.attentive.androidsdk.internal.network.UnreadCountRequest
 import com.attentive.androidsdk.internal.network.UnreadCountResponse
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import retrofit2.Response
@@ -82,6 +84,15 @@ class AttentiveSdkTest {
 
     @After
     fun tearDown() {
+        // Cancel before tearing down state. initializeInbox() launches a fire-and-forget
+        // refreshInbox() that captures the mocked inboxApi; if it lands after the mocks close
+        // it mutates _inboxState during the next test's setUp and makes assertions
+        // order-dependently flaky. Cancel the scope's children (not the SupervisorJob itself,
+        // which has to survive for the remaining tests) and join so nothing is in flight.
+        val inboxJob = AttentiveSdk.inboxScope.coroutineContext[Job]!!
+        inboxJob.cancelChildren()
+        runBlocking { inboxJob.children.toList().forEach { it.join() } }
+
         factoryMocks.close()
         mockedAppInfo?.close()
         TokenProvider.getInstance().token = null
