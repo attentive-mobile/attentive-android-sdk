@@ -52,7 +52,6 @@ import com.attentive.bonni.inbox.InboxScreen
 import com.attentive.bonni.inbox.LegacyInboxScreen
 import com.attentive.bonni.product.ProductScreen
 import com.attentive.bonni.settings.SettingsScreen
-import com.attentive.bonni.settings.debug.DebugScreenComposables
 import com.attentive.bonni.shipping.ShippingScreen
 import com.attentive.bonni.ui.theme.AttentiveAndroidSDKTheme
 
@@ -64,7 +63,7 @@ fun WelcomeScreenContent(
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
         Box(
             modifier =
                 Modifier.paint(
@@ -159,7 +158,7 @@ fun CreateAccountButton() {
 
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
-    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { _ ->
         NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
             composable(Routes.WelcomeScreenRoute.name) {
                 WelcomeScreenContent(navController)
@@ -178,9 +177,6 @@ fun WelcomeScreen(navController: NavHostController) {
             }
             composable(Routes.SettingsScreen.name) {
                 SettingsScreen(navController)
-            }
-            composable(Routes.DebugScreen.name) {
-                DebugScreenComposables(navController)
             }
             composable(Routes.InboxScreen.name) {
                 InboxScreen(navController)
