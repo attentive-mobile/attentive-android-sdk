@@ -114,20 +114,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
-    /**
-     * Changes the event-API version at runtime. Debug/testing use only.
-     *
-     * Kept for one more major version so existing debug tooling keeps compiling. The version is
-     * an implementation detail of the SDK, and both paths produce equivalent payloads, so there is
-     * no reason for a host app to switch at runtime — set it once via
-     * [Builder.apiVersion] if you need to pin it.
-     *
-     * Carries no `ReplaceWith`, deliberately: there is no mechanical replacement for this call.
-     * Moving the setting to construction means editing the original builder chain, which the IDE
-     * cannot do from here — a quick-fix expanding to `AttentiveConfig.Builder().apiVersion(...)`
-     * would build and discard an orphan `Builder`, compile clean, and leave events on the previous
-     * version with no error. The deprecation message says what to do instead.
-     */
     @Deprecated(
         "The event-API version is an SDK implementation detail and will stop being " +
             "selectable in a future major version. Pin it at construction time with " +
