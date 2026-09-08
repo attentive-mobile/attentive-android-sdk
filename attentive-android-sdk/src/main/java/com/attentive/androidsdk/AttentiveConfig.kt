@@ -53,7 +53,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 ClassFactory.buildUserAgentInterceptor(builder._context),
                 builder._context,
             )
-        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain)
+        attentiveApi = ClassFactory.buildAttentiveApi(okHttpClient, domain, this)
         sendInfoEvent()
     }
 

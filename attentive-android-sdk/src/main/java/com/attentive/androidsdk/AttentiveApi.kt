@@ -48,7 +48,11 @@ import java.util.Locale
 import com.attentive.androidsdk.internal.network.events.*
 
 
-class AttentiveApi(private var httpClient: OkHttpClient, private val domain: String) {
+class AttentiveApi(
+    private var httpClient: OkHttpClient,
+    private val domain: String,
+    private val identityProvider: AttentiveIdentityProvider,
+) {
     val metadataModule = SerializersModule {
         polymorphic(Metadata::class) {
             subclass(Metadata::class)
@@ -125,7 +129,7 @@ class AttentiveApi(private var httpClient: OkHttpClient, private val domain: Str
             val builder = UserIdentifiers.Builder()
             email?.let { builder.withEmail(it) }
             phoneNumber?.let { builder.withPhone(it) }
-            AttentiveEventTracker.instance.config.identify(builder.build())
+            identityProvider.identify(builder.build())
         }
 
         return try {
@@ -1001,8 +1005,8 @@ internal suspend fun sendOptInSubscriptionStatus(
     email: String? = "",
     pushToken: String?
 ): Result<Unit> {
-    val domain = AttentiveEventTracker.instance.config.domain
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+    val domain = identityProvider.domain
+    val userIdentifiers = identityProvider.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         val msg = "No visitorId available, cannot send opt-in subscription"
         Timber.e(msg)
@@ -1045,7 +1049,7 @@ internal suspend fun sendOptOutSubscriptionStatus(
     domain: String,
     pushToken: String?
 ): Result<Unit> {
-    val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
+    val userIdentifiers = identityProvider.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
         val msg = "No visitorId available, cannot send opt-out subscription"
         Timber.e(msg)
