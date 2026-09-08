@@ -2,51 +2,10 @@ package com.attentive.androidsdk
 
 import android.os.Bundle
 import com.attentive.androidsdk.AttentiveSettingsService.Companion.handleResetSettingsExtra
-import com.attentive.androidsdk.AttentiveSettingsService.Companion.handleSkipFatigueExtra
 import org.junit.Test
 import org.mockito.Mockito
 
 class AttentiveSettingsServiceTest {
-    @Test
-    fun testHandleSkipFatigueExtra_asTrue() {
-        val bundle = Mockito.mock(Bundle::class.java)
-        val settingsService = Mockito.mock(SettingsService::class.java)
-        Mockito.`when`(bundle.containsKey(AttentiveSettingsService.EXTRA_SET_SKIP_FATIGUE))
-            .thenReturn(true)
-        Mockito.`when`(bundle.getBoolean(AttentiveSettingsService.EXTRA_SET_SKIP_FATIGUE, false))
-            .thenReturn(true)
-
-        handleSkipFatigueExtra(bundle, settingsService)
-
-        Mockito.verify(settingsService).isSkipFatigueEnabled = true
-    }
-
-    @Test
-    fun testHandleSkipFatigueExtra_asFalse() {
-        val bundle = Mockito.mock(Bundle::class.java)
-        val settingsService = Mockito.mock(SettingsService::class.java)
-        Mockito.`when`(bundle.containsKey(AttentiveSettingsService.EXTRA_SET_SKIP_FATIGUE))
-            .thenReturn(true)
-        Mockito.`when`(bundle.getBoolean(AttentiveSettingsService.EXTRA_SET_SKIP_FATIGUE, false))
-            .thenReturn(false)
-
-        handleSkipFatigueExtra(bundle, settingsService)
-
-        Mockito.verify(settingsService).isSkipFatigueEnabled = false
-    }
-
-    @Test
-    fun testHandleSkipFatigueExtra_noValuePassed() {
-        val bundle = Mockito.mock(Bundle::class.java)
-        val settingsService = Mockito.mock(SettingsService::class.java)
-        Mockito.`when`(bundle.containsKey(AttentiveSettingsService.EXTRA_SET_SKIP_FATIGUE))
-            .thenReturn(false)
-
-        handleSkipFatigueExtra(bundle, settingsService)
-
-        Mockito.verify(settingsService, Mockito.times(0)).isSkipFatigueEnabled = false
-    }
-
     @Test
     fun testHandleResetSettingsExtra() {
         val bundle = Mockito.mock(Bundle::class.java)

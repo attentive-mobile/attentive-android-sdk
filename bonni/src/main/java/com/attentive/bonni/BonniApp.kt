@@ -38,7 +38,6 @@ class BonniApp : Application() {
                 .notificationIconBackgroundColor(R.color.purple_200)
                 .mode(AttentiveConfig.Mode.PRODUCTION)
                 .logLevel(AttentiveLogLevel.VERBOSE)
-                .skipFatigueOnCreatives(true)
                 .apiVersion(apiVersion)
                 .build()
 

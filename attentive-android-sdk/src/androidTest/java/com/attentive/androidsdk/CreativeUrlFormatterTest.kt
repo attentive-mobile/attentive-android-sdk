@@ -31,7 +31,7 @@ class CreativeUrlFormatterTest {
         val url = creativeUrlBuilder!!.buildCompanyCreativeUrl(attentiveConfig!!, null)
 
         TestCase.assertEquals(
-            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false",
+            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk",
             url,
         )
     }
@@ -43,7 +43,7 @@ class CreativeUrlFormatterTest {
         val url = creativeUrlBuilder!!.buildCompanyCreativeUrl(attentiveConfig!!, null)
 
         TestCase.assertEquals(
-            BASE_TEST_URL + "&debug=matter-trip-grass-symbol&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false",
+            BASE_TEST_URL + "&debug=matter-trip-grass-symbol&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk",
             url,
         )
     }
@@ -65,7 +65,7 @@ class CreativeUrlFormatterTest {
         val url = creativeUrlBuilder!!.buildCompanyCreativeUrl(attentiveConfig!!, null)
 
         TestCase.assertEquals(
-            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D",
+            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&vid=visitorId&cuid=clientId&p=%2B14156667777&e=email%40gmail.com&kid=54321&sid=12345&cstm=%7B%22key1%22%3A%22value1%22%2C%22key2%22%3A%22value2%22%7D",
             url,
         )
     }
@@ -76,7 +76,7 @@ class CreativeUrlFormatterTest {
         val url = creativeUrlBuilder!!.buildCompanyCreativeUrl(attentiveConfig!!, creativeId)
 
         TestCase.assertEquals(
-            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&skipFatigue=false&attn_creative_id=" + creativeId,
+            BASE_TEST_URL + "&sdkVersion=" + attentiveSDKVersion + "&sdkName=attentive-android-sdk&attn_creative_id=" + creativeId,
             url,
         )
     }

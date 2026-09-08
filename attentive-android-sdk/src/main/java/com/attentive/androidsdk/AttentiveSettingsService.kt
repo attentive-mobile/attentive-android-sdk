@@ -31,7 +31,6 @@ class AttentiveSettingsService : Service() {
                     applicationContext,
                 ),
             )
-        handleSkipFatigueExtra(extras, settingsService)
         handleResetSettingsExtra(extras, settingsService)
         handleSetLogLevelExtra(extras, settingsService)
         stopSelf()
@@ -44,23 +43,8 @@ class AttentiveSettingsService : Service() {
     }
 
     companion object {
-        const val EXTRA_SET_SKIP_FATIGUE: String = "setSkipFatigue"
         const val EXTRA_RESET_SETTINGS: String = "resetSettings"
         const val EXTRA_SET_LOG_LEVEL: String = "setLogLevel"
-
-        @JvmStatic
-        @VisibleForTesting
-        fun handleSkipFatigueExtra(
-            extras: Bundle,
-            settingsService: SettingsService,
-        ) {
-            if (extras.containsKey(EXTRA_SET_SKIP_FATIGUE)) {
-                Timber.d("Setting skip fatigue...")
-                val skipFatigue = extras.getBoolean(EXTRA_SET_SKIP_FATIGUE, false)
-                settingsService.isSkipFatigueEnabled = skipFatigue
-                Timber.i("skipFatigue set to: %s", skipFatigue)
-            }
-        }
 
         @JvmStatic
         @VisibleForTesting

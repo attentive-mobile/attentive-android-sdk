@@ -33,7 +33,6 @@ class CreativeUrlFormatter
         ): Uri.Builder {
             val domain = config.domain
             val mode = config.mode
-            val skipFatigue = config.skipFatigueOnCreatives()
 
             val creativeUriBuilder =
                 Uri.Builder()
@@ -48,7 +47,6 @@ class CreativeUrlFormatter
 
             creativeUriBuilder.appendQueryParameter("sdkVersion", AppInfo.attentiveSDKVersion)
             creativeUriBuilder.appendQueryParameter("sdkName", AppInfo.attentiveSDKName)
-            creativeUriBuilder.appendQueryParameter("skipFatigue", skipFatigue.toString())
 
             if (creativeId != null) {
                 creativeUriBuilder.appendQueryParameter("attn_creative_id", creativeId)
