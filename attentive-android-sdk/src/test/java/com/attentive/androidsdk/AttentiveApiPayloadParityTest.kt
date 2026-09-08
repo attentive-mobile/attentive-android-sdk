@@ -10,6 +10,7 @@ import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.runBlocking
@@ -99,7 +100,7 @@ class AttentiveApiPayloadParityTest {
         assertEquals(legacy.string("quantity"), firstProduct.get("quantity").asString)
         assertEquals(
             legacy.string("category"),
-            firstProduct.getAsJsonArray("categories").single().asString,
+            firstProduct.getAsJsonArray("categories").onlyElement().asString,
         )
     }
 
@@ -202,7 +203,7 @@ class AttentiveApiPayloadParityTest {
         assertEquals(legacy.string("name"), product.string("name"))
         assertEquals(legacy.string("image"), product.string("imageUrl"))
         assertEquals(legacy.string("price"), product.string("price"))
-        assertEquals(legacy.string("category"), product.getAsJsonArray("categories").single().asString)
+        assertEquals(legacy.string("category"), product.getAsJsonArray("categories").onlyElement().asString)
     }
 
     @Test
@@ -438,7 +439,7 @@ class AttentiveApiPayloadParityTest {
         val json = JsonParser.parseString(URLDecoder.decode(encodedValue, "UTF-8")).asJsonObject
         val product = json.getAsJsonObject("eventMetadata").getAsJsonObject("product")
         assertEquals(AWKWARD_NAME, product.string("name"))
-        assertEquals(AWKWARD_CATEGORY, product.getAsJsonArray("categories").single().asString)
+        assertEquals(AWKWARD_CATEGORY, product.getAsJsonArray("categories").onlyElement().asString)
         assertEquals(AWKWARD_PRODUCT_ID, product.string("productId"))
     }
 
@@ -608,7 +609,19 @@ class AttentiveApiPayloadParityTest {
                 ),
             )
 
-    private fun JsonArray.single() = get(0)
+    /**
+     * The single element of this array, failing if there is any other number of them.
+     *
+     * Deliberately strict. These assertions compare a v2 `categories` array against the legacy
+     * single-valued `category` field, so an array that has grown a second entry is exactly the
+     * parity drift this suite exists to catch — not something to quietly read past. The previous
+     * `single() = get(0)` shadowed Kotlin's strict `Iterable<*>.single()` (a `JsonArray` receiver
+     * is the more specific overload) and would have passed on `["Tops", "Knits"]`.
+     */
+    private fun JsonArray.onlyElement(): JsonElement {
+        assertEquals("expected exactly one element, was: $this", 1, size())
+        return get(0)
+    }
 
     companion object {
         private const val DOMAIN = "someDomain"

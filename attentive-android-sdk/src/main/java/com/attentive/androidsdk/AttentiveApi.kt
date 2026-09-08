@@ -511,7 +511,7 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
             purchaseMetadataDto.orderId =
                 purchaseEvent.order.orderId // Assuming orderId is non-nullable
             purchaseMetadataDto.cartTotal =
-                purchaseEvent.cart?.cartTotal ?: cartTotalString
+                resolveCartTotal(purchaseEvent.cart?.cartTotal, cartTotalString)
 
             if (purchaseEvent.cart != null) {
                 purchaseMetadataDto.cartId = purchaseEvent.cart.cartId
@@ -525,7 +525,7 @@ private fun getEventRequestsFromEvent(event: Event): List<EventRequest> {
         val ocMetadata = OrderConfirmedMetadataDto()
         ocMetadata.orderId = purchaseEvent.order.orderId
         ocMetadata.currency = purchaseEvent.items[0]?.price?.currency?.currencyCode
-        ocMetadata.cartTotal = purchaseEvent.cart?.cartTotal ?: cartTotalString
+        ocMetadata.cartTotal = resolveCartTotal(purchaseEvent.cart?.cartTotal, cartTotalString)
         ocMetadata.cartDiscount = purchaseEvent.cart?.cartDiscount
         val products: MutableList<ProductDto> = ArrayList()
         for (item in purchaseEvent.items) {
@@ -1181,7 +1181,7 @@ internal fun cartToCartModel(
     computedCartTotal: String? = null,
 ): Cart {
     return Cart(
-        cartTotal = cart?.cartTotal ?: computedCartTotal,
+        cartTotal = resolveCartTotal(cart?.cartTotal, computedCartTotal),
         cartCoupon = cart?.cartCoupon,
         cartDiscount = cart?.cartDiscount,
         cartId = cart?.cartId
@@ -1189,43 +1189,63 @@ internal fun cartToCartModel(
 }
 
 /**
- * Resolves the `orderTotal` carried by a v2 Purchase event.
+ * The host-total-wins rule for every cart total the SDK sends, on both the legacy `/e` and the v2
+ * `/mobile` path.
  *
  * A host-supplied [com.attentive.androidsdk.events.Cart.cartTotal] wins over the summed item
- * prices, matching the `cartTotal` the legacy `/e` path puts on both its Purchase and
- * OrderConfirmed requests — ignoring the override would understate orders whose total includes
- * shipping or tax.
+ * prices: ignoring the override would understate orders whose total includes shipping or tax.
+ * Values are forwarded verbatim rather than normalised, so `"99.9"` stays `"99.9"`.
  *
- * Unparseable overrides are the exception. The backend feeds this field straight into
- * `new BigDecimal(...)` to build the OrderConfirmed billing totals and substitutes $0.00 when that
- * throws, so a display-formatted total (`"$99.99"`, `"1.299,00"`, `""`) would zero the order rather
- * than merely being ignored. Falling back to the computed sum keeps revenue attribution intact: an
- * override we cannot parse is worse than no override at all.
+ * This is the single source for that precedence. It used to be an inline `?:` at four call sites
+ * across the two paths, which is how the paths drifted apart in the first place. The one field
+ * that needs more than this is the v2 `orderTotal` — see [resolveOrderTotal].
+ */
+@VisibleForTesting
+internal fun resolveCartTotal(
+    hostCartTotal: String?,
+    computedCartTotal: String?,
+): String? = hostCartTotal ?: computedCartTotal
+
+/**
+ * Resolves the `orderTotal` carried by a v2 Purchase event: [resolveCartTotal], plus a parseability
+ * guard on the host's override.
  *
- * Parseable values are forwarded verbatim rather than normalised, so `"99.9"` stays `"99.9"`.
+ * The guard exists because `orderTotal` is the one total the backend cannot shrug off. It feeds the
+ * value straight into `new BigDecimal(...)` to build the OrderConfirmed billing totals and
+ * substitutes $0.00 when that throws, so a display-formatted total (`"$99.99"`, `"1.299,00"`, `""`)
+ * would zero the order rather than merely being ignored. Falling back to the computed sum keeps
+ * revenue attribution intact: an override we cannot parse is worse than no override at all.
+ *
+ * Note this deliberately does *not* apply to the `cartTotal` fields, which pass the host value
+ * through unvalidated via [resolveCartTotal]. The backend leaves an unparseable cart total unset
+ * instead of zeroing it, so forwarding it verbatim is what keeps the two paths at parity.
  */
 @VisibleForTesting
 internal fun resolveOrderTotal(
     hostCartTotal: String?,
     computedCartTotal: String,
 ): String {
-    if (hostCartTotal == null) {
-        return computedCartTotal
-    }
+    val usableHostTotal = hostCartTotal?.takeIf { it.isParseableDecimal() }
 
-    return try {
-        BigDecimal(hostCartTotal)
-        hostCartTotal
-    } catch (e: NumberFormatException) {
+    if (hostCartTotal != null && usableHostTotal == null) {
         Timber.w(
             "Cart total '%s' is not a parseable decimal, so the backend would bill this order as " +
                 "0. Falling back to the computed item total '%s' for orderTotal.",
             hostCartTotal,
             computedCartTotal,
         )
-        computedCartTotal
     }
+
+    return resolveCartTotal(usableHostTotal, computedCartTotal) ?: computedCartTotal
 }
+
+private fun String.isParseableDecimal(): Boolean =
+    try {
+        BigDecimal(this)
+        true
+    } catch (e: NumberFormatException) {
+        false
+    }
 
 @VisibleForTesting
 internal fun calculateCartTotal(items: List<Item>): String {
