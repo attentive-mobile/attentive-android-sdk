@@ -5,11 +5,27 @@ package com.attentive.androidsdk
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.content.pm.PackageManager
-import androidx.annotation.RestrictTo
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.attentive.androidsdk.AttentiveSdk._inboxState
+import com.attentive.androidsdk.AttentiveSdk.clearUser
 import com.attentive.androidsdk.AttentiveSdk.getPushToken
+import com.attentive.androidsdk.AttentiveSdk.getPushTokenWithCallback
+import com.attentive.androidsdk.AttentiveSdk.inboxGeneration
+import com.attentive.androidsdk.AttentiveSdk.inboxState
+import com.attentive.androidsdk.AttentiveSdk.initializeInbox
+import com.attentive.androidsdk.AttentiveSdk.isAttentiveFirebaseMessage
+import com.attentive.androidsdk.AttentiveSdk.loadMoreInboxMessages
+import com.attentive.androidsdk.AttentiveSdk.optUserIntoMarketingSubscription
+import com.attentive.androidsdk.AttentiveSdk.optUserOutOfMarketingSubscription
+import com.attentive.androidsdk.AttentiveSdk.planUpdateUser
+import com.attentive.androidsdk.AttentiveSdk.recordEventSuspend
+import com.attentive.androidsdk.AttentiveSdk.refreshInbox
+import com.attentive.androidsdk.AttentiveSdk.resetInboxForIdentityChange
+import com.attentive.androidsdk.AttentiveSdk.sendNotification
+import com.attentive.androidsdk.AttentiveSdk.startInbox
+import com.attentive.androidsdk.AttentiveSdk.updateUser
+import com.attentive.androidsdk.AttentiveSdk.updateUserSuspend
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
@@ -43,23 +59,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.OkHttpClient
 import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 
 object AttentiveSdk {
-    // Volatile because most reads (the `config` getter below) are unsynchronized, and
-    // initialize() can be raced by inbox collectors on arbitrary dispatchers.
-    @Volatile
+
     private var _config: AttentiveConfig? = null
 
     // Single monitor for initialization. initialize() and initializeInbox() must share one
     // lock: @Synchronized on an object member locks the instance while synchronized(
     // AttentiveSdk::class.java) locks the Class, and two monitors give no happens-before
     // edge between publishing _config and reading it during inbox setup.
-    private val initLock = Any()
+    private val inboxInitLock = Any()
 
     /**
      * Gets the initialized config. Throws if not initialized.
@@ -72,7 +85,6 @@ object AttentiveSdk {
                     "Please call AttentiveSdk.initialize() in your Application.onCreate() method.",
             )
 
-    // Inbox state management
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**
@@ -92,8 +104,6 @@ object AttentiveSdk {
      * Collecting opts this app in to the inbox and triggers the initial fetch. Reading
      * [StateFlow.value] does not — callers that never collect should call [startInbox].
      */
-    // Delegation rather than stateIn(): keeps `value` reads synchronous, and forwards
-    // any members added in future coroutines releases.
     @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
     val inboxState: StateFlow<InboxState> =
         object : StateFlow<InboxState> by _inboxState {
@@ -103,12 +113,10 @@ object AttentiveSdk {
             }
         }
 
-    // Inbox server API (created from manifest meta-data if present)
     private var inboxApi: RetrofitInboxApiService? = null
 
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
-    // Inbox endpoints — paths relative to the host configured via INBOX_BASE_URL_META_KEY.
     private const val DEFAULT_INBOX_HOST = "https://mobile.attentivemobile.com/"
     private var inboxHost: String = DEFAULT_INBOX_HOST
     private val inboxMessagesUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages"
@@ -158,7 +166,7 @@ object AttentiveSdk {
      */
     @SuppressLint("DefaultLocale")
     internal fun initializeInbox(): Boolean =
-        synchronized(initLock) {
+        synchronized(inboxInitLock) {
             if (inboxApi != null) return@synchronized false
             val context = config.applicationContext
             val inboxBaseUrl = DEFAULT_INBOX_HOST
@@ -443,7 +451,7 @@ object AttentiveSdk {
     @Suppress("DEPRECATION")
     @JvmStatic
     fun initialize(config: AttentiveConfig) {
-        synchronized(initLock) {
+        synchronized(inboxInitLock) {
             this._config = config
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
