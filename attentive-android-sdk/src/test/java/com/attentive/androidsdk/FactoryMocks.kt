@@ -61,6 +61,7 @@ class FactoryMocks private constructor(
                 buildAttentiveApi(
                     any(),
                     any(),
+                    any(),
                 )
             }.thenReturn(attentiveApi)
 

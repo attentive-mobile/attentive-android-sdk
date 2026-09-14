@@ -36,7 +36,7 @@ class MultipleEventRequestsCallbackTest {
     @Before
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "test"))
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "test", FakeAttentiveIdentityProvider()))
     }
 
     @Test
