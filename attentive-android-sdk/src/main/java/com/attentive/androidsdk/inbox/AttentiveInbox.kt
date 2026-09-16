@@ -3,7 +3,6 @@
 package com.attentive.androidsdk.inbox
 
 import android.content.Intent
-import android.net.Uri
 import androidx.annotation.RestrictTo
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -74,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -173,7 +173,11 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param titleFontFamily Font family for message titles (null uses system default)
  * @param bodyFontFamily Font family for message body text (null uses system default)
  * @param timestampFontFamily Font family for timestamps (null uses system default)
- * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
+ * @param onMessageClick Invoked on every tap. Registering it also takes over **read state**: the
+ *   SDK stops marking the tapped message read, on the assumption that a host with its own tap
+ *   handling wants to decide when that happens (call [AttentiveSdk.markRead] yourself). It does
+ *   *not* affect click tracking, which always runs, nor deep-link opening, which is governed
+ *   independently by [AttentiveSdk.automaticallyOpensInboxDeepLinks] whether or not this is set.
  */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -307,20 +311,30 @@ fun AttentiveInbox(
                 titleFontFamily = titleFontFamily,
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
-                onMessageClick =
-                    onMessageClick ?: { message: Message ->
-                        if (!message.isRead) {
-                            AttentiveSdk.markRead(message.id)
-                        }
+                onMessageClick = { message: Message ->
+                    val url = message.actionUrl?.takeIf { it.isNotBlank() }
 
-                        // Handle deep link if actionUrl is present
-                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                            AttentiveSdk.trackInboxClick(message.id, url)
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            context.startActivity(intent)
-                        }
-                        Unit
-                    },
+                    // Always tracked, so no host configuration can silently cost attribution.
+                    // Skipped only for a message with no deep link: the click endpoint requires a
+                    // non-blank action_url and rejects the request without one.
+                    if (url != null) {
+                        AttentiveSdk.trackInboxClick(message.id, url)
+                    }
+
+                    onMessageClick?.invoke(message)
+
+                    // Read state follows the callback: a host that registered one is assumed to
+                    // want to decide when a message becomes read, so the SDK stays out of it.
+                    // Navigation deliberately does not follow the same rule — it has its own flag
+                    // below — so registering a callback to observe taps does not silently stop
+                    // deep links working, which is the trap an all-or-nothing handler creates.
+                    if (onMessageClick == null && !message.isRead) {
+                        AttentiveSdk.markRead(message.id)
+                    }
+                    if (AttentiveSdk.automaticallyOpensInboxDeepLinks && url != null) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                    }
+                },
             )
         }
     }
