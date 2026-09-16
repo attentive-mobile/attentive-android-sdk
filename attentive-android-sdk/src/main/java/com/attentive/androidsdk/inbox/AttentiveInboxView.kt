@@ -54,6 +54,15 @@ class AttentiveInboxView
         attrs: AttributeSet? = null,
         defStyleAttr: Int = 0,
     ) : AbstractComposeView(context, attrs, defStyleAttr) {
+        /**
+         * Receives a tap on a message row. Set via [setOnMessageClickListener].
+         *
+         * Registering one hands read state to the host — see that method for the full contract.
+         */
+        fun interface OnMessageClickListener {
+            fun onMessageClick(message: Message)
+        }
+
         // Color properties - loaded from resources in init block
         // Using mutableStateOf so Compose automatically recomposes when these change
         private var backgroundColor by mutableStateOf(Color.Unspecified)
@@ -67,6 +76,8 @@ class AttentiveInboxView
         private var titleFontFamily by mutableStateOf<FontFamily?>(null)
         private var bodyFontFamily by mutableStateOf<FontFamily?>(null)
         private var timestampFontFamily by mutableStateOf<FontFamily?>(null)
+
+        private var messageClickListener by mutableStateOf<OnMessageClickListener?>(null)
 
         init {
             backgroundColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_background))
@@ -198,11 +209,35 @@ class AttentiveInboxView
                 titleFontFamily = titleFontFamily,
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
+                onMessageClick =
+                    messageClickListener?.let { listener ->
+                        { message: Message -> listener.onMessageClick(message) }
+                    },
             )
         }
 
         // Public setters for programmatic customization
         // Note: Since we use mutableStateOf, Compose automatically recomposes when these properties change
+
+        /**
+         * Sets the listener notified when a message row is tapped.
+         *
+         * **Registering a listener also takes over read state.** The SDK stops marking the tapped
+         * message read, on the assumption that a host with its own tap handling wants to choose
+         * when that happens — call [com.attentive.androidsdk.AttentiveSdk.markRead] yourself, at
+         * whatever moment suits (a detail screen opening, a dwell timer). If you only want to
+         * observe taps, you still need that call.
+         *
+         * Two things a listener does *not* change: click tracking always runs, and deep-link
+         * opening is governed solely by
+         * [com.attentive.androidsdk.AttentiveSdk.automaticallyOpensInboxDeepLinks] — so observing
+         * taps never silently breaks navigation. Turn that flag off to route taps yourself.
+         *
+         * Pass null to hand read state back to the SDK.
+         */
+        fun setOnMessageClickListener(listener: OnMessageClickListener?) {
+            messageClickListener = listener
+        }
 
         /**
          * Sets the background color of the inbox
