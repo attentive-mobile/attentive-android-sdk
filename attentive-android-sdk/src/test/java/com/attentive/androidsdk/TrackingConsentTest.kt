@@ -178,6 +178,33 @@ class TrackingConsentTest {
                 },
             )
         assertEquals(8, shapes.size)
+
+        // The callback variants take `callback` last, matching the other *WithCallback methods.
+        // Because it follows a defaulted parameter, a caller that omits the consent has to name
+        // it — the bare positional `(email, phone, callback)` form does not compile.
+        @Suppress("UNUSED_VARIABLE")
+        val callbackShapes: List<() -> Unit> =
+            listOf(
+                { AttentiveSdk.optUserIntoMarketingSubscriptionWithCallback(EMAIL, PHONE, callback = NOOP) },
+                { AttentiveSdk.optUserOutOfMarketingSubscriptionWithCallback(EMAIL, PHONE, callback = NOOP) },
+                {
+                    AttentiveSdk.optUserIntoMarketingSubscriptionWithCallback(
+                        EMAIL,
+                        PHONE,
+                        TrackingConsent.ACCEPTED,
+                        NOOP,
+                    )
+                },
+                {
+                    AttentiveSdk.optUserOutOfMarketingSubscriptionWithCallback(
+                        EMAIL,
+                        PHONE,
+                        TrackingConsent.DECLINED,
+                        NOOP,
+                    )
+                },
+            )
+        assertEquals(4, callbackShapes.size)
     }
 
     // --- helpers -----------------------------------------------------------------------------
@@ -218,6 +245,13 @@ class TrackingConsentTest {
             .build()
 
     private companion object {
+        val NOOP =
+            object : AttentiveSdk.AttentiveCallback {
+                override fun onSuccess() = Unit
+
+                override fun onFailure(exception: Exception) = Unit
+            }
+
         const val DOMAIN = "someDomain"
         const val VISITOR_ID = "someVisitorId"
         const val EMAIL = "shopper@example.com"

@@ -509,8 +509,8 @@ object AttentiveSdk {
     fun optUserIntoMarketingSubscriptionWithCallback(
         email: String = "",
         phoneNumber: String = "",
-        callback: AttentiveCallback,
         trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
+        callback: AttentiveCallback,
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             dispatchResult(
@@ -561,8 +561,8 @@ object AttentiveSdk {
     fun optUserOutOfMarketingSubscriptionWithCallback(
         email: String = "",
         phoneNumber: String = "",
-        callback: AttentiveCallback,
         trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
+        callback: AttentiveCallback,
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             dispatchResult(
