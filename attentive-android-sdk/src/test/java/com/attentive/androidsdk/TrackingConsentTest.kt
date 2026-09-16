@@ -1,0 +1,227 @@
+package com.attentive.androidsdk
+
+import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.mockito.Mockito
+import org.mockito.kotlin.whenever
+
+/**
+ * Wire-contract tests for [TrackingConsent] on the opt-in / opt-out requests.
+ *
+ * These assert on captured request bytes rather than on the DTO, because the omission rule is a
+ * property of the Gson config (no `serializeNulls()`) and isn't visible on the request object.
+ *
+ * Sets the process-global `AttentiveEventTracker.instance.config`, which is `lateinit` and so
+ * can't be unset. Nothing else currently depends on it being uninitialized.
+ */
+class TrackingConsentTest {
+    private lateinit var bodies: MutableList<String>
+    private lateinit var api: AttentiveApi
+
+    @Before
+    fun setup() {
+        bodies = mutableListOf()
+
+        val config = Mockito.mock(AttentiveConfig::class.java)
+        whenever(config.domain).thenReturn(DOMAIN)
+        whenever(config.userIdentifiers)
+            .thenReturn(UserIdentifiers.Builder().withVisitorId(VISITOR_ID).build())
+        AttentiveEventTracker.instance.config = config
+
+        api = AttentiveApi(recordingClient(), DOMAIN)
+    }
+
+    // --- toWireValue ------------------------------------------------------------------------
+
+    @Test
+    fun toWireValue_acceptedAndDeclined_serializeAsTheirEnumName() {
+        assertEquals("ACCEPTED", TrackingConsent.ACCEPTED.toWireValue())
+        assertEquals("DECLINED", TrackingConsent.DECLINED.toWireValue())
+    }
+
+    @Test
+    fun toWireValue_unspecified_isNullSoTheFieldIsOmittedRatherThanSentAsUnspecified() {
+        assertEquals(null, TrackingConsent.UNSPECIFIED.toWireValue())
+    }
+
+    // --- opt-in ------------------------------------------------------------------------------
+
+    @Test
+    fun optIn_accepted_sendsTrackingConsentAccepted() {
+        sendOptIn(TrackingConsent.ACCEPTED)
+        assertEquals("ACCEPTED", body().get("trackingConsent").asString)
+    }
+
+    @Test
+    fun optIn_declined_sendsTrackingConsentDeclined() {
+        sendOptIn(TrackingConsent.DECLINED)
+        assertEquals("DECLINED", body().get("trackingConsent").asString)
+    }
+
+    @Test
+    fun optIn_unspecified_omitsTheFieldEntirely() {
+        sendOptIn(TrackingConsent.UNSPECIFIED)
+        val json = body()
+        assertFalse(
+            "UNSPECIFIED must send no trackingConsent key at all, was: $json",
+            json.has("trackingConsent"),
+        )
+    }
+
+    @Test
+    fun optIn_defaultArgument_omitsTheFieldEntirely() {
+        // The overload existing callers use.
+        runBlocking { api.sendOptInSubscriptionStatus(PHONE, EMAIL, PUSH_TOKEN) }
+        assertFalse(body().has("trackingConsent"))
+    }
+
+    @Test
+    fun optIn_consent_doesNotDisturbTheRestOfTheBody() {
+        sendOptIn(TrackingConsent.ACCEPTED)
+        val json = body()
+        assertEquals(DOMAIN, json.get("c").asString)
+        assertEquals(VISITOR_ID, json.get("u").asString)
+        assertEquals(EMAIL, json.get("email").asString)
+        assertEquals(PHONE, json.get("phone").asString)
+        assertEquals("MARKETING", json.get("type").asString)
+    }
+
+    // --- opt-out -----------------------------------------------------------------------------
+
+    @Test
+    fun optOut_accepted_sendsTrackingConsentAccepted() {
+        sendOptOut(TrackingConsent.ACCEPTED)
+        assertEquals("ACCEPTED", body().get("trackingConsent").asString)
+    }
+
+    @Test
+    fun optOut_declined_sendsTrackingConsentDeclined() {
+        sendOptOut(TrackingConsent.DECLINED)
+        assertEquals("DECLINED", body().get("trackingConsent").asString)
+    }
+
+    @Test
+    fun optOut_unspecified_omitsTheFieldEntirely() {
+        sendOptOut(TrackingConsent.UNSPECIFIED)
+        val json = body()
+        assertFalse(
+            "UNSPECIFIED must send no trackingConsent key at all, was: $json",
+            json.has("trackingConsent"),
+        )
+    }
+
+    @Test
+    fun optOut_defaultArgument_omitsTheFieldEntirely() {
+        runBlocking { api.sendOptOutSubscriptionStatus(EMAIL, PHONE, DOMAIN, PUSH_TOKEN) }
+        assertFalse(body().has("trackingConsent"))
+    }
+
+    // --- enum shape --------------------------------------------------------------------------
+
+    @Test
+    fun enumNames_matchTheBackendContract() {
+        // Names are the wire values, so renaming a constant breaks the wire.
+        assertEquals(
+            listOf("UNSPECIFIED", "ACCEPTED", "DECLINED"),
+            TrackingConsent.entries.map { it.name },
+        )
+    }
+
+    // --- public call shapes ------------------------------------------------------------------
+
+    /**
+     * Compile-time guard on the call forms, including the README's example. Never invoked — the
+     * point is that they resolve, so a signature change fails here rather than in a host app.
+     */
+    @Test
+    fun publicCallShapes_compile() {
+        @Suppress("UNUSED_VARIABLE")
+        val shapes: List<suspend () -> Result<Unit>> =
+            listOf(
+                // Pre-existing forms.
+                { AttentiveSdk.optUserIntoMarketingSubscription() },
+                { AttentiveSdk.optUserIntoMarketingSubscription(EMAIL) },
+                { AttentiveSdk.optUserIntoMarketingSubscription(EMAIL, PHONE) },
+                { AttentiveSdk.optUserOutOfMarketingSubscription(EMAIL, PHONE) },
+                { AttentiveSdk.optUserIntoMarketingSubscription(email = EMAIL) },
+                // The README's example.
+                {
+                    AttentiveSdk.optUserIntoMarketingSubscription(
+                        email = EMAIL,
+                        trackingConsent = TrackingConsent.ACCEPTED,
+                    )
+                },
+                {
+                    AttentiveSdk.optUserOutOfMarketingSubscription(
+                        email = EMAIL,
+                        trackingConsent = TrackingConsent.DECLINED,
+                    )
+                },
+                // Positional, all three.
+                {
+                    AttentiveSdk.optUserIntoMarketingSubscription(
+                        EMAIL,
+                        PHONE,
+                        TrackingConsent.ACCEPTED,
+                    )
+                },
+            )
+        assertEquals(8, shapes.size)
+    }
+
+    // --- helpers -----------------------------------------------------------------------------
+
+    private fun sendOptIn(consent: TrackingConsent) {
+        runBlocking {
+            val result = api.sendOptInSubscriptionStatus(PHONE, EMAIL, PUSH_TOKEN, consent)
+            assertTrue("opt-in failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+        }
+    }
+
+    private fun sendOptOut(consent: TrackingConsent) {
+        runBlocking {
+            val result = api.sendOptOutSubscriptionStatus(EMAIL, PHONE, DOMAIN, PUSH_TOKEN, consent)
+            assertTrue("opt-out failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+        }
+    }
+
+    private fun body() = JsonParser.parseString(bodies.single()).asJsonObject
+
+    private fun recordingClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(
+                Interceptor { chain ->
+                    val request = chain.request()
+                    val buffer = Buffer()
+                    request.body?.writeTo(buffer)
+                    bodies.add(buffer.readUtf8())
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("".toResponseBody(null))
+                        .build()
+                },
+            )
+            .build()
+
+    private companion object {
+        const val DOMAIN = "someDomain"
+        const val VISITOR_ID = "someVisitorId"
+        const val EMAIL = "shopper@example.com"
+        const val PHONE = "+15551234567"
+        const val PUSH_TOKEN = "somePushToken"
+    }
+}

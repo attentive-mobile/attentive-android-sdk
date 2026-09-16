@@ -524,6 +524,40 @@ and
     AttentiveSdk.optUserOutOfMarketingSubscription(optionalEmail, optionalPhoneNumber)
 ```
 
+#### Passing pixel-tracking consent
+
+France (July 2026) and Italy (October 2026) require brands to let email shoppers opt in or out of
+email open-tracking — the pixels embedded in marketing emails that report when a message is opened.
+If your app collects that choice, pass it along with the subscription:
+
+```kotlin
+    AttentiveSdk.optUserIntoMarketingSubscription(
+        email = email,
+        trackingConsent = TrackingConsent.ACCEPTED,
+    )
+```
+
+`TrackingConsent` has three values:
+
+| Value | Meaning |
+|-------|---------|
+| `ACCEPTED` | The shopper agreed to email open-tracking. |
+| `DECLINED` | The shopper declined it. |
+| `UNSPECIFIED` | No choice recorded. The default, and what you get if you omit the parameter. |
+
+The same parameter is available on `optUserOutOfMarketingSubscription` and on both
+`...WithCallback` variants.
+
+- **Your app owns the UI.** The SDK never prompts for this choice and never stores it — it
+  forwards the value you pass. This is not App Tracking Transparency and has nothing to do with the
+  advertising ID.
+- **Don't infer the value.** If you haven't asked the shopper, leave it `UNSPECIFIED`. The field is
+  then omitted and Attentive applies its own locale-based defaulting.
+- **The parameter is optional.** Existing Kotlin and Java calls keep working unchanged.
+
+For the customer-facing explanation, see
+[France Email Privacy Compliance Update](https://help.attentive.com/hc/en-us/articles/51464632390804-France-Email-Privacy-Compliance-Update).
+
 ### Update user via email and/or phone
 
 Our SDK supports switching the identified user via email and/or phone (at least one identifier must be provided).
