@@ -80,13 +80,6 @@ class TrackingConsentTest {
     }
 
     @Test
-    fun optIn_defaultArgument_omitsTheFieldEntirely() {
-        // The overload existing callers use.
-        runBlocking { api.sendOptInSubscriptionStatus(PHONE, EMAIL, PUSH_TOKEN) }
-        assertFalse(body().has("trackingConsent"))
-    }
-
-    @Test
     fun optIn_consent_doesNotDisturbTheRestOfTheBody() {
         sendOptIn(TrackingConsent.ACCEPTED)
         val json = body()
@@ -119,12 +112,6 @@ class TrackingConsentTest {
             "UNSPECIFIED must send no trackingConsent key at all, was: $json",
             json.has("trackingConsent"),
         )
-    }
-
-    @Test
-    fun optOut_defaultArgument_omitsTheFieldEntirely() {
-        runBlocking { api.sendOptOutSubscriptionStatus(EMAIL, PHONE, DOMAIN, PUSH_TOKEN) }
-        assertFalse(body().has("trackingConsent"))
     }
 
     // --- enum shape --------------------------------------------------------------------------
