@@ -8,6 +8,7 @@ import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,16 +23,26 @@ import org.mockito.kotlin.whenever
  * These assert on captured request bytes rather than on the DTO, because the omission rule is a
  * property of the Gson config (no `serializeNulls()`) and isn't visible on the request object.
  *
- * Sets the process-global `AttentiveEventTracker.instance.config`, which is `lateinit` and so
- * can't be unset. Nothing else currently depends on it being uninitialized.
+ * `sendOptIn/OutSubscriptionStatus` read domain and identifiers off the
+ * `AttentiveEventTracker` singleton, so these have to populate it. All test classes share one JVM
+ * (no `forkEvery`), and seven production branches key off `::config.isInitialized`, so the
+ * singleton is restored to its prior value — including uninitialized — after each test rather
+ * than left holding this suite's mock.
  */
 class TrackingConsentTest {
     private lateinit var bodies: MutableList<String>
     private lateinit var api: AttentiveApi
 
+    /** Whatever the singleton held before this test, `null` if it was never initialized. */
+    private var priorConfig: AttentiveConfig? = null
+
     @Before
     fun setup() {
         bodies = mutableListOf()
+
+        // Read through the field, not the getter: `config` is lateinit, so the getter throws
+        // rather than returning null when nothing has initialized it yet.
+        priorConfig = CONFIG_FIELD.get(AttentiveEventTracker.instance) as AttentiveConfig?
 
         val config = Mockito.mock(AttentiveConfig::class.java)
         whenever(config.domain).thenReturn(DOMAIN)
@@ -40,6 +51,13 @@ class TrackingConsentTest {
         AttentiveEventTracker.instance.config = config
 
         api = AttentiveApi(recordingClient(), DOMAIN)
+    }
+
+    @After
+    fun restoreSingletonConfig() {
+        // Setting null is only reachable by reflection, and is what makes an uninitialized
+        // singleton restorable at all.
+        CONFIG_FIELD.set(AttentiveEventTracker.instance, priorConfig)
     }
 
     // --- toWireValue ------------------------------------------------------------------------
@@ -232,6 +250,11 @@ class TrackingConsentTest {
             .build()
 
     private companion object {
+        val CONFIG_FIELD =
+            AttentiveEventTracker::class.java
+                .getDeclaredField("config")
+                .apply { isAccessible = true }
+
         val NOOP =
             object : AttentiveSdk.AttentiveCallback {
                 override fun onSuccess() = Unit
