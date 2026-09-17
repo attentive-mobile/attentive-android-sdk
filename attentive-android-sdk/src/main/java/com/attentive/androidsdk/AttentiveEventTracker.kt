@@ -199,6 +199,7 @@ class AttentiveEventTracker private constructor() {
     internal suspend fun optIn(
         email: String = "",
         phoneNumber: String = "",
+        trackingConsent: TrackingConsent,
     ): Result<Unit> {
         if (!::config.isInitialized) {
             return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
@@ -216,12 +217,14 @@ class AttentiveEventTracker private constructor() {
             phoneNumber,
             email,
             tokenResult.getOrNull()?.token,
+            trackingConsent,
         )
     }
 
     internal suspend fun optOut(
         email: String = "",
         phoneNumber: String = "",
+        trackingConsent: TrackingConsent,
     ): Result<Unit> {
         if (!::config.isInitialized) {
             return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
@@ -240,6 +243,7 @@ class AttentiveEventTracker private constructor() {
             phoneNumber,
             config.domain,
             tokenResult.getOrNull()?.token,
+            trackingConsent,
         )
     }
 
