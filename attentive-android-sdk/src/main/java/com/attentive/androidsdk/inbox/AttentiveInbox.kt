@@ -321,7 +321,15 @@ fun AttentiveInbox(
                     }
 
                     if (AttentiveSdk.automaticallyOpensInboxDeepLinks && url != null) {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        } catch (e: Exception) {
+                            Timber.e(
+                                "Error opening the inbox action URL '%s'. Error message: '%s'",
+                                url,
+                                e.message,
+                            )
+                        }
                     }
                 },
             )
