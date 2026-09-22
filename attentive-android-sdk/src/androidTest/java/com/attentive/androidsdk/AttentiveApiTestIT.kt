@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
 class AttentiveApiTestIT {
     lateinit var countDownLatch: CountDownLatch
     lateinit var okHttpClient: OkHttpClient
-    lateinit var attentiveApi: AttentiveApi
+    internal lateinit var attentiveApi: AttentiveApi
     lateinit var attentiveApiCallback: AttentiveApiCallback
     val metadataModule =
         SerializersModule {
@@ -59,11 +59,22 @@ class AttentiveApiTestIT {
             Request::class.java,
         )
 
+    private val identityProvider =
+        object : AttentiveIdentityProvider {
+            override val domain: String = "games"
+            override val userIdentifiers: UserIdentifiers =
+                UserIdentifiers.Builder().withVisitorId("someVisitorId").build()
+
+            override fun identify(userIdentifiers: UserIdentifiers) = Unit
+
+            override fun clearUser() = Unit
+        }
+
     @Before
     fun setup() {
         countDownLatch = CountDownLatch(1)
         okHttpClient = Mockito.spy(OkHttpClient())
-        attentiveApi = AttentiveApi(okHttpClient, "games")
+        attentiveApi = AttentiveApi(okHttpClient, "games", identityProvider)
         json =
             Json {
                 serializersModule = metadataModule

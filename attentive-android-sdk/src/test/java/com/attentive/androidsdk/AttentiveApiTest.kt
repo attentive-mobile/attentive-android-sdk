@@ -48,11 +48,13 @@ class AttentiveApiTest {
     private lateinit var attentiveApi: AttentiveApi
     private lateinit var okHttpClient: OkHttpClient
     private lateinit var json: Json
+    private lateinit var identityProvider: FakeAttentiveIdentityProvider
 
     @Before
     fun setup() {
         okHttpClient = Mockito.mock(OkHttpClient::class.java)
-        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "games"))
+        identityProvider = FakeAttentiveIdentityProvider(userIdentifiers = ALL_USER_IDENTIFIERS)
+        attentiveApi = Mockito.spy(AttentiveApi(okHttpClient, "games", identityProvider))
         json = Json { ignoreUnknownKeys = true }
     }
 
@@ -464,7 +466,7 @@ class AttentiveApiTest {
         val capturedRequests = mutableListOf<CapturedApiRequest>()
         val requestLatch = CountDownLatch(1)
         val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
-        val testApi = AttentiveApi(interceptorClient, "games")
+        val testApi = AttentiveApi(interceptorClient, "games", FakeAttentiveIdentityProvider())
 
         // Act
         testApi.registerPushToken(
@@ -508,7 +510,7 @@ class AttentiveApiTest {
         val capturedRequests = mutableListOf<CapturedApiRequest>()
         val requestLatch = CountDownLatch(1)
         val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
-        val testApi = AttentiveApi(interceptorClient, "games")
+        val testApi = AttentiveApi(interceptorClient, "games", FakeAttentiveIdentityProvider())
 
         val callbackMap = mapOf(
             "attentive_open_action_url" to "https://example.com/deep-link",
@@ -571,7 +573,7 @@ class AttentiveApiTest {
         val capturedRequests = mutableListOf<CapturedApiRequest>()
         val requestLatch = CountDownLatch(1)
         val interceptorClient = buildInterceptorClient(capturedRequests, requestLatch)
-        val testApi = AttentiveApi(interceptorClient, "games")
+        val testApi = AttentiveApi(interceptorClient, "games", FakeAttentiveIdentityProvider())
 
         // Act
         testApi.sendDirectOpenStatus(
