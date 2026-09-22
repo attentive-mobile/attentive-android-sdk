@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
 class AttentiveApiTestIT {
     lateinit var countDownLatch: CountDownLatch
     lateinit var okHttpClient: OkHttpClient
-    lateinit var attentiveApi: AttentiveApi
+    internal lateinit var attentiveApi: AttentiveApi
     lateinit var attentiveApiCallback: AttentiveApiCallback
     val metadataModule =
         SerializersModule {
