@@ -48,7 +48,7 @@ import java.util.Locale
 import com.attentive.androidsdk.internal.network.events.*
 
 
-class AttentiveApi(
+internal class AttentiveApi(
     private var httpClient: OkHttpClient,
     private val domain: String,
     private val identityProvider: AttentiveIdentityProvider,
