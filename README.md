@@ -545,15 +545,18 @@ AttentiveInbox(
 )
 ```
 
-You can also intercept the tap behavior with `onMessageClick`. If you provide a callback, the default (mark-as-read + open deep link) is replaced — call `AttentiveSdk.markRead` and handle the deep link yourself if you want to keep that behavior:
+You can also intercept the tap behavior with `onMessageClick`. Registering a callback stops the SDK marking the tapped message read, so call `AttentiveSdk.markRead` yourself if you want that:
 
 ```kotlin
 AttentiveInbox(
     onMessageClick = { message ->
+        AttentiveSdk.markRead(message.id)
         // your custom navigation here
     },
 )
 ```
+
+Two things a callback does *not* change: click tracking always runs — do **not** call `AttentiveSdk.trackInboxClick` from your handler, or the click is reported twice — and the SDK still opens the message's `actionUrl` itself.
 
 ### Unread badge count
 
