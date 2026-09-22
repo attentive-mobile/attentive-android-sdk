@@ -88,20 +88,6 @@ object AttentiveSdk {
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**
-     * Whether a tap on an inbox message opens its `actionUrl` via `ACTION_VIEW`.
-     *
-     * Independent of everything else a tap does: turning it off leaves click tracking,
-     * mark-as-read and the tap callback untouched, so a host can route navigation itself without
-     * giving up any of them. Read at tap time, so it can be flipped while the inbox is on screen.
-     *
-     * Mirrors `ATTNSDK.automaticallyOpensInboxDeepLinks` on iOS. Note the iOS default is not
-     * stable across versions — 2.0.18-beta.1 ships it on — so a cross-platform host should set
-     * this explicitly on both platforms rather than relying on either default.
-     */
-    @JvmStatic
-    var automaticallyOpensInboxDeepLinks: Boolean = false
-
-    /**
      * Scope for background work started by [initializeInbox]. Retained rather than an
      * anonymous `CoroutineScope(Dispatchers.IO)` so in-flight refreshes are attributable and
      * cancellable — tests cancel its children between cases so a refresh from one test can't
@@ -110,6 +96,9 @@ object AttentiveSdk {
      */
     @VisibleForTesting
     internal val inboxScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    internal val automaticallyOpensInboxDeepLinks: Boolean
+        get() = _config?.automaticallyOpensInboxDeepLinks ?: true
 
     /**
      * Stream of inbox state. Emits a new [InboxState] whenever the messages or unread
