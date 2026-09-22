@@ -524,7 +524,7 @@ and
     AttentiveSdk.optUserOutOfMarketingSubscription(optionalEmail, optionalPhoneNumber)
 ```
 
-#### Passing pixel-tracking consent
+#### Passing pixel-tracking consent (EU only)
 
 France (July 2026) and Italy (October 2026) require brands to let email shoppers opt in or out of
 email open-tracking — the pixels embedded in marketing emails that report when a message is opened.
