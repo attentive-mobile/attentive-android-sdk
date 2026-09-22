@@ -54,11 +54,7 @@ class AttentiveInboxView
         attrs: AttributeSet? = null,
         defStyleAttr: Int = 0,
     ) : AbstractComposeView(context, attrs, defStyleAttr) {
-        /**
-         * Receives a tap on a message row. Set via [setOnMessageClickListener].
-         *
-         * Registering one hands read state to the host — see that method for the full contract.
-         */
+        /** Receives a tap on a message row. Set via [setOnMessageClickListener]. */
         fun interface OnMessageClickListener {
             fun onMessageClick(message: Message)
         }
@@ -220,20 +216,11 @@ class AttentiveInboxView
         // Note: Since we use mutableStateOf, Compose automatically recomposes when these properties change
 
         /**
-         * Sets the listener notified when a message row is tapped.
+         * Sets the listener notified when a message row is tapped, or null to clear it.
          *
-         * **Registering a listener also takes over read state.** The SDK stops marking the tapped
-         * message read, on the assumption that a host with its own tap handling wants to choose
-         * when that happens — call [com.attentive.androidsdk.AttentiveSdk.markRead] yourself, at
-         * whatever moment suits (a detail screen opening, a dwell timer). If you only want to
-         * observe taps, you still need that call.
-         *
-         * Two things a listener does *not* change: click tracking always runs, and deep-link
-         * opening is governed solely by
-         * [com.attentive.androidsdk.AttentiveSdk.automaticallyOpensInboxDeepLinks] — so observing
-         * taps never silently breaks navigation. Turn that flag off to route taps yourself.
-         *
-         * Pass null to hand read state back to the SDK.
+         * Registering one stops the SDK marking tapped messages read — call
+         * [com.attentive.androidsdk.AttentiveSdk.markRead] yourself. Click tracking and
+         * deep-link opening are unaffected.
          */
         fun setOnMessageClickListener(listener: OnMessageClickListener?) {
             messageClickListener = listener
