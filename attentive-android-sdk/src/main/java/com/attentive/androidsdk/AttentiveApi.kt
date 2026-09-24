@@ -999,7 +999,8 @@ private fun sendDirectOpenStatusInternal(
 internal suspend fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
-    pushToken: String?
+    pushToken: String?,
+    trackingConsent: TrackingConsent
 ): Result<Unit> {
     val domain = AttentiveEventTracker.instance.config.domain
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
@@ -1018,6 +1019,7 @@ internal suspend fun sendOptInSubscriptionStatus(
         pushToken = pushToken,
         email = email,
         phone = phoneNumber,
+        trackingConsent = trackingConsent.toWireValue(),
     )
 
     return try {

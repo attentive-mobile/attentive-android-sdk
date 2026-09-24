@@ -475,10 +475,13 @@ object AttentiveSdk {
      *
      * @param email Email address. Optional if [phoneNumber] is provided.
      * @param phoneNumber Phone number in E.164 format. Optional if [email] is provided.
+     * @param trackingConsent The shopper's email open-tracking choice, or
+     *   [TrackingConsent.UNSPECIFIED] if they haven't been asked. See [TrackingConsent].
      */
     suspend fun optUserIntoMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
+        trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
     ): Result<Unit> {
         var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
@@ -496,20 +499,24 @@ object AttentiveSdk {
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        return AttentiveEventTracker.instance.optIn(validEmail, validPhone)
+        return AttentiveEventTracker.instance.optIn(validEmail, validPhone, trackingConsent)
     }
 
     /**
-     * Callback-based variant of [optUserIntoMarketingSubscription] for Java interop.
+     * Callback-based variant of [optUserIntoMarketingSubscription].
      */
     @JvmStatic
     fun optUserIntoMarketingSubscriptionWithCallback(
         email: String = "",
         phoneNumber: String = "",
+        trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
         callback: AttentiveCallback,
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            dispatchResult(optUserIntoMarketingSubscription(email, phoneNumber), callback)
+            dispatchResult(
+                optUserIntoMarketingSubscription(email, phoneNumber, trackingConsent),
+                callback,
+            )
         }
     }
 
@@ -517,6 +524,9 @@ object AttentiveSdk {
      * Unsubscribes the user from Attentive marketing on email and/or SMS. Safe to call
      * repeatedly with the same identifier. At least one of [email] or [phoneNumber] must
      * be provided.
+     *
+     * @param email Email address. Optional if [phoneNumber] is provided.
+     * @param phoneNumber Phone number in E.164 format. Optional if [email] is provided.
      */
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
@@ -542,7 +552,7 @@ object AttentiveSdk {
     }
 
     /**
-     * Callback-based variant of [optUserOutOfMarketingSubscription] for Java interop.
+     * Callback-based variant of [optUserOutOfMarketingSubscription].
      */
     @JvmStatic
     fun optUserOutOfMarketingSubscriptionWithCallback(
