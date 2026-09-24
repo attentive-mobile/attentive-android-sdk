@@ -18,7 +18,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.whenever
 
 /**
- * Wire-contract tests for [TrackingConsent] on the opt-in / opt-out requests.
+ * Wire-contract tests for [TrackingConsent] on the opt-in request.
  *
  * These assert on captured request bytes rather than on the DTO, because the omission rule is a
  * property of the Gson config (no `serializeNulls()`) and isn't visible on the request object.
@@ -111,25 +111,13 @@ class TrackingConsentTest {
     // --- opt-out -----------------------------------------------------------------------------
 
     @Test
-    fun optOut_accepted_sendsTrackingConsentAccepted() {
-        sendOptOut(TrackingConsent.ACCEPTED)
-        assertEquals("ACCEPTED", body().get("trackingConsent").asString)
-    }
-
-    @Test
-    fun optOut_declined_sendsTrackingConsentDeclined() {
-        sendOptOut(TrackingConsent.DECLINED)
-        assertEquals("DECLINED", body().get("trackingConsent").asString)
-    }
-
-    @Test
-    fun optOut_unspecified_omitsTheFieldEntirely() {
-        sendOptOut(TrackingConsent.UNSPECIFIED)
+    fun optOut_neverSendsTrackingConsent() {
+        runBlocking {
+            val result = api.sendOptOutSubscriptionStatus(EMAIL, PHONE, DOMAIN, PUSH_TOKEN)
+            assertTrue("opt-out failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+        }
         val json = body()
-        assertFalse(
-            "UNSPECIFIED must send no trackingConsent key at all, was: $json",
-            json.has("trackingConsent"),
-        )
+        assertFalse("opt-out must not send trackingConsent, was: $json", json.has("trackingConsent"))
     }
 
     // --- enum shape --------------------------------------------------------------------------
@@ -167,12 +155,6 @@ class TrackingConsentTest {
                         trackingConsent = TrackingConsent.ACCEPTED,
                     )
                 },
-                {
-                    AttentiveSdk.optUserOutOfMarketingSubscription(
-                        email = EMAIL,
-                        trackingConsent = TrackingConsent.DECLINED,
-                    )
-                },
                 // Positional, all three.
                 {
                     AttentiveSdk.optUserIntoMarketingSubscription(
@@ -182,11 +164,10 @@ class TrackingConsentTest {
                     )
                 },
             )
-        assertEquals(8, shapes.size)
+        assertEquals(7, shapes.size)
 
         // The callback variants take `callback` last, matching the other *WithCallback methods.
-        // Because it follows a defaulted parameter, a caller that omits the consent has to name
-        // it — the bare positional `(email, phone, callback)` form does not compile.
+        // Because it follows a defaulted parameter, a caller that omits the consent has to name it.
         @Suppress("UNUSED_VARIABLE")
         val callbackShapes: List<() -> Unit> =
             listOf(
@@ -200,14 +181,7 @@ class TrackingConsentTest {
                         NOOP,
                     )
                 },
-                {
-                    AttentiveSdk.optUserOutOfMarketingSubscriptionWithCallback(
-                        EMAIL,
-                        PHONE,
-                        TrackingConsent.DECLINED,
-                        NOOP,
-                    )
-                },
+                { AttentiveSdk.optUserOutOfMarketingSubscriptionWithCallback(EMAIL, PHONE, NOOP) },
             )
         assertEquals(4, callbackShapes.size)
     }
@@ -218,13 +192,6 @@ class TrackingConsentTest {
         runBlocking {
             val result = api.sendOptInSubscriptionStatus(PHONE, EMAIL, PUSH_TOKEN, consent)
             assertTrue("opt-in failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
-        }
-    }
-
-    private fun sendOptOut(consent: TrackingConsent) {
-        runBlocking {
-            val result = api.sendOptOutSubscriptionStatus(EMAIL, PHONE, DOMAIN, PUSH_TOKEN, consent)
-            assertTrue("opt-out failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
         }
     }
 

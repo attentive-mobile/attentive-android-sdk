@@ -527,13 +527,10 @@ object AttentiveSdk {
      *
      * @param email Email address. Optional if [phoneNumber] is provided.
      * @param phoneNumber Phone number in E.164 format. Optional if [email] is provided.
-     * @param trackingConsent The shopper's email open-tracking choice, or
-     *   [TrackingConsent.UNSPECIFIED] if they haven't been asked. See [TrackingConsent].
      */
     suspend fun optUserOutOfMarketingSubscription(
         email: String = "",
         phoneNumber: String = "",
-        trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
     ): Result<Unit> {
         var validPhone = phoneNumber
         if (phoneNumber.isNotBlank() && phoneNumber.isPhoneNumber().not()) {
@@ -551,7 +548,7 @@ object AttentiveSdk {
             return Result.failure(IllegalArgumentException(msg))
         }
 
-        return AttentiveEventTracker.instance.optOut(validEmail, validPhone, trackingConsent)
+        return AttentiveEventTracker.instance.optOut(validEmail, validPhone)
     }
 
     /**
@@ -561,14 +558,10 @@ object AttentiveSdk {
     fun optUserOutOfMarketingSubscriptionWithCallback(
         email: String = "",
         phoneNumber: String = "",
-        trackingConsent: TrackingConsent = TrackingConsent.UNSPECIFIED,
         callback: AttentiveCallback,
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            dispatchResult(
-                optUserOutOfMarketingSubscription(email, phoneNumber, trackingConsent),
-                callback,
-            )
+            dispatchResult(optUserOutOfMarketingSubscription(email, phoneNumber), callback)
         }
     }
 

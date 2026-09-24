@@ -1045,8 +1045,7 @@ internal suspend fun sendOptOutSubscriptionStatus(
     email: String?,
     phoneNumber: String?,
     domain: String,
-    pushToken: String?,
-    trackingConsent: TrackingConsent,
+    pushToken: String?
 ): Result<Unit> {
     val userIdentifiers = AttentiveEventTracker.instance.config.userIdentifiers
     if (userIdentifiers.visitorId.isNullOrEmpty()) {
@@ -1064,7 +1063,6 @@ internal suspend fun sendOptOutSubscriptionStatus(
         pushToken = pushToken,
         email = email,
         phone = phoneNumber,
-        trackingConsent = trackingConsent.toWireValue(),
     )
 
     return try {

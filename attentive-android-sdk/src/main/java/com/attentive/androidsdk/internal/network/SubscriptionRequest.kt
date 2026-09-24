@@ -44,7 +44,4 @@ data class OptOutSubscriptionRequest(
     val email: String?,
     @SerializedName("phone")
     val phone: String?,
-    /** Serialized [com.attentive.androidsdk.TrackingConsent]; null omits the field. */
-    @SerializedName("trackingConsent")
-    val trackingConsent: String? = null,
 )

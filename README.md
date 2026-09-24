@@ -545,8 +545,7 @@ If your app collects that choice, pass it along with the subscription:
 | `DECLINED` | The shopper declined it. |
 | `UNSPECIFIED` | No choice recorded. The default, and what you get if you omit the parameter. |
 
-The same parameter is available on `optUserOutOfMarketingSubscription` and on both
-`...WithCallback` variants.
+The same parameter is available on `optUserIntoMarketingSubscriptionWithCallback`.
 
 - **Your app owns the UI.** The SDK never prompts for this choice and never stores it — it
   forwards the value you pass. This is not App Tracking Transparency and has nothing to do with the

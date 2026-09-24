@@ -4,10 +4,9 @@ package com.attentive.androidsdk
  * A shopper's choice about email open-tracking pixels, for the France and Italy email privacy
  * rules. Unrelated to App Tracking Transparency or the advertising ID.
  *
- * Pass it to [AttentiveSdk.optUserIntoMarketingSubscription] or
- * [AttentiveSdk.optUserOutOfMarketingSubscription] when your app has collected a choice. Your app
- * owns the UI; the SDK neither prompts nor stores. Don't infer a value — if the shopper hasn't
- * been asked, leave it [UNSPECIFIED].
+ * Pass it to [AttentiveSdk.optUserIntoMarketingSubscription] when your app has collected a
+ * choice. Your app owns the UI; the SDK neither prompts nor stores. Don't infer a value — if the
+ * shopper hasn't been asked, leave it [UNSPECIFIED].
  *
  * See the
  * [France email privacy compliance update](https://help.attentive.com/hc/en-us/articles/51464632390804-France-Email-Privacy-Compliance-Update).
