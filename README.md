@@ -556,7 +556,7 @@ AttentiveInbox(
 )
 ```
 
-Two things a callback does *not* change: click tracking always runs — do **not** call `AttentiveSdk.trackInboxClick` from your handler, or the click is reported twice — and the SDK still opens the message's `actionUrl` itself, unless you turn that off (below).
+Registering a callback still reports the click through `AttentiveSdk.trackInboxClick`, which is public only for fully custom inbox UIs.
 
 ### SDK-opened deep links
 
