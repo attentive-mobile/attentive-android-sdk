@@ -556,7 +556,22 @@ AttentiveInbox(
 )
 ```
 
-Two things a callback does *not* change: click tracking always runs — do **not** call `AttentiveSdk.trackInboxClick` from your handler, or the click is reported twice — and the SDK still opens the message's `actionUrl` itself.
+Two things a callback does *not* change: click tracking always runs — do **not** call `AttentiveSdk.trackInboxClick` from your handler, or the click is reported twice — and the SDK still opens the message's `actionUrl` itself, unless you turn that off (below).
+
+### SDK-opened deep links
+
+A tapped message opens its `actionUrl` with no wiring from you. If you navigate from `onMessageClick`, the SDK navigates too and the user sees it twice — so turn the SDK's own navigation off and handle `actionUrl` yourself:
+
+```kotlin
+val attentiveConfig = AttentiveConfig.Builder()
+        .applicationContext(getApplicationContext())
+        .domain("YOUR_ATTENTIVE_DOMAIN")
+        .mode(AttentiveConfig.Mode.PRODUCTION)
+        .automaticallyOpensInboxDeepLinks(false)
+        .build()
+```
+
+Click tracking and `onMessageClick` are unaffected either way; only the SDK-initiated navigation stops. iOS exposes the same flag under the same name, so set it on both platforms if you route taps yourself.
 
 ### Unread badge count
 
