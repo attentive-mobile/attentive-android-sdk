@@ -571,7 +571,7 @@ val attentiveConfig = AttentiveConfig.Builder()
         .build()
 ```
 
-Click tracking and `onMessageClick` are unaffected either way; only the SDK-initiated navigation stops. iOS exposes the same flag under the same name, so set it on both platforms if you route taps yourself.
+Click tracking and `onMessageClick` are unaffected either way; only the SDK-initiated navigation stops.
 
 ### Unread badge count
 
