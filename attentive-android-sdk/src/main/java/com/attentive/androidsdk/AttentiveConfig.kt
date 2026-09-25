@@ -292,12 +292,6 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 this._pushEnabled = enabled
             }
 
-        /**
-         * Whether a tapped inbox message opens its `actionUrl` via `ACTION_VIEW`. Defaults to
-         * `true`. Independent of everything else a tap does: turning it off leaves click
-         * tracking, mark-as-read and `onMessageClick` untouched, so a host can route navigation
-         * itself without losing them.
-         */
         fun automaticallyOpensInboxDeepLinks(enabled: Boolean) =
             apply {
                 this._automaticallyOpensInboxDeepLinks = enabled
