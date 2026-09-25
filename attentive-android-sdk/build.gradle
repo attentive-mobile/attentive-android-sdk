@@ -21,6 +21,17 @@ android {
     defaultConfig {
         minSdk libs.versions.minSdk.get().toInteger()
 
+        // Consumers only need compileSdk 35 to build against this AAR. Left unset, AGP 9
+        // derives the floor from our own compileSdk (37) and stamps minCompileSdk=37, which
+        // fails checkDebugAarMetadata in every host app on a lower compileSdk. No AGP flag
+        // bypasses that check, so the app cannot opt out: it must raise compileSdk to 37,
+        // which in turn requires AGP >= 8.10.1 and Kotlin >= 2.1.20. For a React Native host
+        // that means RN >= 0.81 (the RN template still defaults to compileSdk 36 through
+        // 0.83), so a 37 floor silently drops every RN app below that.
+        aarMetadata {
+            minCompileSdk = 35
+        }
+
         buildConfigField "String", "VERSION_NAME", "\"$versionName\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -46,6 +57,16 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+
+        // Stamp class metadata as 2.0.0 instead of 2.2.0. A Kotlin compiler reads its own
+        // metadata version or one minor ahead, so an artifact built by 2.2.10 is unreadable
+        // to the 2.0.x compilers that React Native 0.77-0.80 pin: consumers get "Module was
+        // compiled with an incompatible version of Kotlin. The binary version of its metadata
+        // is 2.2.0, expected version is 2.0.0" and have to add -Xskip-metadata-version-check
+        // to their own app module. Our sources compile clean at language level 2.0; the cost
+        // is that we cannot use 2.1/2.2 language features until consumers move up.
+        languageVersion = "2.0"
+        apiVersion = "2.0"
     }
 
     lint {
@@ -103,6 +124,12 @@ android {
         }
     }
 }
+
+// Attach kotlin-stdlib 2.0.21 rather than the 2.2.10 that KGP would pull in to match the
+// compiler. The stdlib is a compile-scope dependency of this module, so its own 2.2.0 metadata
+// lands on consumers' compile classpath and trips the same check as above even when our own
+// classes are readable.
+kotlin { coreLibrariesVersion = "2.0.21" }
 
 dependencies {
     // Lint checks bundled with the SDK
