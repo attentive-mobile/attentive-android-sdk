@@ -131,7 +131,9 @@ class SettingsViewModel : ViewModel() {
             putString(ATTENTIVE_ENDPOINT_PREFS, newApiVersion.name)
         }
 
-        // Update the runtime config so it takes effect immediately
+        // Update the runtime config so it takes effect immediately. Bonni is the debug tooling
+        // this deprecated hook exists for, so the warning is expected here.
+        @Suppress("DEPRECATION")
         AttentiveEventTracker.instance.config.changeApiVersion(newApiVersion)
 
         val endPointString =

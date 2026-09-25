@@ -114,9 +114,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         }
     }
 
-    /**
-     * Changes the event-API version at runtime. Debug/testing use only.
-     */
+    @Deprecated(
+        "The event-API version is an SDK implementation detail and will stop being " +
+            "selectable in a future major version. Pin it at construction time with " +
+            "AttentiveConfig.Builder.apiVersion(...) if you still need to.",
+    )
     fun changeApiVersion(apiVersion: ApiVersion) {
         Timber.d("Changing API version from ${this@AttentiveConfig.apiVersion} to $apiVersion")
         this@AttentiveConfig.apiVersion = apiVersion

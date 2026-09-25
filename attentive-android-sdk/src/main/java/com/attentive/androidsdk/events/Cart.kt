@@ -1,12 +1,15 @@
 package com.attentive.androidsdk.events
 
-import com.attentive.androidsdk.ParameterValidation
 import kotlinx.serialization.Serializable
 
 /**
  * Cart state associated with a [PurchaseEvent].
  *
- * @property cartId Your canonical cart identifier. Required, non-empty.
+ * Every field is optional, matching `ATTNCart` on iOS and the `Cart` schema the events backend
+ * accepts (which declares no required properties). A cart with no ID still carries useful
+ * coupon/total/discount context, so an omitted [cartId] is passed through rather than rejected.
+ *
+ * @property cartId Your canonical cart identifier, if you have one.
  * @property cartCoupon A promotion code applied to the cart, if any.
  * @property cartTotal The cart total as a string (e.g. "42.00"). When null on v2 events,
  * the SDK computes a fallback from the item prices.
@@ -14,23 +17,19 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class Cart(
-    val cartId: String,
+    val cartId: String? = null,
     val cartCoupon: String? = null,
     val cartTotal: String? = null,
     val cartDiscount: String? = null,
 ) {
-    init {
-        ParameterValidation.verifyNotEmpty(cartId, "cartId")
-    }
-
     @Serializable
     class Builder {
-        lateinit var cartId: String
+        var cartId: String? = null
         private var cartCoupon: String? = null
         private var cartTotal: String? = null
         private var cartDiscount: String? = null
 
-        fun cartId(id: String): Builder {
+        fun cartId(id: String?): Builder {
             cartId = id
             return this
         }
@@ -50,9 +49,6 @@ data class Cart(
             return this
         }
 
-        /**
-         * @throws UninitializedPropertyAccessException if [cartId] was not set.
-         */
         fun build(): Cart {
             return Cart(
                 cartId = cartId,
