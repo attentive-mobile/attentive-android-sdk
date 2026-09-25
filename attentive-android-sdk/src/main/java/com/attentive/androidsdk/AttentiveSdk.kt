@@ -97,6 +97,9 @@ object AttentiveSdk {
     @VisibleForTesting
     internal val inboxScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    internal val automaticallyOpensInboxDeepLinks: Boolean
+        get() = _config?.automaticallyOpensInboxDeepLinks ?: true
+
     /**
      * Stream of inbox state. Emits a new [InboxState] whenever the messages or unread
      * count change.

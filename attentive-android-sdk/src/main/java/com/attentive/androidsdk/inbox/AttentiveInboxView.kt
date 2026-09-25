@@ -54,6 +54,11 @@ class AttentiveInboxView
         attrs: AttributeSet? = null,
         defStyleAttr: Int = 0,
     ) : AbstractComposeView(context, attrs, defStyleAttr) {
+        /** Receives a tap on a message row. Set via [setOnMessageClickListener]. */
+        fun interface OnMessageClickListener {
+            fun onMessageClick(message: Message)
+        }
+
         // Color properties - loaded from resources in init block
         // Using mutableStateOf so Compose automatically recomposes when these change
         private var backgroundColor by mutableStateOf(Color.Unspecified)
@@ -67,6 +72,8 @@ class AttentiveInboxView
         private var titleFontFamily by mutableStateOf<FontFamily?>(null)
         private var bodyFontFamily by mutableStateOf<FontFamily?>(null)
         private var timestampFontFamily by mutableStateOf<FontFamily?>(null)
+
+        private var messageClickListener by mutableStateOf<OnMessageClickListener?>(null)
 
         init {
             backgroundColor = Color(ContextCompat.getColor(context, R.color.attentive_inbox_background))
@@ -198,11 +205,26 @@ class AttentiveInboxView
                 titleFontFamily = titleFontFamily,
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
+                onMessageClick =
+                    messageClickListener?.let { listener ->
+                        { message: Message -> listener.onMessageClick(message) }
+                    },
             )
         }
 
         // Public setters for programmatic customization
         // Note: Since we use mutableStateOf, Compose automatically recomposes when these properties change
+
+        /**
+         * Sets the listener notified when a message row is tapped, or null to clear it.
+         *
+         * Registering one stops the SDK marking tapped messages read — call
+         * [com.attentive.androidsdk.AttentiveSdk.markRead] yourself. Click tracking and
+         * deep-link opening are unaffected.
+         */
+        fun setOnMessageClickListener(listener: OnMessageClickListener?) {
+            messageClickListener = listener
+        }
 
         /**
          * Sets the background color of the inbox

@@ -3,7 +3,6 @@
 package com.attentive.androidsdk.inbox
 
 import android.content.Intent
-import android.net.Uri
 import androidx.annotation.RestrictTo
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -74,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -173,7 +173,7 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param titleFontFamily Font family for message titles (null uses system default)
  * @param bodyFontFamily Font family for message body text (null uses system default)
  * @param timestampFontFamily Font family for timestamps (null uses system default)
- * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
+ * @param onMessageClick Callback invoked when a message is clicked (does not mark as read)
  */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -307,20 +307,31 @@ fun AttentiveInbox(
                 titleFontFamily = titleFontFamily,
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
-                onMessageClick =
-                    onMessageClick ?: { message: Message ->
-                        if (!message.isRead) {
-                            AttentiveSdk.markRead(message.id)
-                        }
+                onMessageClick = { message: Message ->
+                    val url = message.actionUrl?.takeIf { it.isNotBlank() }
 
-                        // Handle deep link if actionUrl is present
-                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                            AttentiveSdk.trackInboxClick(message.id, url)
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            context.startActivity(intent)
+                    if (url != null) {
+                        AttentiveSdk.trackInboxClick(message.id, url)
+                    }
+
+                    onMessageClick?.invoke(message)
+
+                    if (onMessageClick == null && !message.isRead) {
+                        AttentiveSdk.markRead(message.id)
+                    }
+
+                    if (AttentiveSdk.automaticallyOpensInboxDeepLinks && url != null) {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        } catch (e: Exception) {
+                            Timber.e(
+                                "Error opening the inbox action URL '%s'. Error message: '%s'",
+                                url,
+                                e.message,
+                            )
                         }
-                        Unit
-                    },
+                    }
+                },
             )
         }
     }
