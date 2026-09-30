@@ -16,6 +16,8 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
+import org.mockito.Mockito.after
+import org.mockito.Mockito.timeout
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -155,10 +157,8 @@ class AppLaunchTrackerTest {
     fun `normal launch sends APP_LAUNCHED event`() {
         activityCallback.onActivityResumed(createMockActivity(false))
 
-        Thread.sleep(500)
-
         runBlocking {
-            verify(mockEventTracker).sendAppLaunchEvent(
+            verify(mockEventTracker, timeout(VERIFY_TIMEOUT_MS)).sendAppLaunchEvent(
                 eq(AttentiveApi.LaunchType.APP_LAUNCHED),
                 any()
             )
@@ -169,10 +169,8 @@ class AppLaunchTrackerTest {
     fun `notification launch sends DIRECT_OPEN event`() {
         activityCallback.onActivityResumed(createMockActivity(true))
 
-        Thread.sleep(500)
-
         runBlocking {
-            verify(mockEventTracker).sendAppLaunchEvent(
+            verify(mockEventTracker, timeout(VERIFY_TIMEOUT_MS)).sendAppLaunchEvent(
                 eq(AttentiveApi.LaunchType.DIRECT_OPEN),
                 any()
             )
@@ -183,15 +181,19 @@ class AppLaunchTrackerTest {
     fun `duplicate resume sends only one event`() {
         activityCallback.onActivityResumed(createMockActivity(false))
 
-        Thread.sleep(500)
+        runBlocking {
+            verify(mockEventTracker, timeout(VERIFY_TIMEOUT_MS)).sendAppLaunchEvent(any(), any())
+        }
 
         // Second resume should be blocked by guard
         activityCallback.onActivityResumed(createMockActivity(false))
 
-        Thread.sleep(500)
-
         runBlocking {
-            verify(mockEventTracker, Mockito.times(1)).sendAppLaunchEvent(any(), any())
+            verify(mockEventTracker, after(500).times(1)).sendAppLaunchEvent(any(), any())
         }
+    }
+
+    private companion object {
+        const val VERIFY_TIMEOUT_MS = 5_000L
     }
 }
