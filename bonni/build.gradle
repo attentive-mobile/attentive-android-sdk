@@ -101,6 +101,7 @@ dependencies {
 
     // Google
     implementation(libs.engage.core)
+    implementation(libs.mlkit.genai.prompt)
     implementation(libs.accompanist.permissions)
     implementation(libs.gson)
 

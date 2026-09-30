@@ -2,24 +2,44 @@ package com.attentive.bonni.inbox
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.navigation.NavHostController
+import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.inbox.AttentiveInbox
 import com.attentive.bonni.R
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.ui.theme.BonniPink
+import kotlinx.coroutines.launch
 
 @Composable
 fun InboxScreen(navHostController: NavHostController) {
+    val inboxState by AttentiveSdk.inboxState.collectAsState()
+    val fontFamily = FontFamily(Font(R.font.degulardisplay_regular))
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
     Column(modifier = Modifier.fillMaxSize()) {
         SimpleToolbar(
             title = "Inbox",
             navController = navHostController,
+        )
+
+        InboxSummary(
+            messages = inboxState.messages,
+            fontFamily = fontFamily,
+            onMessageClick = { message ->
+                val index = inboxState.messages.indexOfFirst { it.id == message.id }
+                if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
+            },
         )
 
         AttentiveInbox(
@@ -32,6 +52,7 @@ fun InboxScreen(navHostController: NavHostController) {
             titleFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             bodyFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
             timestampFontFamily = FontFamily(Font(R.font.degulardisplay_regular)),
+            listState = listState,
         )
     }
 }

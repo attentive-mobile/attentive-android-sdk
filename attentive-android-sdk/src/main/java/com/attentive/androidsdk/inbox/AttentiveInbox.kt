@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -173,6 +174,7 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param bodyFontFamily Font family for message body text (null uses system default)
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
+ * @param listState Scroll state of the message list, for hosts that scroll it programmatically
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,6 +190,7 @@ fun AttentiveInbox(
     bodyFontFamily: FontFamily? = null,
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     // Initialize during composition, ahead of the collector below, so this composable
     // learns whether *it* performed first-time setup. If it did, that setup already
@@ -196,7 +199,6 @@ fun AttentiveInbox(
     val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
-    val listState = rememberLazyListState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     val refreshScope = rememberCoroutineScope()
