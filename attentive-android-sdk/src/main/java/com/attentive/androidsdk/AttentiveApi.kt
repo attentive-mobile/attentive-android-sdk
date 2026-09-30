@@ -1003,7 +1003,8 @@ private fun sendDirectOpenStatusInternal(
 internal suspend fun sendOptInSubscriptionStatus(
     phoneNumber: String? = "",
     email: String? = "",
-    pushToken: String?
+    pushToken: String?,
+    trackingConsent: TrackingConsent
 ): Result<Unit> {
     val domain = identityProvider.domain
     val userIdentifiers = identityProvider.userIdentifiers
@@ -1022,6 +1023,7 @@ internal suspend fun sendOptInSubscriptionStatus(
         pushToken = pushToken,
         email = email,
         phone = phoneNumber,
+        trackingConsent = trackingConsent.toWireValue(),
     )
 
     return try {

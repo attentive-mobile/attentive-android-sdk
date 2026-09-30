@@ -37,7 +37,7 @@ class AttentiveApiIdentityProviderTest {
             )
 
         // Act
-        val result = runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token") }
+        val result = runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token", TrackingConsent.UNSPECIFIED) }
 
         // Assert
         Assert.assertTrue(result.isSuccess)
@@ -90,7 +90,7 @@ class AttentiveApiIdentityProviderTest {
 
         // Act
         identityProvider.domain = "after"
-        runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token") }
+        runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token", TrackingConsent.UNSPECIFIED) }
 
         // Assert
         val body = JsonParser.parseString(capturedRequests.single().bodyJson).asJsonObject
@@ -109,7 +109,7 @@ class AttentiveApiIdentityProviderTest {
             )
 
         // Act
-        val result = runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token") }
+        val result = runBlocking { api.sendOptInSubscriptionStatus("+15556667777", "a@b.com", "token", TrackingConsent.UNSPECIFIED) }
 
         // Assert
         Assert.assertTrue(result.isFailure)
