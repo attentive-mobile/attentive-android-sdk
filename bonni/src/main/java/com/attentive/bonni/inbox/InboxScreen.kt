@@ -1,9 +1,5 @@
-@file:Suppress("DEPRECATION")
-@file:SuppressLint("RestrictedApi")
-
 package com.attentive.bonni.inbox
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
