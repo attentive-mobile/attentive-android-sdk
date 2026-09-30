@@ -1,9 +1,5 @@
-@file:Suppress("DEPRECATION")
-@file:SuppressLint("RestrictedApi")
-
 package com.attentive.bonni.inbox
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -22,7 +18,6 @@ import com.attentive.bonni.ui.theme.BonniPink
  *
  * This shows how the legacy View implementation works in a Compose context.
  */
-@Suppress("DEPRECATION")
 @Composable
 fun LegacyInboxScreen(navHostController: NavHostController) {
     Column(modifier = Modifier.fillMaxSize()) {

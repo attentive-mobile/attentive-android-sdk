@@ -4,7 +4,6 @@ package com.attentive.androidsdk.inbox
 
 import android.content.Intent
 import android.net.Uri
-import androidx.annotation.RestrictTo
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -175,12 +174,6 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
  */
-@Suppress("DEPRECATION")
-@Deprecated(
-    message = "Inbox is not yet available for public use.",
-    level = DeprecationLevel.WARNING,
-)
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttentiveInbox(
@@ -196,11 +189,10 @@ fun AttentiveInbox(
     timestampFontFamily: FontFamily? = null,
     onMessageClick: ((Message) -> Unit)? = null,
 ) {
-    // initializeInbox returns true only on the very first call across the app's
-    // lifetime — in that case it already kicked off the initial fetch, so we
-    // must not fire another on the first ON_RESUME (which would double-request
-    // on cold launch). Anchor a remember to keep this flag stable across
-    // recompositions.
+    // Initialize during composition, ahead of the collector below, so this composable
+    // learns whether *it* performed first-time setup. If it did, that setup already
+    // fetched, so the first ON_RESUME refresh is skipped to avoid double-requesting on
+    // cold launch. remember keeps the flag stable across recompositions.
     val didFirstTimeInit = remember { AttentiveSdk.initializeInbox() }
     val context = LocalContext.current
     val inboxState by AttentiveSdk.inboxState.collectAsState()
@@ -369,7 +361,6 @@ private fun EmptyInboxView(
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 private fun MessageList(
     messages: List<Message>,
@@ -657,7 +648,6 @@ private fun SwipeToAction(
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 private fun MessageItem(
     message: Message,
@@ -720,7 +710,6 @@ private fun MessageItem(
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 private fun SmallMessageContent(
     message: Message,
@@ -811,7 +800,6 @@ private fun SmallMessageContent(
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 private fun LargeMessageContent(
     message: Message,

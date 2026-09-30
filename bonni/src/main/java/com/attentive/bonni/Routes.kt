@@ -6,7 +6,6 @@ enum class Routes() {
     PushPermissionScreen,
     CartScreen,
     ShippingScreen,
-    DebugScreen,
     PaymentScreen,
     ThankYouScreen,
     SettingsScreen,

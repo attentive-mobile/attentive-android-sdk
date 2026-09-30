@@ -1,10 +1,7 @@
-@file:Suppress("DEPRECATION")
-
 package com.attentive.androidsdk.inbox
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.annotation.RestrictTo
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,12 +46,6 @@ import com.attentive.androidsdk.R
  * @param attrs Optional AttributeSet for XML attributes
  * @param defStyleAttr Optional default style attribute
  */
-@Suppress("DEPRECATION")
-@Deprecated(
-    message = "Inbox is not yet available for public use.",
-    level = DeprecationLevel.WARNING,
-)
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class AttentiveInboxView
     @JvmOverloads
     constructor(

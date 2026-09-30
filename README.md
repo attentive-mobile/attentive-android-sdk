@@ -373,18 +373,14 @@ creative.destroy()
 __*** NOTE 1: You must call the destroy method when the creative is no longer in use to properly clean up the WebView and it's resources.***__
 __*** NOTE 2: Starting from Build.VERSION_CODES.Q this will be called on the destroy lifecycle callback of the activity if the activity is provided to automatically clear up resources and avoid memory leaks.***__
 
-#### 4. Skip Fatigue on Creative
+#### 4. Fatigue Rules
 
-For debugging purposes, you can skip fatigue rule evaluation to show your creative every time. Default value is `false`.
+Fatigue rules are evaluated by the Attentive backend.
+`AttentiveConfig.Builder.skipFatigueOnCreatives()` is deprecated, has no effect, and will be
+removed in a future major version.
 
-```kotlin
-val attentiveConfig = AttentiveConfig.Builder()
-    .applicationContext(getApplicationContext())
-    .domain("YOUR_ATTENTIVE_DOMAIN")
-    .mode(AttentiveConfig.Mode.DEBUG)
-    .skipFatigueOnCreatives(true)
-    .build()
-```
+To force a specific creative to display while debugging, trigger it by creative ID as shown in
+[Trigger a Specific Creative](#trigger-a-specific-creative) above. This will ignore all fatigue rules evaluated by the Attentive backend.
 
 ## Step 4 (optional) - Integrate With Push
 
@@ -498,6 +494,112 @@ override fun onNewIntent(intent: Intent?) {
 ```
 
 Without this, the SDK cannot detect notification taps when the app is brought from background, because `singleTask` activities receive new intents via `onNewIntent()` rather than being recreated.
+
+## Step 5 (optional) - Inbox
+
+The SDK ships an in-app message inbox — a Jetpack Compose component (`AttentiveInbox`) that displays messages sent to the user, backed by a `StateFlow` you can also observe directly for things like a badge count on your tab bar.
+
+The inbox lazily initializes the first time it is used, fetches the first page of messages in the background, and refreshes automatically when the containing screen resumes. Rendering the `AttentiveInbox` composable or collecting `AttentiveSdk.inboxState` opts you in automatically; callers that never collect the flow can opt in explicitly with `AttentiveSdk.startInbox()`.
+
+### Show the inbox UI
+
+Drop the composable anywhere in your Compose hierarchy — it observes SDK state internally and requires no wiring:
+
+```kotlin
+import com.attentive.androidsdk.inbox.AttentiveInbox
+
+@Composable
+fun InboxScreen() {
+    AttentiveInbox(
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+```
+
+Features:
+
+- Message list with title, body, timestamp, and optional image (static or animated GIF)
+- Unread indicator dot on unread rows
+- Pull-to-refresh
+- Swipe left to mark a message unread, swipe right to delete
+- Tap to mark read and follow the message's deep link
+- Infinite scroll pagination
+- Empty state when there are no messages
+
+### Customize the appearance
+
+All colors and fonts are overridable via composable parameters. Any parameter you leave unset falls back to the SDK's default color resources (see `attentive_inbox_*` in the SDK's `colors.xml`).
+
+```kotlin
+AttentiveInbox(
+    modifier = Modifier.fillMaxSize(),
+    backgroundColor = Color.White,
+    unreadIndicatorColor = Color(0xFF1E88E5),
+    titleTextColor = Color.Black,
+    bodyTextColor = Color(0xFF666666),
+    timestampTextColor = Color(0xFF999999),
+    swipeBackgroundColor = Color(0xFFFFC5B9),
+    titleFontFamily = FontFamily.SansSerif,
+    bodyFontFamily = FontFamily.SansSerif,
+    timestampFontFamily = FontFamily.SansSerif,
+)
+```
+
+You can also intercept the tap behavior with `onMessageClick`. If you provide a callback, the default (mark-as-read + open deep link) is replaced — call `AttentiveSdk.markRead` and handle the deep link yourself if you want to keep that behavior:
+
+```kotlin
+AttentiveInbox(
+    onMessageClick = { message ->
+        // your custom navigation here
+    },
+)
+```
+
+### Unread badge count
+
+Observe `AttentiveSdk.inboxState` to drive a badge in your tab bar or navigation:
+
+```kotlin
+@Composable
+fun InboxTabBadge() {
+    val state by AttentiveSdk.inboxState.collectAsState()
+    if (state.unreadCount > 0) {
+        Badge { Text(state.unreadCount.toString()) }
+    }
+}
+```
+
+Collecting `inboxState` is what opts the app in to the inbox, so the snippet above needs no other setup: the first collector kicks off initialization and the badge updates when the first page lands.
+
+Outside Compose, collect the flow from any coroutine scope:
+
+```kotlin
+scope.launch {
+    AttentiveSdk.inboxState.collect { state ->
+        updateBadge(state.unreadCount)
+    }
+}
+```
+
+Reading `AttentiveSdk.inboxState.value` gives you a synchronous snapshot, but — unlike collecting — it does not trigger initialization, so on a cold start it returns an empty state. If you only ever read `value`, call `AttentiveSdk.startInbox()` once during setup so the inbox is populated.
+
+### Programmatic actions
+
+If you build a custom inbox UI, you can drive it with the same actions the built-in composable uses:
+
+```kotlin
+AttentiveSdk.markRead(messageId)
+AttentiveSdk.markUnread(messageId)
+AttentiveSdk.deleteMessage(messageId)
+AttentiveSdk.trackInboxClick(messageId, actionUrl)   // report a click on a message link
+AttentiveSdk.loadMoreInboxMessages()                 // fetch the next page
+```
+
+Each of these updates `inboxState` immediately (optimistic) and syncs to the Attentive backend in the background.
+
+### Behavior on logout
+
+`AttentiveSdk.clearUser()` and `AttentiveSdk.updateUser()` clear the inbox so that the previous user's messages don't leak into the next session. Any inbox network requests already in flight are ignored on completion.
 
 ## Other functionality
 

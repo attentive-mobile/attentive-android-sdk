@@ -1,6 +1,5 @@
 package com.attentive.androidsdk.inbox
 
-import androidx.annotation.RestrictTo
 import kotlinx.serialization.Serializable
 
 /**

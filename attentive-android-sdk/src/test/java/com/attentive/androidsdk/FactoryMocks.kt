@@ -8,13 +8,15 @@ import okhttp3.OkHttpClient
 import org.mockito.MockedStatic
 import org.mockito.Mockito
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 
 class FactoryMocks private constructor(
     private val classFactoryMockedStatic: MockedStatic<ClassFactory>,
     val persistentStorage: PersistentStorage,
     val visitorService: VisitorService,
     val okHttpClient: OkHttpClient,
-    val attentiveApi: AttentiveApi,
+    // `internal` because AttentiveApi is internal — a public property cannot expose it.
+    internal val attentiveApi: AttentiveApi,
 ) : AutoCloseable {
     override fun close() {
         classFactoryMockedStatic.close()
@@ -49,12 +51,16 @@ class FactoryMocks private constructor(
                 buildOkHttpClient(
                     any(),
                     any(),
-                    any(),
+                    // anyOrNull, not any: the context parameter is nullable and callers
+                    // that opt out of the offline request buffer pass null explicitly,
+                    // which any() would not match.
+                    anyOrNull(),
                 )
             }.thenReturn(okHttpClient)
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
+                    any(),
                     any(),
                     any(),
                 )

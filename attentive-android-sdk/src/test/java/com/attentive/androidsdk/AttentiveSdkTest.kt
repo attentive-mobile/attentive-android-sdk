@@ -18,7 +18,10 @@ import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import com.attentive.androidsdk.internal.network.TrackClickRequest
 import com.attentive.androidsdk.internal.network.UnreadCountRequest
 import com.attentive.androidsdk.internal.network.UnreadCountResponse
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import retrofit2.Response
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.push.TokenProvider
@@ -27,7 +30,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -107,6 +112,15 @@ class AttentiveSdkTest {
 
     @After
     fun tearDown() {
+        // Cancel before tearing down state. initializeInbox() launches a fire-and-forget
+        // refreshInbox() that captures the mocked inboxApi; if it lands after the mocks close
+        // it mutates _inboxState during the next test's setUp and makes assertions
+        // order-dependently flaky. Cancel the scope's children (not the SupervisorJob itself,
+        // which has to survive for the remaining tests) and join so nothing is in flight.
+        val inboxJob = AttentiveSdk.inboxScope.coroutineContext[Job]!!
+        inboxJob.cancelChildren()
+        runBlocking { inboxJob.children.toList().forEach { it.join() } }
+
         storedValues.clear()
         factoryMocks.close()
         mockedAppInfo?.close()
@@ -578,6 +592,53 @@ class AttentiveSdkTest {
         runBlocking {
             verify(factoryMocks.attentiveApi, never()).sendUserUpdate(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    private fun getInboxApi(): RetrofitInboxApiService? {
+        val field = AttentiveSdk::class.java.getDeclaredField("inboxApi")
+        field.isAccessible = true
+        return field.get(AttentiveSdk) as RetrofitInboxApiService?
+    }
+
+    @Test
+    fun inboxState_collect_optsInToInbox() {
+        assertNull("inbox should start uninitialized", getInboxApi())
+
+        // first() suspends until the current value is emitted, which only happens after
+        // the collector has triggered lazy initialization.
+        runBlocking { AttentiveSdk.inboxState.first() }
+
+        assertNotNull("collecting inboxState should initialize the inbox", getInboxApi())
+    }
+
+    @Test
+    fun inboxState_valueRead_doesNotOptInToInbox() {
+        assertNull(getInboxApi())
+
+        AttentiveSdk.inboxState.value
+
+        // Reading .value must stay a pure snapshot — non-collecting callers (Java,
+        // bridge layers) opt in via startInbox() instead.
+        assertNull("reading .value should not initialize the inbox", getInboxApi())
+    }
+
+    @Test
+    fun startInbox_optsInToInbox() {
+        assertNull(getInboxApi())
+
+        AttentiveSdk.startInbox()
+
+        assertNotNull("startInbox should initialize the inbox", getInboxApi())
+    }
+
+    @Test
+    fun startInbox_isIdempotent() {
+        AttentiveSdk.startInbox()
+        val firstApi = getInboxApi()
+
+        AttentiveSdk.startInbox()
+
+        assertSame("repeat startInbox should not rebuild the client", firstApi, getInboxApi())
     }
 
     @Test
