@@ -299,6 +299,7 @@ jobs:
       - run:
           name: Inspect each token (read-only)
           command: |
+            set +e +o pipefail
             REPO=attentive-mobile/attentive-android-sdk
             for name in $(compgen -v); do
               val="${!name-}"
