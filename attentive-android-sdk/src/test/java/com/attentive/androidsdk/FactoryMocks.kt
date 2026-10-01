@@ -15,7 +15,8 @@ class FactoryMocks private constructor(
     val persistentStorage: PersistentStorage,
     val visitorService: VisitorService,
     val okHttpClient: OkHttpClient,
-    val attentiveApi: AttentiveApi,
+    // `internal` because AttentiveApi is internal — a public property cannot expose it.
+    internal val attentiveApi: AttentiveApi,
 ) : AutoCloseable {
     override fun close() {
         classFactoryMockedStatic.close()
@@ -59,6 +60,7 @@ class FactoryMocks private constructor(
             val attentiveApi = Mockito.mock(AttentiveApi::class.java)
             classFactoryMockedStatic.`when`<Any> {
                 buildAttentiveApi(
+                    any(),
                     any(),
                     any(),
                 )

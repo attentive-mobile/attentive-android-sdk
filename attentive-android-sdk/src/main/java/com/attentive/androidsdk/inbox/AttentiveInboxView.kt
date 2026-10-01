@@ -2,7 +2,6 @@ package com.attentive.androidsdk.inbox
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.annotation.RestrictTo
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue

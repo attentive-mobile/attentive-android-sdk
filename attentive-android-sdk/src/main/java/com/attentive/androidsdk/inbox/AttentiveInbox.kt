@@ -3,7 +3,6 @@
 package com.attentive.androidsdk.inbox
 
 import android.content.Intent
-import androidx.annotation.RestrictTo
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -175,7 +174,6 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param timestampFontFamily Font family for timestamps (null uses system default)
  * @param onMessageClick Callback invoked when a message is clicked (does not mark as read)
  */
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttentiveInbox(
