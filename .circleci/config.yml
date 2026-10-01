@@ -382,13 +382,15 @@ jobs:
               --target "$(git rev-parse HEAD)" \
               --title "$RELEASE_VERSION" \
               --generate-notes
+            # Cleanup below only deletes a draft this run created, never one kept for recovery.
+            echo "export DRAFT_CREATED=true" >> "$BASH_ENV"
       - when:
           condition: << pipeline.parameters.release_dry_run >>
           steps:
             - run:
                 name: Dry run - delete the draft and stop
                 command: |
-                  if [ "$IS_BETA" != "true" ]; then
+                  if [ "${DRAFT_CREATED:-}" = "true" ]; then
                     gh release delete "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --yes
                   fi
                   echo "Dry run complete: token can write releases. Nothing was published."
@@ -457,11 +459,8 @@ jobs:
           when: on_fail
           command: |
             # Once Maven Central has the artifact, keep the draft so it can be published by hand.
-            [ -n "${RELEASE_VERSION:-}" ] && [ "${MAVEN_PUBLISHED:-}" != "true" ] || exit 0
-            IS_DRAFT=$(gh release view "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --json isDraft --jq .isDraft 2>/dev/null || true)
-            if [ "$IS_DRAFT" = "true" ]; then
-              gh release delete "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --yes
-            fi
+            [ "${DRAFT_CREATED:-}" = "true" ] && [ "${MAVEN_PUBLISHED:-}" != "true" ] || exit 0
+            gh release delete "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --yes
       - notify-slack-on-failure
 
 workflows:
