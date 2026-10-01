@@ -275,6 +275,46 @@ jobs:
           destination: bonni-apk
       - notify-slack-on-failure
 
+  # TEMPORARY (MSDK-532): read-only token diagnostic. Remove before merging.
+  release-token-debug:
+    executor: android-executor
+    steps:
+      - checkout
+      - run:
+          name: Tokens before the App token step
+          command: |
+            for name in $(compgen -v); do
+              val="${!name-}"
+              case "$val" in
+                ghs_*|ghp_*|gho_*|ghu_*|github_pat_*)
+                  echo "  $name = ${val%%_*}_… sha256:$(printf %s "$val" | sha256sum | cut -c1-12)" ;;
+              esac
+            done
+      - attentive/app-based-github-token:
+          github_app_client_id: ${GITHUB_APP_CLIENT_ID}
+          github_app_private_key_base64: ${GITHUB_APP_PRIVATE_KEY_BASE64}
+          github_app_installation_id: ${GITHUB_APP_INSTALLATION_ID}
+      - github-cli/install:
+          version: "2.97.0"
+      - run:
+          name: Inspect each token (read-only)
+          command: |
+            REPO=attentive-mobile/attentive-android-sdk
+            for name in $(compgen -v); do
+              val="${!name-}"
+              case "$val" in
+                ghs_*|ghp_*|gho_*|ghu_*|github_pat_*) ;;
+                *) continue ;;
+              esac
+              echo "=== $name = ${val%%_*}_… sha256:$(printf %s "$val" | sha256sum | cut -c1-12)"
+              echo "repo .permissions:"
+              GH_TOKEN="$val" gh api "repos/$REPO" --jq '.permissions' 2>&1 | sed 's/^/    /'
+              echo "installation repositories (App tokens only):"
+              GH_TOKEN="$val" gh api /installation/repositories --jq '"    total=\(.total_count) includes_repo=\([.repositories[].full_name] | index("'"$REPO"'") != null)"' 2>&1 | sed 's/^/    /'
+              echo "x-accepted-github-permissions for POST releases (dry header probe via GET):"
+              GH_TOKEN="$val" gh api -i "repos/$REPO/releases?per_page=1" 2>&1 | grep -i -E "^(x-accepted-github-permissions|x-oauth-scopes|x-github-sso)" | sed 's/^/    /'
+            done
+
   release:
     executor: android-executor
     steps:
@@ -425,6 +465,12 @@ workflows:
   build-and-test:
     unless: << pipeline.parameters.run_release >>
     jobs:
+      # TEMPORARY (MSDK-532): remove before merging.
+      - release-token-debug:
+          context: *default_context
+          filters:
+            branches:
+              only: bugfix/MSDK-532-release-token-check
       - lint:
           context: *default_context
       - unit-test:
