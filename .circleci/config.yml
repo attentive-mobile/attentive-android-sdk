@@ -21,6 +21,9 @@ parameters:
   release_version:
     type: string
     default: ""
+  release_dry_run:
+    type: boolean
+    default: false
 
 # Reusable environment variables
 environment: &default_environment
@@ -293,13 +296,12 @@ jobs:
       # and gh release create fails with a misleading "workflow scope may be required".
       # That is what broke the 2.2.2 release (MSDK-485).
       #
-      # The step above does mint a proper App installation token — the App has code and
-      # pull request write on this repo — but exports it under its own variable name.
-      # Rather than hardcode that name, find it by prefix: ghs_ is an App installation
-      # token, ghp_/gho_/ghu_/github_pat_ are user tokens. Hand it to gh as GH_TOKEN,
-      # which gh prefers over GITHUB_TOKEN.
+      # The step above mints an App installation token. Find it by prefix: ghs_ is an App
+      # installation token, ghp_/gho_/ghu_/github_pat_ are user tokens. Hand it to gh as
+      # GH_TOKEN, which gh prefers over GITHUB_TOKEN. Write access is verified later by
+      # creating the draft GitHub Release.
       - run:
-          name: Select the App token for gh and verify write access
+          name: Select the App token for gh
           command: |
             echo "GitHub tokens visible in the environment (name and type prefix only):"
             APP_TOKEN_VAR=""
@@ -325,15 +327,6 @@ jobs:
             echo "Using \$$APP_TOKEN_VAR as GH_TOKEN"
             export GH_TOKEN="${!APP_TOKEN_VAR}"
             echo "export GH_TOKEN=\"\$$APP_TOKEN_VAR\"" >> "$BASH_ENV"
-
-            # Fail here rather than after publishing: a read-only token previously got
-            # as far as pushing a tag and uploading to Maven Central before dying.
-            PUSH=$(gh api repos/attentive-mobile/attentive-android-sdk --jq '.permissions.push' 2>/dev/null || echo "unknown")
-            echo "push access for this repo: $PUSH"
-            if [ "$PUSH" != "true" ]; then
-              echo "ERROR: token cannot write to this repo; aborting before any mutation."
-              exit 1
-            fi
       - run:
           name: Switch git remote to HTTPS with App token
           command: |
@@ -363,62 +356,111 @@ jobs:
             fi
 
             echo "Releasing: $VERSION"
+      # Creating the draft is the write-access check: it needs the same contents write as
+      # publishing the release, and it happens before anything irreversible. The repo
+      # API's .permissions object can't be used for this — it reports false for every
+      # permission on an App installation token (MSDK-532).
       - run:
-          name: Push release branch and open PR
-          command: |
-            git config user.name "circleci[bot]"
-            git config user.email "circleci[bot]@users.noreply.github.com"
-
-            BRANCH="release/$RELEASE_VERSION"
-            git checkout -b "$BRANCH"
-            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$RELEASE_VERSION/" attentive-android-sdk/gradle.properties
-            git add attentive-android-sdk/gradle.properties
-
-            if git diff --cached --quiet; then
-              echo "gradle.properties already at $RELEASE_VERSION; skipping release branch + PR. Publishing from current commit."
-            else
-              git commit -m "Set version to $RELEASE_VERSION"
-              git push --force origin "$BRANCH"
-
-              # The PR is bookkeeping; the Maven Central publish below is the release.
-              # Never abort here: the branch is already pushed, so a failure would strand
-              # the release half-done — version bumped on the branch, nothing published.
-              if PR_OUTPUT=$(gh pr create \
-                --repo attentive-mobile/attentive-android-sdk \
-                --title "Release v$RELEASE_VERSION" \
-                --body "Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified." \
-                --head "$BRANCH" \
-                --base main 2>&1); then
-                echo "$PR_OUTPUT"
-              else
-                echo "$PR_OUTPUT"
-                echo
-                echo "WARNING: could not open the release PR — continuing with the publish."
-                echo "See 'Select the App token for gh and verify write access' above for"
-                echo "which token gh is using and whether it has write access here."
-                echo "Open the PR manually:"
-                echo "  https://github.com/attentive-mobile/attentive-android-sdk/compare/main...$BRANCH?expand=1"
-              fi
-            fi
-      - run:
-          name: Clean
-          command: ./gradlew clean
-      - run:
-          name: Publish to Maven Central
-          command: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
-      - run:
-          name: Create GitHub Release
+          name: Create draft GitHub Release
           command: |
             if [ "$IS_BETA" = "true" ]; then
-              echo "Skipping GitHub Release for beta version"
+              echo "Beta release; no GitHub Release to draft"
               exit 0
             fi
-            git tag "$RELEASE_VERSION"
-            git push origin "$RELEASE_VERSION"
+            REPO=attentive-mobile/attentive-android-sdk
+            if EXISTING=$(gh release view "$RELEASE_VERSION" --repo "$REPO" --json isDraft --jq .isDraft 2>/dev/null); then
+              if [ "$EXISTING" = "true" ]; then
+                echo "Reusing draft release $RELEASE_VERSION from an earlier run"
+                exit 0
+              fi
+              echo "ERROR: release $RELEASE_VERSION is already published."
+              exit 1
+            fi
             gh release create "$RELEASE_VERSION" \
-              --repo attentive-mobile/attentive-android-sdk \
+              --repo "$REPO" \
+              --draft \
+              --target "$(git rev-parse HEAD)" \
               --title "$RELEASE_VERSION" \
               --generate-notes
+            # Cleanup below only deletes a draft this run created, never one kept for recovery.
+            echo "export DRAFT_CREATED=true" >> "$BASH_ENV"
+      - when:
+          condition: << pipeline.parameters.release_dry_run >>
+          steps:
+            - run:
+                name: Dry run - delete the draft and stop
+                command: |
+                  if [ "${DRAFT_CREATED:-}" = "true" ]; then
+                    gh release delete "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --yes
+                  fi
+                  echo "Dry run complete: token can write releases. Nothing was published."
+      - unless:
+          condition: << pipeline.parameters.release_dry_run >>
+          steps:
+            - run:
+                name: Push release branch and open PR
+                command: |
+                  git config user.name "circleci[bot]"
+                  git config user.email "circleci[bot]@users.noreply.github.com"
+
+                  BRANCH="release/$RELEASE_VERSION"
+                  git checkout -b "$BRANCH"
+                  sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$RELEASE_VERSION/" attentive-android-sdk/gradle.properties
+                  git add attentive-android-sdk/gradle.properties
+
+                  if git diff --cached --quiet; then
+                    echo "gradle.properties already at $RELEASE_VERSION; skipping release branch + PR. Publishing from current commit."
+                  else
+                    git commit -m "Set version to $RELEASE_VERSION"
+                    git push --force origin "$BRANCH"
+
+                    # The PR is bookkeeping; the Maven Central publish below is the release.
+                    # Never abort here: the branch is already pushed, so a failure would strand
+                    # the release half-done — version bumped on the branch, nothing published.
+                    if PR_OUTPUT=$(gh pr create \
+                      --repo attentive-mobile/attentive-android-sdk \
+                      --title "Release v$RELEASE_VERSION" \
+                      --body "Automated release PR. Maven Central publish and GitHub Release are performed from this branch by CircleCI. Merge into main once verified." \
+                      --head "$BRANCH" \
+                      --base main 2>&1); then
+                      echo "$PR_OUTPUT"
+                    else
+                      echo "$PR_OUTPUT"
+                      echo
+                      echo "WARNING: could not open the release PR — continuing with the publish."
+                      echo "See 'Select the App token for gh' above for which token gh is using."
+                      echo "Open the PR manually:"
+                      echo "  https://github.com/attentive-mobile/attentive-android-sdk/compare/main...$BRANCH?expand=1"
+                    fi
+                  fi
+            - run:
+                name: Clean
+                command: ./gradlew clean
+            - run:
+                name: Publish to Maven Central
+                command: |
+                  ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+                  echo "export MAVEN_PUBLISHED=true" >> "$BASH_ENV"
+            - run:
+                name: Publish GitHub Release
+                command: |
+                  if [ "$IS_BETA" = "true" ]; then
+                    echo "Skipping GitHub Release for beta version"
+                    exit 0
+                  fi
+                  git tag "$RELEASE_VERSION"
+                  git push origin "$RELEASE_VERSION"
+                  gh release edit "$RELEASE_VERSION" \
+                    --repo attentive-mobile/attentive-android-sdk \
+                    --tag "$RELEASE_VERSION" \
+                    --draft=false
+      - run:
+          name: Delete draft GitHub Release after a failed publish
+          when: on_fail
+          command: |
+            # Once Maven Central has the artifact, keep the draft so it can be published by hand.
+            [ "${DRAFT_CREATED:-}" = "true" ] && [ "${MAVEN_PUBLISHED:-}" != "true" ] || exit 0
+            gh release delete "$RELEASE_VERSION" --repo attentive-mobile/attentive-android-sdk --yes
       - notify-slack-on-failure
 
 workflows:
