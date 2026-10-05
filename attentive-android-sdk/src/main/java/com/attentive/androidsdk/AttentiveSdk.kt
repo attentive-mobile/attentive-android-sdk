@@ -8,6 +8,16 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.events.Event
+import kotlinx.coroutines.flow.asStateFlow
+import com.attentive.androidsdk.journeys.CartAbandonmentState
+import com.attentive.androidsdk.journeys.CartAbandonmentConfig
+import com.attentive.androidsdk.internal.journeys.WorkManagerAbandonmentScheduler
+import com.attentive.androidsdk.internal.journeys.CartSnapshotStore
+import com.attentive.androidsdk.internal.journeys.CartAbandonmentTracker
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.DefaultLifecycleObserver
+import android.os.Looper
+import android.os.Handler
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
@@ -446,6 +456,60 @@ object AttentiveSdk {
     val domain: String
         get() = config.domain
 
+    private val _cartAbandonmentState = MutableStateFlow(CartAbandonmentState())
+
+    /** Stream of on-device cart abandonment tracking state. See [enableCartAbandonment]. */
+    @JvmStatic
+    val cartAbandonmentState: StateFlow<CartAbandonmentState> = _cartAbandonmentState.asStateFlow()
+
+    @Volatile
+    internal var cartAbandonmentTracker: CartAbandonmentTracker? = null
+        private set
+
+    private var cartAbandonmentLifecycleObserver: DefaultLifecycleObserver? = null
+
+    /**
+     * Starts on-device cart abandonment detection. After each
+     * [com.attentive.androidsdk.events.AddToCartEvent], the SDK waits
+     * [CartAbandonmentConfig.delayMillis]; if no [com.attentive.androidsdk.events.PurchaseEvent]
+     * follows, it scores the cart's purchase intent and shows a local notification when the
+     * score meets [CartAbandonmentConfig.scoreThreshold] and push permission is granted.
+     *
+     * Call after [initialize], typically in `Application.onCreate()`, so the scheduled check can
+     * run after process death. Calling again replaces the config; a cart already being tracked
+     * keeps its current check time.
+     *
+     * This is a prototype and may change or be removed.
+     */
+    @JvmStatic
+    fun enableCartAbandonment(cartAbandonmentConfig: CartAbandonmentConfig) {
+        val context = config.applicationContext
+        cartAbandonmentTracker =
+            CartAbandonmentTracker(
+                config = cartAbandonmentConfig,
+                store = CartSnapshotStore(PersistentStorage(context)),
+                scheduler = WorkManagerAbandonmentScheduler(context),
+                _state = _cartAbandonmentState,
+            )
+        if (cartAbandonmentLifecycleObserver == null) {
+            val observer =
+                object : DefaultLifecycleObserver {
+                    override fun onStart(owner: LifecycleOwner) {
+                        cartAbandonmentTracker?.onAppForegrounded()
+                    }
+                }
+            cartAbandonmentLifecycleObserver = observer
+            Handler(Looper.getMainLooper()).post { ProcessLifecycleOwner.get().lifecycle.addObserver(observer) }
+        }
+    }
+
+    /** Stops cart abandonment detection and cancels any pending check. */
+    @JvmStatic
+    fun disableCartAbandonment() {
+        cartAbandonmentTracker?.stop()
+        cartAbandonmentTracker = null
+    }
+
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
      * logged but not surfaced to the caller. For coroutine-aware error handling, use
@@ -456,6 +520,7 @@ object AttentiveSdk {
      */
     @Suppress("DEPRECATION")
     fun recordEvent(event: Event) {
+        cartAbandonmentTracker?.onEvent(event)
         AttentiveEventTracker.instance.recordEvent(event)
     }
 
@@ -463,6 +528,7 @@ object AttentiveSdk {
      * Records an analytics event with Attentive and suspends until the request completes.
      */
     suspend fun recordEventSuspend(event: Event): Result<Unit> {
+        cartAbandonmentTracker?.onEvent(event)
         return AttentiveEventTracker.instance.recordEventSuspend(event)
     }
 
@@ -911,6 +977,7 @@ object AttentiveSdk {
      * visitor ID rather than a new one.
      */
     fun clearUser() {
+        cartAbandonmentTracker?.onUserCleared()
         val pushToken = TokenProvider.getInstance().token
         when (planClearUser(pushToken)) {
             IdentitySyncDecision.SKIP -> {

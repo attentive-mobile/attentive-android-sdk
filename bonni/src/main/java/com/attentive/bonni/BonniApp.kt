@@ -6,7 +6,10 @@ import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.internal.network.ApiVersion
+import com.attentive.androidsdk.journeys.CartAbandonmentConfig
 import com.attentive.bonni.database.AppDatabase
+import com.attentive.bonni.journeys.NanoAbandonmentCopyProvider
+import java.util.concurrent.TimeUnit
 
 class BonniApp : Application() {
     override fun onCreate() {
@@ -42,6 +45,7 @@ class BonniApp : Application() {
                 .build()
 
         AttentiveSdk.initialize(attentiveConfig)
+        enableCartAbandonment(prefs.getBoolean(CART_ABANDONMENT_FAST_DELAY_PREFS, false))
 
         // Restore user identifiers if they exist (using identify to preserve visitorId)
         if (email != null || phone != null) {
@@ -57,6 +61,16 @@ class BonniApp : Application() {
         }
     }
 
+    /** Enables cart abandonment, checking after 30 seconds instead of an hour when [fastDelay] is set. */
+    fun enableCartAbandonment(fastDelay: Boolean) {
+        val builder =
+            CartAbandonmentConfig.Builder()
+                .cartDeeplink("bonni://cart")
+                .copyProvider(NanoAbandonmentCopyProvider())
+        if (fastDelay) builder.delay(30, TimeUnit.SECONDS)
+        AttentiveSdk.enableCartAbandonment(builder.build())
+    }
+
     companion object {
         private lateinit var appInstance: BonniApp
 
@@ -67,6 +81,8 @@ class BonniApp : Application() {
         const val ATTENTIVE_PHONE_PREFS = "ATTENTIVE_PHONE_PREFS"
 
         const val ATTENTIVE_ENDPOINT_PREFS = "ATTENTIVE_ENDPOINT_PREFS"
+
+        const val CART_ABANDONMENT_FAST_DELAY_PREFS = "CART_ABANDONMENT_FAST_DELAY_PREFS"
 
         fun getInstance(): BonniApp {
             return appInstance
