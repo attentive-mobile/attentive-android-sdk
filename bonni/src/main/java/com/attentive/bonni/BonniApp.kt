@@ -9,6 +9,9 @@ import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.journeys.CartAbandonmentConfig
 import com.attentive.bonni.database.AppDatabase
 import com.attentive.bonni.journeys.NanoAbandonmentCopyProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class BonniApp : Application() {
@@ -61,12 +64,18 @@ class BonniApp : Application() {
         }
     }
 
+    private val nanoCopyProvider by lazy {
+        NanoAbandonmentCopyProvider().also { provider ->
+            CoroutineScope(Dispatchers.IO).launch { provider.prepare() }
+        }
+    }
+
     /** Enables cart abandonment, checking after 30 seconds instead of an hour when [fastDelay] is set. */
     fun enableCartAbandonment(fastDelay: Boolean) {
         val builder =
             CartAbandonmentConfig.Builder()
                 .cartDeeplink("bonni://cart")
-                .copyProvider(NanoAbandonmentCopyProvider())
+                .copyProvider(nanoCopyProvider)
         if (fastDelay) builder.delay(30, TimeUnit.SECONDS)
         AttentiveSdk.enableCartAbandonment(builder.build())
     }

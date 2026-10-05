@@ -3,9 +3,11 @@ package com.attentive.bonni.journeys
 import com.attentive.androidsdk.journeys.AbandonedCart
 import com.attentive.androidsdk.journeys.AbandonmentCopyProvider
 import com.attentive.androidsdk.journeys.NotificationCopy
+import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 /**
@@ -14,6 +16,25 @@ import timber.log.Timber
  */
 class NanoAbandonmentCopyProvider : AbandonmentCopyProvider {
     private val model by lazy { Generation.getClient() }
+
+    /** Downloads Gemini Nano if this device supports it but doesn't have it yet. */
+    suspend fun prepare() {
+        try {
+            val status = model.checkStatus()
+            Timber.d("Gemini Nano status for cart copy: $status")
+            if (status == FeatureStatus.DOWNLOADABLE || status == FeatureStatus.DOWNLOADING) {
+                val result =
+                    model.download().first {
+                        it is DownloadStatus.DownloadCompleted || it is DownloadStatus.DownloadFailed
+                    }
+                Timber.d("Gemini Nano download for cart copy: $result")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "Gemini Nano preparation failed")
+        }
+    }
 
     override suspend fun createCopy(cart: AbandonedCart): NotificationCopy? {
         return try {
