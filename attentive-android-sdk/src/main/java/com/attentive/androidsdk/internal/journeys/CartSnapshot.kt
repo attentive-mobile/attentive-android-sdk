@@ -14,15 +14,25 @@ internal data class CartSnapshot(
     val deeplink: String? = null,
     val lastAddedAtMillis: Long,
     val lastActivityAtMillis: Long,
-    val checkAtMillis: Long,
+    val checkAtMillis: Long? = null,
     val addToCartCount: Int,
     val appOpensSinceAdd: Int = 0,
     val outcome: Outcome = Outcome.PENDING,
+    val copy: CachedCopy? = null,
 ) {
     @Serializable
     enum class Outcome { PENDING, NOTIFIED, BELOW_THRESHOLD, PUSH_UNAVAILABLE }
 
+    /** Notification copy generated ahead of time for the cart identified by [cartKey]. */
+    @Serializable
+    data class CachedCopy(val cartKey: String, val title: String, val body: String)
+
     val itemCount: Int get() = items.sumOf { it.quantity }
+
+    /** Identifies the cart's contents, so copy written for different contents is not reused. */
+    val cartKey: String get() = items.sortedBy { it.productVariantId }.joinToString(",") { "${it.productVariantId}x${it.quantity}" }
+
+    val currentCopy: CachedCopy? get() = copy?.takeIf { it.cartKey == cartKey }
 }
 
 /** Combines items that share a variant, summing their quantities. */

@@ -8,6 +8,7 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.events.Item
 import kotlinx.coroutines.flow.asStateFlow
 import com.attentive.androidsdk.journeys.CartAbandonmentState
 import com.attentive.androidsdk.journeys.CartAbandonmentConfig
@@ -489,6 +490,9 @@ object AttentiveSdk {
                 config = cartAbandonmentConfig,
                 store = CartSnapshotStore(PersistentStorage(context)),
                 scheduler = WorkManagerAbandonmentScheduler(context),
+                isAppInForeground = {
+                    ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                },
                 _state = _cartAbandonmentState,
             )
         if (cartAbandonmentLifecycleObserver == null) {
@@ -501,6 +505,16 @@ object AttentiveSdk {
             cartAbandonmentLifecycleObserver = observer
             Handler(Looper.getMainLooper()).post { ProcessLifecycleOwner.get().lifecycle.addObserver(observer) }
         }
+    }
+
+    /**
+     * Reports the cart's current contents to cart abandonment detection, replacing what the SDK
+     * inferred from add-to-cart events. Call whenever the cart changes, including removals; an
+     * empty list cancels any pending check. Does nothing unless [enableCartAbandonment] was called.
+     */
+    @JvmStatic
+    fun syncCart(items: List<Item>) {
+        cartAbandonmentTracker?.syncCart(items)
     }
 
     /** Stops cart abandonment detection and cancels any pending check. */

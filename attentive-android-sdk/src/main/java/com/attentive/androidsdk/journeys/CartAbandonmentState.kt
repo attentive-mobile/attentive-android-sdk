@@ -22,6 +22,9 @@ data class CartAbandonmentState(
         /** No cart is being tracked. */
         EMPTY,
 
+        /** The cart has items but no check is scheduled. The next add-to-cart schedules one. */
+        IDLE,
+
         /** A cart is being tracked and will be checked at [checkAtMillis]. */
         WAITING,
 

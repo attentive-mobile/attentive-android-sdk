@@ -7,8 +7,13 @@ import com.attentive.androidsdk.events.Order
 import com.attentive.androidsdk.events.Price
 import com.attentive.androidsdk.events.ProductViewEvent
 import com.attentive.androidsdk.events.PurchaseEvent
+import com.attentive.androidsdk.journeys.AbandonedCart
+import com.attentive.androidsdk.journeys.AbandonmentCopyProvider
 import com.attentive.androidsdk.journeys.CartAbandonmentConfig
 import com.attentive.androidsdk.journeys.CartAbandonmentState.Status
+import com.attentive.androidsdk.journeys.NotificationCopy
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -29,6 +34,8 @@ class CartAbandonmentTrackerTest {
     private val values = mutableMapOf<String, Any>()
     private lateinit var storage: PersistentStorage
     private val scheduler = FakeScheduler()
+    private var foreground = false
+    private val testScope = TestScope()
 
     @Before
     fun setUp() {
@@ -52,7 +59,7 @@ class CartAbandonmentTrackerTest {
     }
 
     private fun tracker(config: CartAbandonmentConfig = CartAbandonmentConfig.Builder().build()) =
-        CartAbandonmentTracker(config, CartSnapshotStore(storage), scheduler, clock = { now })
+        CartAbandonmentTracker(config, CartSnapshotStore(storage), scheduler, { foreground }, scope = testScope, clock = { now })
 
     private fun item(id: String, price: String = "30.00", name: String? = null) =
         Item.Builder(id, "$id-variant", Price.Builder().price(BigDecimal(price)).currency(Currency.getInstance("USD")).build())
@@ -94,7 +101,7 @@ class CartAbandonmentTrackerTest {
 
         assertEquals(1, scheduler.cancelCount)
         assertEquals(Status.PURCHASED, tracker.state.value.status)
-        assertEquals(AbandonmentEvaluation.NoCart, tracker.evaluate(isAppInForeground = false, canNotify = true))
+        assertEquals(AbandonmentEvaluation.NoCart, tracker.evaluate(canNotify = true))
     }
 
     @Test
@@ -103,14 +110,14 @@ class CartAbandonmentTrackerTest {
         tracker.onEvent(addToCart(item("shirt", name = "Linen Shirt")))
         now += hour
 
-        val evaluation = tracker.evaluate(isAppInForeground = false, canNotify = true)
+        val evaluation = tracker.evaluate(canNotify = true)
 
         assertTrue(evaluation is AbandonmentEvaluation.Notify)
         evaluation as AbandonmentEvaluation.Notify
         assertEquals("bonni://cart", evaluation.deeplink)
         assertEquals("Linen Shirt", evaluation.cart.items.single().name)
         assertEquals(Status.NOTIFIED, tracker.state.value.status)
-        assertEquals(AbandonmentEvaluation.AlreadyEvaluated, tracker.evaluate(isAppInForeground = false, canNotify = true))
+        assertEquals(AbandonmentEvaluation.AlreadyEvaluated, tracker.evaluate(canNotify = true))
     }
 
     @Test
@@ -119,7 +126,7 @@ class CartAbandonmentTrackerTest {
         tracker.onEvent(addToCart(item("shirt")))
         now += hour
 
-        assertTrue(tracker.evaluate(isAppInForeground = false, canNotify = true) is AbandonmentEvaluation.BelowThreshold)
+        assertTrue(tracker.evaluate(canNotify = true) is AbandonmentEvaluation.BelowThreshold)
         assertEquals(Status.BELOW_THRESHOLD, tracker.state.value.status)
     }
 
@@ -129,7 +136,7 @@ class CartAbandonmentTrackerTest {
         tracker.onEvent(addToCart(item("shirt")))
         now += hour
 
-        assertTrue(tracker.evaluate(isAppInForeground = false, canNotify = false) is AbandonmentEvaluation.PushUnavailable)
+        assertTrue(tracker.evaluate(canNotify = false) is AbandonmentEvaluation.PushUnavailable)
         assertEquals(Status.PUSH_UNAVAILABLE, tracker.state.value.status)
     }
 
@@ -139,22 +146,138 @@ class CartAbandonmentTrackerTest {
         tracker.onEvent(addToCart(item("shirt")))
         now += hour
 
-        assertEquals(AbandonmentEvaluation.Deferred, tracker.evaluate(isAppInForeground = true, canNotify = true))
+        foreground = true
+
+        assertEquals(AbandonmentEvaluation.Deferred, tracker.evaluate(canNotify = true))
         assertEquals(listOf(hour, hour), scheduler.scheduled)
         assertEquals(now + hour, tracker.state.value.checkAtMillis)
     }
 
     @Test
-    fun addToCartAfterEvaluation_startsNewCart() {
+    fun addToCartAfterEvaluation_rearmsCheckAndKeepsItems() {
         val tracker = tracker()
         tracker.onEvent(addToCart(item("shirt")))
         now += hour
-        tracker.evaluate(isAppInForeground = false, canNotify = true)
+        tracker.evaluate(canNotify = true)
 
         tracker.onEvent(addToCart(item("hat")))
 
         assertEquals(Status.WAITING, tracker.state.value.status)
+        assertEquals(2, tracker.state.value.itemCount)
+        assertTrue(tracker.evaluate(canNotify = true) is AbandonmentEvaluation.Notify)
+    }
+
+    @Test
+    fun syncCart_replacesItemsInferredFromEvents() {
+        val tracker = tracker()
+        tracker.onEvent(addToCart(item("shirt")))
+        tracker.onEvent(addToCart(item("shirt")))
+
+        tracker.syncCart(listOf(item("shirt")))
+
         assertEquals(1, tracker.state.value.itemCount)
+        assertEquals(Status.WAITING, tracker.state.value.status)
+    }
+
+    @Test
+    fun syncCart_withoutAdd_tracksItemsWithoutSchedulingCheck() {
+        val tracker = tracker()
+
+        tracker.syncCart(listOf(item("shirt"), item("hat")))
+
+        assertEquals(Status.IDLE, tracker.state.value.status)
+        assertEquals(2, tracker.state.value.itemCount)
+        assertTrue(scheduler.scheduled.isEmpty())
+        assertEquals(AbandonmentEvaluation.AlreadyEvaluated, tracker.evaluate(canNotify = true))
+    }
+
+    @Test
+    fun addToCartAfterSync_keepsHostItems() {
+        val tracker = tracker()
+        tracker.syncCart(listOf(item("shirt"), item("hat")))
+
+        tracker.onEvent(addToCart(item("hat")))
+
+        assertEquals(2, tracker.state.value.itemCount)
+        assertEquals(listOf(hour), scheduler.scheduled)
+    }
+
+    @Test
+    fun syncCart_empty_cancelsCheckAndClearsNotifiedCart() {
+        val tracker = tracker()
+        tracker.onEvent(addToCart(item("shirt")))
+        now += hour
+        tracker.evaluate(canNotify = true)
+
+        tracker.syncCart(emptyList())
+
+        assertEquals(1, scheduler.cancelCount)
+        assertEquals(Status.EMPTY, tracker.state.value.status)
+    }
+
+    @Test
+    fun syncCart_emptyAfterPurchase_keepsPurchasedStatus() {
+        val tracker = tracker()
+        tracker.onEvent(addToCart(item("shirt")))
+        tracker.onEvent(purchase())
+
+        tracker.syncCart(emptyList())
+
+        assertEquals(Status.PURCHASED, tracker.state.value.status)
+    }
+
+    @Test
+    fun copyPreparedInForeground_isUsedForNotification() {
+        foreground = true
+        val provider = FakeCopyProvider()
+        val tracker = tracker(CartAbandonmentConfig.Builder().copyProvider(provider).build())
+        tracker.onEvent(addToCart(item("shirt", name = "Linen Shirt")))
+        testScope.advanceUntilIdle()
+        foreground = false
+        now += hour
+
+        val evaluation = tracker.evaluate(canNotify = true) as AbandonmentEvaluation.Notify
+
+        assertEquals(NotificationCopy("Title 1", "Linen Shirt"), evaluation.copy)
+        assertEquals(1, provider.calls)
+    }
+
+    @Test
+    fun copyIsNotPreparedInBackground() {
+        val provider = FakeCopyProvider()
+        val tracker = tracker(CartAbandonmentConfig.Builder().copyProvider(provider).build())
+        tracker.onEvent(addToCart(item("shirt")))
+        testScope.advanceUntilIdle()
+        now += hour
+
+        assertNull((tracker.evaluate(canNotify = true) as AbandonmentEvaluation.Notify).copy)
+        assertEquals(0, provider.calls)
+    }
+
+    @Test
+    fun copyForEarlierCart_isNotReused() {
+        foreground = true
+        val provider = FakeCopyProvider()
+        val tracker = tracker(CartAbandonmentConfig.Builder().copyProvider(provider).build())
+        tracker.onEvent(addToCart(item("shirt")))
+        testScope.advanceUntilIdle()
+        foreground = false
+        tracker.syncCart(listOf(item("hat")))
+        now += hour
+
+        assertNull((tracker.evaluate(canNotify = true) as AbandonmentEvaluation.Notify).copy)
+    }
+
+    @Test
+    fun rapidCartChanges_prepareCopyOnce() {
+        foreground = true
+        val provider = FakeCopyProvider()
+        val tracker = tracker(CartAbandonmentConfig.Builder().copyProvider(provider).build())
+        tracker.onEvent(addToCart(item("shirt")))
+        tracker.onEvent(addToCart(item("hat")))
+        testScope.advanceUntilIdle()
+
+        assertEquals(1, provider.calls)
     }
 
     @Test
@@ -188,7 +311,7 @@ class CartAbandonmentTrackerTest {
         val restored = tracker()
 
         assertEquals(Status.WAITING, restored.state.value.status)
-        assertTrue(restored.evaluate(isAppInForeground = false, canNotify = true) is AbandonmentEvaluation.Notify)
+        assertTrue(restored.evaluate(canNotify = true) is AbandonmentEvaluation.Notify)
     }
 
     @Test
@@ -205,11 +328,20 @@ class CartAbandonmentTrackerTest {
 
     @Test
     fun defaultCopy_namesSingleItem() {
-        val cart = com.attentive.androidsdk.journeys.AbandonedCart(listOf(item("shirt", name = "Linen Shirt")), 0.5, now)
+        val cart = AbandonedCart(listOf(item("shirt", name = "Linen Shirt")), 0.5, now)
         assertEquals(
             "Your Linen Shirt is still waiting. Complete your order before it's gone.",
             CartAbandonmentWorker.defaultCopy(cart).body,
         )
+    }
+
+    private class FakeCopyProvider : AbandonmentCopyProvider {
+        var calls = 0
+
+        override suspend fun createCopy(cart: AbandonedCart): NotificationCopy {
+            calls++
+            return NotificationCopy("Title $calls", cart.items.joinToString { it.name.orEmpty() })
+        }
     }
 
     private class FakeScheduler : AbandonmentScheduler {

@@ -3,8 +3,13 @@ package com.attentive.androidsdk.journeys
 import com.attentive.androidsdk.events.Item
 
 /**
- * Supplies the text of a cart abandonment notification. Runs on a background thread when the
- * notification is about to be shown.
+ * Supplies the text of a cart abandonment notification.
+ *
+ * The SDK calls [createCopy] on a background thread while the app is in the foreground, shortly
+ * after the cart changes, and saves the result for when the notification is shown. This lets
+ * providers use on-device models that refuse background use. If no saved copy matches the cart
+ * when the notification is shown, the SDK calls [createCopy] once more before falling back to
+ * its default copy.
  */
 interface AbandonmentCopyProvider {
     /**

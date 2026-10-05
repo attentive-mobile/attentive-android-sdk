@@ -21,6 +21,7 @@ class BonniApp : Application() {
         initAttentiveTracker()
         // Timber tree is planted by AttentiveSdk based on logLevel config
         AppDatabase.getInstance().initWithMockProducts()
+        syncCartWithAttentive()
     }
 
     private fun initAttentiveTracker() {
@@ -61,6 +62,15 @@ class BonniApp : Application() {
             }
 
             attentiveConfig.identify(userIdentifiers.build())
+        }
+    }
+
+    /** Keeps cart abandonment's view of the cart in step with Bonni's cart, including removals. */
+    private fun syncCartWithAttentive() {
+        CoroutineScope(Dispatchers.IO).launch {
+            AppDatabase.getInstance().cartItemDao().getAll().collect { cartItems ->
+                AttentiveSdk.syncCart(cartItems.map { it.product.item.copy(quantity = it.quantity) })
+            }
         }
     }
 

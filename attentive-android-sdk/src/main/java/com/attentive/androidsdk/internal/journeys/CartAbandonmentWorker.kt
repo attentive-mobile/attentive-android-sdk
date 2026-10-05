@@ -2,8 +2,6 @@ package com.attentive.androidsdk.internal.journeys
 
 import android.content.Context
 import androidx.annotation.RestrictTo
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -16,8 +14,6 @@ import com.attentive.androidsdk.journeys.AbandonmentCopyProvider
 import com.attentive.androidsdk.journeys.NotificationCopy
 import com.attentive.androidsdk.push.AttentivePush
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -58,15 +54,11 @@ class CartAbandonmentWorker(
             Timber.i("Skipping cart abandonment check: cart abandonment is not enabled")
             return Result.success()
         }
-        val isForeground =
-            withContext(Dispatchers.Main) {
-                ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-            }
         val canNotify =
             AttentiveEventTracker.instance.isPushEnabled() &&
                 AttentiveSdk.isPushPermissionGranted(applicationContext)
 
-        when (val evaluation = tracker.evaluate(isForeground, canNotify)) {
+        when (val evaluation = tracker.evaluate(canNotify)) {
             is AbandonmentEvaluation.Notify -> notify(evaluation, tracker.config.copyProvider)
             else -> Timber.d("Cart abandonment check: $evaluation")
         }
@@ -75,7 +67,7 @@ class CartAbandonmentWorker(
 
     private suspend fun notify(evaluation: AbandonmentEvaluation.Notify, copyProvider: AbandonmentCopyProvider?) {
         val cart = evaluation.cart
-        val copy = copyProvider?.let { customCopy(it, cart) } ?: defaultCopy(cart)
+        val copy = evaluation.copy ?: copyProvider?.let { customCopy(it, cart) } ?: defaultCopy(cart)
         val dataMap = evaluation.deeplink?.let { mapOf(AttentivePush.ATTENTIVE_DEEP_LINK_KEY to it) } ?: emptyMap()
         AttentivePush.getInstance().sendNotification(
             messageTitle = copy.title,
@@ -88,7 +80,7 @@ class CartAbandonmentWorker(
 
     private suspend fun customCopy(provider: AbandonmentCopyProvider, cart: AbandonedCart): NotificationCopy? =
         try {
-            withTimeoutOrNull(COPY_TIMEOUT_MILLIS) { provider.createCopy(cart) }
+            withTimeoutOrNull(CartAbandonmentTracker.COPY_TIMEOUT_MILLIS) { provider.createCopy(cart) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -97,8 +89,6 @@ class CartAbandonmentWorker(
         }
 
     companion object {
-        private const val COPY_TIMEOUT_MILLIS = 15_000L
-
         internal fun defaultCopy(cart: AbandonedCart): NotificationCopy {
             val itemCount = cart.items.sumOf { it.quantity }
             val singleName = cart.items.singleOrNull()?.takeIf { it.quantity == 1 }?.name
