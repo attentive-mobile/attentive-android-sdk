@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -282,7 +283,7 @@ fun AttentiveInbox(
                 }
             }
         },
-        modifier = modifier,
+        modifier = modifier.background(backgroundColor),
     ) {
         if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
             EmptyInboxView(
@@ -394,7 +395,7 @@ private fun MessageList(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(backgroundColor),
     ) {
         items(
             items = messages,
@@ -411,6 +412,7 @@ private fun MessageList(
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
                     swipeBackgroundColor = swipeBackgroundColor,
+                    backgroundColor = backgroundColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -667,6 +669,7 @@ private fun MessageItem(
     bodyTextColor: Color,
     timestampTextColor: Color,
     swipeBackgroundColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
@@ -674,6 +677,20 @@ private fun MessageItem(
     onSwipeMarkUnread: () -> Unit,
     onSwipeDelete: () -> Unit,
 ) {
+    fun inboxRowSurface(background: Color, isRead: Boolean): Color {
+        if (isRead) return background
+        val target = if (background.luminance() > 0.5f) Color.Black else Color.White
+        val f = 0.04f
+        return Color(
+            red = background.red + (target.red - background.red) * f,
+            green = background.green + (target.green - background.green) * f,
+            blue = background.blue + (target.blue - background.blue) * f,
+            alpha = background.alpha,
+        )
+    }
+
+    val rowColor = inboxRowSurface(backgroundColor, message.isRead)
+
     SwipeToAction(
         swipeLeftAction =
             SwipeActionConfig(
@@ -700,6 +717,7 @@ private fun MessageItem(
                     titleTextColor = titleTextColor,
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
+                    backgroundColor = rowColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -712,6 +730,7 @@ private fun MessageItem(
                     titleTextColor = titleTextColor,
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
+                    backgroundColor = rowColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -728,13 +747,12 @@ private fun SmallMessageContent(
     titleTextColor: Color,
     bodyTextColor: Color,
     timestampTextColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
 ) {
-    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
-
     Row(
         modifier =
             Modifier
@@ -818,12 +836,12 @@ private fun LargeMessageContent(
     titleTextColor: Color,
     bodyTextColor: Color,
     timestampTextColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
 ) {
-    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
 
     Card(
         modifier =
@@ -924,6 +942,7 @@ private fun SmallMessagePreview_UnreadWithImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,
@@ -948,6 +967,7 @@ private fun SmallMessagePreview_ReadWithImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,
@@ -972,6 +992,7 @@ private fun SmallMessagePreview_UnreadNoImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,
