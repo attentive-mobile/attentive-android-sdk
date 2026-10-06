@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Mock inbox server (github.com/tpfaff/attentive-inbox-mock-server) when local.properties has
+             bonni.mockInbox=true; empty otherwise, so the SDK uses its default host. Requires `adb reverse tcp:3000 tcp:3000`. -->
+        <meta-data
+            android:name="com.attentive.sdk.INBOX_BASE_URL"
+            android:value="${inboxBaseUrl}" />
+    </application>
+</manifest>

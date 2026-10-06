@@ -33,19 +33,22 @@ import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
+import com.google.mlkit.genai.prompt.TextPart
+import com.google.mlkit.genai.prompt.generateContentRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import kotlin.random.Random
 
 /** Summarizes up to this many unread messages; keeps the prompt well under Gemini Nano's token limit. */
 private const val MAX_MESSAGES = 10
 
 /**
- * Matches the model's `[phrase](…)` references. The parenthesized part should be one 1-based message
- * number, but the model sometimes lists several ("1 & 5", "2, 7 and 8") or writes something else.
+ * Matches the model's `[phrase](Message title)` links, and bare `[…]` brackets it sometimes writes
+ * instead. Group 1 is any leading whitespace, group 2 the bracketed text, group 3 the target if present.
  */
-private val MESSAGE_LINK = Regex("""\[([^\]]+)\]\(([^)]*)\)""")
-private val NUMBER = Regex("""\d+""")
+private val MESSAGE_REFERENCE = Regex("""(\s*)\[([^\]]+)](?:\(([^)]*)\))?""")
+private val NON_WORD = Regex("""[^\p{L}\p{N}]+""")
 
 private sealed interface SummaryState {
     data object Loading : SummaryState
@@ -133,7 +136,14 @@ private suspend fun summarize(
                 onProgress(SummaryState.Loading)
             }
         }
-        val text = model.generateContent(buildPrompt(unread)).candidates.firstOrNull()?.text?.trim()
+        // A fresh seed per request so each summary is worded differently.
+        val request =
+            generateContentRequest(TextPart(buildPrompt(unread))) {
+                temperature = 0.6f
+                topK = 40
+                seed = Random.nextInt(Int.MAX_VALUE)
+            }
+        val text = model.generateContent(request).candidates.firstOrNull()?.text?.trim()
         Timber.d("Inbox summary: $text")
         if (text.isNullOrEmpty()) SummaryState.Failed("empty response") else SummaryState.Ready(text)
     } catch (e: CancellationException) {
@@ -152,18 +162,28 @@ private fun buildPrompt(unread: List<Message>): String =
                 "No bullet points, no preamble.",
         )
         appendLine(
-            "Whenever you mention a message, wrap the words about it as [words](N), where N is the " +
-                "message's number. Use exactly one number per link, never a list like (1 & 5). " +
-                "Example: Your [order has shipped](3) and there's a [weekend sale](2).",
+            "Whenever you mention a message, wrap a few words about it as [words](Title), where Title " +
+                "is that message's exact title. Link every message you mention.",
         )
         appendLine()
-        unread.forEachIndexed { i, m -> appendLine("${i + 1}. ${m.title}: ${m.body}") }
+        appendLine("Example messages:")
+        appendLine("- Summer Sale: 30% off all sandals through Sunday.")
+        appendLine("- Order Delivered: Order #1182 was left at your door.")
+        appendLine("- Points Update: You have 400 points, enough for a free tote.")
+        appendLine("Example summary:")
+        appendLine(
+            "Your [order was delivered](Order Delivered), you have [enough points for a free tote](Points Update), " +
+                "and [sandals are 30% off](Summer Sale) through Sunday.",
+        )
+        appendLine()
+        appendLine("Messages:")
+        unread.forEach { appendLine("- ${it.title}: ${it.body}") }
     }
 
 /**
- * Turns `[phrase](N)` references into links to message N. When a reference lists several numbers,
- * the phrase links to the first one in [unread]. References to no message in [unread] keep their
- * phrase as plain text.
+ * Turns `[phrase](Message title)` references into links to that message. A target that matches no
+ * title, and a bare `[phrase]`, keep the phrase as plain text; a bare `[Message title]` is dropped,
+ * since it only repeats a title the sentence already describes.
  */
 private fun linkify(
     text: String,
@@ -172,12 +192,16 @@ private fun linkify(
 ): AnnotatedString =
     buildAnnotatedString {
         var last = 0
-        for (match in MESSAGE_LINK.findAll(text)) {
+        for (match in MESSAGE_REFERENCE.findAll(text)) {
             append(text, last, match.range.first)
-            val phrase = match.groupValues[1]
-            val message =
-                NUMBER.findAll(match.groupValues[2])
-                    .firstNotNullOfOrNull { unread.getOrNull(it.value.toInt() - 1) }
+            last = match.range.last + 1
+            val (space, phrase, target) = match.destructured
+            if (match.groups[3] == null) {
+                if (findMessage(phrase, unread) == null) append(space + phrase)
+                continue
+            }
+            append(space)
+            val message = findMessage(target, unread)
             if (message == null) {
                 append(phrase)
             } else {
@@ -191,7 +215,32 @@ private fun linkify(
                     ) { onClick(message) },
                 ) { append(phrase) }
             }
-            last = match.range.last + 1
         }
         append(text, last, text.length)
     }
+
+/**
+ * The message whose title [reference] names: an exact match ignoring case and punctuation, then one
+ * title containing the other, then the title sharing the most words (at least half of them).
+ */
+private fun findMessage(
+    reference: String,
+    unread: List<Message>,
+): Message? {
+    val key = normalize(reference)
+    if (key.isEmpty()) return null
+    unread.firstOrNull { normalize(it.title) == key }?.let { return it }
+    unread.firstOrNull {
+        val title = normalize(it.title)
+        title.contains(key) || key.contains(title)
+    }?.let { return it }
+    val keyWords = key.split(' ').toSet()
+    return unread
+        .map { it to normalize(it.title).split(' ').toSet() }
+        .map { (message, words) -> message to words.intersect(keyWords).size.toDouble() / words.union(keyWords).size }
+        .filter { (_, overlap) -> overlap >= 0.5 }
+        .maxByOrNull { (_, overlap) -> overlap }
+        ?.first
+}
+
+private fun normalize(text: String): String = text.lowercase().replace(NON_WORD, " ").trim()

@@ -21,6 +21,16 @@ if (System.getenv("BONNI_STORE_PASSWORD") != null) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Debug builds hit the local mock inbox server when local.properties has bonni.mockInbox=true
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+def mockInbox = localProperties.getProperty("bonni.mockInbox", "false").toBoolean()
+// All builds show the SDK's built-in demo inbox when bonni.inboxMockData=true (local.properties or -P)
+def inboxMockData = (project.findProperty("bonni.inboxMockData") ?: localProperties.getProperty("bonni.inboxMockData", "false")).toBoolean()
+
 android {
     namespace = "com.attentive.bonni"
     compileSdk = libs.versions.compileSdk.get().toInteger()
@@ -33,6 +43,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [inboxUseMockData: inboxMockData.toString()]
     }
 
     signingConfigs {
@@ -47,6 +58,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders += [inboxBaseUrl: mockInbox ? "http://localhost:3000/" : ""]
+        }
         release() {
             minifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

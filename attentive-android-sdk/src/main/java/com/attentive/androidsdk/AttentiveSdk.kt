@@ -5,6 +5,8 @@ package com.attentive.androidsdk
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Bundle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.events.Event
@@ -98,6 +100,10 @@ object AttentiveSdk {
 
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
+    // When true in the app's manifest meta-data, the inbox shows local mock messages and makes no network calls.
+    private const val INBOX_USE_MOCK_DATA_META_KEY = "com.attentive.sdk.INBOX_USE_MOCK_DATA"
+    private var useMockInbox = false
+
     private const val DEFAULT_INBOX_HOST = "https://mobile.attentivemobile.com/"
     private var inboxHost: String = DEFAULT_INBOX_HOST
     private val inboxMessagesUrl get() = "${inboxHost.trimEnd('/')}/inbox/messages"
@@ -113,6 +119,7 @@ object AttentiveSdk {
     // Pagination management
     private val paginationLock = Mutex()
     private const val INBOX_PAGE_SIZE = 20
+    private const val HOUR_MS = 3_600_000L
     private var nextPageToken: String? = null
 
     /**
@@ -148,9 +155,16 @@ object AttentiveSdk {
     @SuppressLint("DefaultLocale")
     internal fun initializeInbox(): Boolean =
         synchronized(inboxInitLock) {
-            if (inboxApi != null) return@synchronized false
+            if (inboxApi != null || useMockInbox) return@synchronized false
             val context = config.applicationContext
-            val inboxBaseUrl = DEFAULT_INBOX_HOST
+            val metaData = readMetaData(context)
+            if (metaData?.getBoolean(INBOX_USE_MOCK_DATA_META_KEY) == true) {
+                useMockInbox = true
+                initializeMockInbox()
+                return@synchronized true
+            }
+            val inboxBaseUrl =
+                metaData?.getString(INBOX_BASE_URL_META_KEY)?.takeIf { it.isNotBlank() } ?: DEFAULT_INBOX_HOST
             inboxHost = inboxBaseUrl
             // context is deliberately null — inbox requests skip the offline request buffer,
             // which buildOkHttpClient installs only when given a context. Passed explicitly
@@ -173,6 +187,18 @@ object AttentiveSdk {
             // from sendNotification() on push receipt.
             inboxScope.launch { refreshInbox() }
             true
+        }
+
+    /** The app's manifest `<meta-data>`, or null if it has none. */
+    private fun readMetaData(context: Context): Bundle? =
+        try {
+            val packageManager: PackageManager? = context.packageManager
+            packageManager
+                ?.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+                ?.metaData
+        } catch (e: PackageManager.NameNotFoundException) {
+            Timber.e(e, "Failed to read manifest meta-data")
+            null
         }
 
     /**
@@ -231,7 +257,11 @@ object AttentiveSdk {
     internal fun resetInboxForIdentityChange() {
         inboxGeneration += 1
         nextPageToken = null
-        _inboxState.value = InboxState()
+        if (useMockInbox) {
+            initializeMockInbox()
+        } else {
+            _inboxState.value = InboxState()
+        }
         Timber.d("Inbox state reset for identity change (generation=$inboxGeneration)")
     }
 
@@ -267,75 +297,152 @@ object AttentiveSdk {
         )
     }
 
-    @SuppressLint("DefaultLocale")
+    /** Seeds the inbox with demo messages for [INBOX_USE_MOCK_DATA_META_KEY]; there are no further pages. */
     private fun initializeMockInbox() {
-        val originalMessages =
+        val now = System.currentTimeMillis()
+        val mockMessages =
             listOf(
                 Message(
                     id = "msg_001",
-                    title = "Welcome to Attentive!",
-                    body = "Thanks for joining us. Check out our latest offers.",
-                    timestamp = System.currentTimeMillis() - 86400000,
+                    title = "Welcome to Bonni Beauty!",
+                    body = "Thanks for joining. Enjoy 15% off your first order with code HELLO15.",
+                    timestamp = now - 1 * HOUR_MS,
                     isRead = false,
-                    actionUrl = "https://example.com/offers",
+                    actionUrl = "https://example.com/welcome",
                     style = Style.Small,
                 ),
                 Message(
                     id = "msg_002",
-                    title = "New Sale Alert",
-                    body = "50% off on all items this weekend!",
-                    timestamp = System.currentTimeMillis() - 172800000,
-                    isRead = true,
-                    imageUrl = "https://as1.ftcdn.net/v2/jpg/03/98/30/92/1000_F_398309275_84cKyqzV2RLTbYmBtt0dzpZkEvqapPZo.jpg",
-                    actionUrl = "https://example.com/sale",
-                    style = Style.Small,
-                ),
-                Message(
-                    id = "msg_003",
-                    title = "Your Order Has Shipped",
-                    body = "Your order #12345 is on its way!",
-                    timestamp = System.currentTimeMillis() - 259200000,
+                    title = "Your order has shipped",
+                    body = "Order #48213 is on its way and should arrive Thursday.",
+                    timestamp = now - 2 * HOUR_MS,
                     isRead = false,
-                    actionUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
                     imageUrl = "https://shippingeasy.com/wp-content/uploads/2021/04/Easy_Graphics_USPS-Priority-Mail-Blog-01.png",
+                    actionUrl = "https://example.com/orders/48213",
                     style = Style.Large,
                 ),
                 Message(
-                    id = "msg_004",
+                    id = "msg_003",
                     title = "Your cart is waiting",
-                    body = "Pickup where you left off!",
-                    timestamp = System.currentTimeMillis() - 259200000,
+                    body = "The Hydrating Lip Balm and Glow Serum are still in your cart.",
+                    timestamp = now - 3 * HOUR_MS,
                     isRead = false,
                     actionUrl = "bonni://cart",
                     style = Style.Small,
                 ),
-            )
-
-        val generatedMessages =
-            List(16) { index ->
-                val messageNumber = index + 5
                 Message(
-                    id = "msg_${String.format("%03d", messageNumber)}",
-                    title = "Message $messageNumber",
-                    body = "This is the content of message number $messageNumber",
-                    timestamp = System.currentTimeMillis() - (index + 4) * 3600000L,
-                    isRead = messageNumber % 3 == 0,
-                    imageUrl = if (messageNumber % 5 == 0) "https://picsum.photos/200/300?random=$messageNumber" else null,
-                    style = if (messageNumber % 5 == 0) Style.Large else Style.Small,
-                )
-            }
-
-        val mockMessages = originalMessages + generatedMessages
+                    id = "msg_004",
+                    title = "Flash sale: 40% off skincare",
+                    body = "Today only — 40% off every serum, cleanser and moisturizer.",
+                    timestamp = now - 5 * HOUR_MS,
+                    isRead = false,
+                    imageUrl = "https://picsum.photos/seed/bonni-sale/600/400",
+                    actionUrl = "https://example.com/sale/skincare",
+                    style = Style.Large,
+                ),
+                Message(
+                    id = "msg_005",
+                    title = "Back in stock: Velvet Matte Lipstick",
+                    body = "The shade you saved, Rosewood, is back. Only a few left.",
+                    timestamp = now - 8 * HOUR_MS,
+                    isRead = false,
+                    actionUrl = "https://example.com/products/velvet-matte-rosewood",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_006",
+                    title = "You earned 250 reward points",
+                    body = "You're 50 points away from a free full-size product.",
+                    timestamp = now - 12 * HOUR_MS,
+                    isRead = false,
+                    actionUrl = "https://example.com/rewards",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_007",
+                    title = "New arrivals: fall collection",
+                    body = "Warm bronzes and berry tones just landed.",
+                    timestamp = now - 20 * HOUR_MS,
+                    isRead = false,
+                    imageUrl = "https://picsum.photos/seed/bonni-fall/600/400",
+                    actionUrl = "https://example.com/collections/fall",
+                    style = Style.Large,
+                ),
+                Message(
+                    id = "msg_008",
+                    title = "Free shipping this weekend",
+                    body = "No minimum — free standard shipping through Sunday.",
+                    timestamp = now - 26 * HOUR_MS,
+                    isRead = false,
+                    actionUrl = "https://example.com/shipping",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_009",
+                    title = "Price drop on a saved item",
+                    body = "Overnight Repair Cream is now $28, down from $36.",
+                    timestamp = now - 30 * HOUR_MS,
+                    isRead = false,
+                    actionUrl = "https://example.com/products/overnight-repair",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_010",
+                    title = "How was your order?",
+                    body = "Review Glow Serum and earn 50 bonus points.",
+                    timestamp = now - 48 * HOUR_MS,
+                    isRead = false,
+                    actionUrl = "https://example.com/reviews/glow-serum",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_011",
+                    title = "Your order was delivered",
+                    body = "Order #47790 was delivered to your front door.",
+                    timestamp = now - 72 * HOUR_MS,
+                    isRead = true,
+                    actionUrl = "https://example.com/orders/47790",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_012",
+                    title = "Members-only early access",
+                    body = "Get first pick of the holiday gift sets before anyone else.",
+                    timestamp = now - 96 * HOUR_MS,
+                    isRead = true,
+                    imageUrl = "https://picsum.photos/seed/bonni-holiday/600/400",
+                    actionUrl = "https://example.com/holiday",
+                    style = Style.Large,
+                ),
+                Message(
+                    id = "msg_013",
+                    title = "Tips for your new routine",
+                    body = "Three ways to get the most out of your Glow Serum.",
+                    timestamp = now - 120 * HOUR_MS,
+                    isRead = true,
+                    actionUrl = "https://example.com/blog/glow-serum-tips",
+                    style = Style.Small,
+                ),
+                Message(
+                    id = "msg_014",
+                    title = "Birthday treat inside",
+                    body = "Happy birthday! Here's a free mini mascara with any order this month.",
+                    timestamp = now - 168 * HOUR_MS,
+                    isRead = true,
+                    actionUrl = "https://example.com/birthday",
+                    style = Style.Small,
+                ),
+            )
 
         _inboxState.value =
             InboxState(
                 messages = mockMessages,
                 unreadCount = mockMessages.count { !it.isRead },
                 currentOffset = mockMessages.size,
-                hasMoreMessages = true,
+                hasMoreMessages = false,
             )
 
-        Timber.d("Initialized inbox with ${mockMessages.size} mock messages (4 original + 16 generated)")
+        Timber.d("Initialized inbox with ${mockMessages.size} mock messages")
     }
 
     /**
