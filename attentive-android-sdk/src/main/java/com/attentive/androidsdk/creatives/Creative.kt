@@ -139,10 +139,13 @@ class Creative internal constructor(
 
     private fun addWebViewToParent() {
         changeWebViewVisibility(false)
-        // Make WebView fullscreen - touch events will be filtered by bounding rect
-        val width = parentView.width
-        val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width, height)
+        // Fill the parent so the WebView follows it when it resizes (e.g. for the IME) - touch
+        // events will be filtered by bounding rect
+        val layoutParams =
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
         webView?.setBackgroundColor(Color.TRANSPARENT)
         Timber.d("Set webview background color to transparent")
 

@@ -480,6 +480,7 @@ workflows:
           requires:
             - lint
             - unit-test
+            - instrumented-test
             - snapshot-test
       - distribute-bonni:
           context: *default_context

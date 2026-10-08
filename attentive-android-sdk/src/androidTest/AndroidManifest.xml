@@ -4,5 +4,8 @@
         <activity
             android:name="com.attentive.androidsdk.creatives.PassThroughWebViewTestActivity"
             android:exported="false" />
+        <activity
+            android:name="com.attentive.androidsdk.creatives.PassThroughWebViewKeyboardTestActivity"
+            android:exported="false" />
     </application>
 </manifest>
