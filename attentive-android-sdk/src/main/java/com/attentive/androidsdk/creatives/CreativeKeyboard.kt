@@ -1,5 +1,6 @@
 package com.attentive.androidsdk.creatives
 
+import android.content.Context
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -16,7 +17,7 @@ import timber.log.Timber
  */
 internal fun WebView.releaseKeyboardIfOwned() {
     if (!hasFocus()) return
-    val imm = context.getSystemService(InputMethodManager::class.java)
+    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
     if (imm != null && imm.isActive(this)) {
         Timber.i("Creative owns the keyboard, hiding it")
         imm.hideSoftInputFromWindow(windowToken, 0)
