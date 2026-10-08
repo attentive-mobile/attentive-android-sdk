@@ -138,6 +138,14 @@ jobs:
           restore-gradle-cache-prefix: gradle-v2
           post-emulator-launch-assemble-command: ./gradlew :attentive-android-sdk:assembleDebugAndroidTest
       - run:
+          # Keyboard tests need the test activity to hold window focus
+          name: Unlock emulator and close system dialogs
+          command: |
+            adb shell input keyevent KEYCODE_WAKEUP
+            adb shell wm dismiss-keyguard
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
+            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" || true
+      - run:
           name: Run Instrumented Tests
           command: ./gradlew :attentive-android-sdk:connectedDebugAndroidTest
           no_output_timeout: 20m

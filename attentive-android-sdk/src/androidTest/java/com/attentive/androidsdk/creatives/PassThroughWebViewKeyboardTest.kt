@@ -57,13 +57,7 @@ class PassThroughWebViewKeyboardTest {
     fun tapOnInput_whileAnotherViewHasFocus_servesImeToWebView() {
         val activity = getActivity()
         assertTrue("Test page did not load", activity.pageLoaded.await(10, TimeUnit.SECONDS))
-        val windowFocused =
-            waitFor(timeoutMs = 10_000) {
-                var focused = false
-                instrumentation.runOnMainSync { focused = activity.hasWindowFocus() }
-                focused
-            }
-        assertTrue("Test activity never gained window focus, so no view can be served the IME", windowFocused)
+        awaitWindowFocus(activity)
         instrumentation.runOnMainSync {
             assertTrue("Host EditText should start with focus", activity.hostEditText.requestFocus())
         }

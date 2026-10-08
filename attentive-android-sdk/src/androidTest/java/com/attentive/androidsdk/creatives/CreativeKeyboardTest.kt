@@ -48,7 +48,7 @@ class CreativeKeyboardTest {
     @Before
     fun setUp() {
         activityRule.scenario.onActivity { activity = it }
-        assertTrue("Test activity never gained window focus", waitFor(10_000) { onMain { activity.hasWindowFocus() } })
+        awaitWindowFocus(activity)
         onMain {
             val config =
                 AttentiveConfig.Builder()
