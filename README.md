@@ -325,6 +325,8 @@ val creative = Creative(attentiveConfig, parentView)
 val creative = Creative(attentiveConfig, parentView, activity)
 ```
 
+> **Keyboard:** On Android 11 (API 30) and above, the creative stays above the soft keyboard, including in edge-to-edge apps, so `parentView` doesn't need IME padding. The creative only dismisses a keyboard it opened, so it won't close the keyboard while the user is typing elsewhere in your app. If your window uses `adjustNothing`, Android doesn't report the keyboard's size and the keyboard can cover the creative.
+
 #### 2. Trigger the Creative
 
 When you've reached the point in the app where you'd like to show the creative, call the `trigger` function to display it. Note: the creative may not display if it's not enabled or configured properly via Attentive admin UI.
