@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -107,6 +108,12 @@ fun SettingsScreenContent(navHostController: NavHostController) {
         remember {
             Creative(AttentiveEventTracker.instance.config, frameLayout, activity)
         }
+
+    LaunchedEffect(Unit) {
+        AttentiveSdk.creativeEmailLeads.collect { lead ->
+            Toast.makeText(activity, "Email lead: ${lead.email ?: "(no email)"}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SimpleToolbar(title = "Settings", {}, navHostController)

@@ -25,6 +25,8 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewCompat.WebMessageListener
 import androidx.webkit.WebViewFeature
 import com.attentive.androidsdk.AttentiveConfig
+import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.internal.creatives.CreativeEmailLeadParser
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -473,6 +475,12 @@ class Creative internal constructor(
                             "RESIZE_FRAME" -> {
                                 Timber.d("Resize frame: %s", messageData)
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
+                            }
+                            "EMAIL_LEAD" -> {
+                                Timber.d("Email lead: %s", messageData)
+                                CreativeEmailLeadParser.parse(messageData)?.let {
+                                    AttentiveSdk.emitCreativeEmailLead(it)
+                                }
                             }
                             "IMPRESSION" -> Timber.d("Impression: %s", messageData)
                             "CLOSE" -> closeCreative()
