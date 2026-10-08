@@ -35,8 +35,13 @@ import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.FlowCollector
+import com.attentive.androidsdk.creatives.CreativeEmailLead
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -442,6 +447,24 @@ object AttentiveSdk {
     @get:JvmStatic
     val domain: String
         get() = config.domain
+
+    private val _creativeEmailLeads =
+        MutableSharedFlow<CreativeEmailLead>(
+            extraBufferCapacity = 16,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
+    /**
+     * Stream of email submissions from any [com.attentive.androidsdk.creatives.Creative].
+     * Emits each time a user submits their email in a creative. Does not replay past
+     * submissions to new collectors.
+     */
+    @JvmStatic
+    val creativeEmailLeads: SharedFlow<CreativeEmailLead> = _creativeEmailLeads.asSharedFlow()
+
+    internal fun emitCreativeEmailLead(lead: CreativeEmailLead) {
+        _creativeEmailLeads.tryEmit(lead)
+    }
 
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are
