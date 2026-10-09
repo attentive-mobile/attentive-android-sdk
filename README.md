@@ -497,6 +497,8 @@ Without this, the SDK cannot detect notification taps when the app is brought fr
 
 ## Step 5 (optional) - Inbox
 
+> **Note:** The inbox is currently an MVP. Please contact your CSM to discuss access before enabling it in production.
+
 The SDK ships an in-app message inbox — a Jetpack Compose component (`AttentiveInbox`) that displays messages sent to the user, backed by a `StateFlow` you can also observe directly for things like a badge count on your tab bar.
 
 The inbox lazily initializes the first time it is used, fetches the first page of messages in the background, and refreshes automatically when the containing screen resumes. Rendering the `AttentiveInbox` composable or collecting `AttentiveSdk.inboxState` opts you in automatically; callers that never collect the flow can opt in explicitly with `AttentiveSdk.startInbox()`.

@@ -22,10 +22,26 @@ open class PassThroughWebView
     constructor(
         context: Context,
         attrs: AttributeSet? = null,
-        defStyleAttr: Int = 0,
+        // Keep WebView's default style; it makes the view focusable so creative inputs can
+        // raise the keyboard.
+        defStyleAttr: Int = android.R.attr.webViewStyle,
     ) : WebView(context, attrs, defStyleAttr) {
         /** Bounds within which touches are handled by the WebView. Null = pass all touches to WebView. */
         var creativeBounds: Rect? = null
+
+        override fun onSizeChanged(
+            w: Int,
+            h: Int,
+            oldw: Int,
+            oldh: Int,
+        ) {
+            super.onSizeChanged(w, h, oldw, oldh)
+            val bounds = creativeBounds
+            if (bounds != null && oldh > 0 && h != oldh) {
+                creativeBounds = shiftWithBottomEdge(bounds, h - oldh)
+                Timber.i("Height changed $oldh -> $h, shifted creative bounds to $creativeBounds")
+            }
+        }
 
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -44,6 +60,15 @@ open class PassThroughWebView
         }
 
         companion object {
+            /**
+             * Creatives are positioned from the bottom of the WebView, so when its height
+             * changes by [deltaHeight] the creative moves by the same amount.
+             */
+            internal fun shiftWithBottomEdge(
+                bounds: Rect,
+                deltaHeight: Int,
+            ): Rect = Rect(bounds.left, bounds.top + deltaHeight, bounds.right, bounds.bottom + deltaHeight)
+
             /**
              * Returns true if a touch at ([x], [y]) should pass through to views behind the
              * WebView. Bounds are inclusive on the top/left edges and exclusive on the

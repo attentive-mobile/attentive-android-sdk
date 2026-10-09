@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -19,6 +20,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.ViewCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -81,6 +83,8 @@ class Creative internal constructor(
 
     private val triggerQueue = mutableListOf<() -> Unit>()
 
+    private val imeLayoutListener = ViewTreeObserver.OnGlobalLayoutListener { webView?.avoidImeOverlap(parentView) }
+
     @VisibleForTesting
     internal var isWebViewReady = false
 
@@ -139,14 +143,24 @@ class Creative internal constructor(
 
     private fun addWebViewToParent() {
         changeWebViewVisibility(false)
-        // Make WebView fullscreen - touch events will be filtered by bounding rect
-        val width = parentView.width
-        val height = parentView.height
-        val layoutParams = ViewGroup.LayoutParams(width, height)
+        // Fill the parent so the WebView follows it when it resizes (e.g. for the IME) - touch
+        // events will be filtered by bounding rect
+        val layoutParams =
+            ViewGroup.MarginLayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
         webView?.setBackgroundColor(Color.TRANSPARENT)
         Timber.d("Set webview background color to transparent")
 
         (parentView as ViewGroup).addView(webView, layoutParams)
+        webView?.let { view ->
+            view.viewTreeObserver.addOnGlobalLayoutListener(imeLayoutListener)
+            ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                (v as WebView).avoidImeOverlap(parentView)
+                ViewCompat.onApplyWindowInsets(v, insets)
+            }
+        }
     }
 
     /**
@@ -221,6 +235,10 @@ class Creative internal constructor(
         Timber.i("Destroying creative")
         isCreativeOpen.set(false)
         isCreativeOpening.set(false)
+        webView?.let { view ->
+            view.releaseKeyboardIfOwned()
+            view.viewTreeObserver?.removeOnGlobalLayoutListener(imeLayoutListener)
+        }
         if (parentView != null && webView != null) {
             Timber.i("WebView removed from view hierarchy correctly")
             (parentView as ViewGroup).removeView(webView)
@@ -487,13 +505,15 @@ class Creative internal constructor(
         }
     }
 
-    private fun onCreativeTimedOut() {
+    @VisibleForTesting
+    internal fun onCreativeTimedOut() {
         Timber.e("Creative timed out. Not showing WebView.")
         CoroutineScope(Dispatchers.Main).launch {
             isCreativeOpen.set(false)
             isCreativeOpening.set(false)
             (webView as? PassThroughWebView)?.creativeBounds = null
             webView?.let { view ->
+                view.releaseKeyboardIfOwned()
                 changeWebViewVisibility(false)
                 view.stopLoading()
             }
@@ -559,6 +579,7 @@ class Creative internal constructor(
             (webView as? PassThroughWebView)?.creativeBounds = null
             Timber.i("Cleared creative bounds")
             if (webView != null) {
+                webView?.releaseKeyboardIfOwned()
                 changeWebViewVisibility(false)
                 Timber.i("webview clearCache() called")
                 webView!!.clearCache(true)
