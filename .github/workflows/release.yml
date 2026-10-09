@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: 'main'
+      dry_run:
+        description: 'Verify the release token can write releases, then stop before publishing anything.'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   trigger-release:
@@ -29,6 +34,7 @@ jobs:
               "branch": "${{ inputs.branch }}",
               "parameters": {
                 "run_release": true,
-                "release_version": "${{ inputs.version }}"
+                "release_version": "${{ inputs.version }}",
+                "release_dry_run": ${{ inputs.dry_run }}
               }
             }'
