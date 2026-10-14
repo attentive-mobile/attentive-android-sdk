@@ -44,6 +44,7 @@ kotlinxSerialization = "1.8.0"
 material = "1.12.0"
 accompanistPermissions = "0.37.2"
 engageCore = "1.5.8"
+mlkitGenaiPrompt = "1.0.0-beta4"
 
 # Logging
 timber = "5.0.1"
@@ -139,6 +140,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 engage-core = { group = "com.google.android.engage", name = "engage-core", version.ref = "engageCore" }
+mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "mlkitGenaiPrompt" }
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }

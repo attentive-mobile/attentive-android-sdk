@@ -57,6 +57,7 @@ import com.attentive.androidsdk.creatives.Creative
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.bonni.BonniApp
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_EMAIL_PREFS
+import com.attentive.bonni.BonniApp.Companion.CART_ABANDONMENT_FAST_DELAY_PREFS
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PHONE_PREFS
 import com.attentive.bonni.BonniApp.Companion.ATTENTIVE_PREFS
 import com.attentive.bonni.R
@@ -71,6 +72,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.text.DateFormat
+import java.util.Date
 
 data class SettingItem(
     val title: String,
@@ -342,6 +345,8 @@ fun SettingsList(
             PushPermissionRequest()
             SettingGroup(pushSettings)
             SettingGroup(deepLinkSettings)
+            SectionHeader("Cart abandonment")
+            CartAbandonmentSettings()
             AboutSection()
             Spacer(modifier = Modifier.padding(8.dp))
         }
@@ -725,6 +730,36 @@ suspend fun sharePushToken(activity: Activity) {
                 .show()
         }
     }
+}
+
+@Composable
+private fun CartAbandonmentSettings() {
+    val state by AttentiveSdk.cartAbandonmentState.collectAsState()
+    val prefs = BonniApp.getInstance().getSharedPreferences(ATTENTIVE_PREFS, MODE_PRIVATE)
+    var fastDelay by remember { mutableStateOf(prefs.getBoolean(CART_ABANDONMENT_FAST_DELAY_PREFS, false)) }
+    val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.MEDIUM) }
+    val fontFamily = FontFamily(Font(R.font.degulardisplay_regular))
+
+    Column(modifier = Modifier.padding(8.dp)) {
+        Text("Status: ${state.status}", fontFamily = fontFamily)
+        Text("Items in cart: ${state.itemCount}", fontFamily = fontFamily)
+        Text(
+            "Purchase intent score: ${state.intentScore?.let { "%.2f".format(it) } ?: "-"}",
+            fontFamily = fontFamily,
+        )
+        state.checkAtMillis?.let {
+            Text("Checks at: ${timeFormat.format(Date(it))}", fontFamily = fontFamily)
+        }
+    }
+    Setting(
+        title = "Check after ${if (fastDelay) "30 seconds" else "1 hour"} (tap to switch; applies to the next add-to-cart)",
+        enabled = true,
+        onClick = {
+            fastDelay = !fastDelay
+            prefs.edit { putBoolean(CART_ABANDONMENT_FAST_DELAY_PREFS, fastDelay) }
+            BonniApp.getInstance().enableCartAbandonment(fastDelay)
+        },
+    )
 }
 
 @Composable
