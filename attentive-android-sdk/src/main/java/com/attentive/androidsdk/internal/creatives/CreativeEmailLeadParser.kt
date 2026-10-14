@@ -1,5 +1,6 @@
 package com.attentive.androidsdk.internal.creatives
 
+import com.attentive.androidsdk.creatives.Creative
 import com.attentive.androidsdk.creatives.CreativeEmailLead
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -9,7 +10,10 @@ import kotlinx.serialization.json.jsonObject
 import timber.log.Timber
 
 internal object CreativeEmailLeadParser {
-    /** Parses an `EMAIL_LEAD` creative message. Returns `null` if [messageData] isn't a JSON object. */
+    /**
+     * Parses an `EMAIL_LEAD` creative message. Returns `null` if [messageData] isn't a JSON object.
+     * The origin the SDK adds while forwarding is removed from [CreativeEmailLead.rawPayload].
+     */
     fun parse(messageData: String): CreativeEmailLead? {
         val json =
             try {
@@ -20,7 +24,12 @@ internal object CreativeEmailLeadParser {
             }
         return CreativeEmailLead(
             email = json.stringOrNull("email"),
-            rawPayload = messageData,
+            rawPayload =
+                if (Creative.MESSAGE_ORIGIN_KEY in json) {
+                    JsonObject(json - Creative.MESSAGE_ORIGIN_KEY).toString()
+                } else {
+                    messageData
+                },
         )
     }
 

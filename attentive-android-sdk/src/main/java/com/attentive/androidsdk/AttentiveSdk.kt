@@ -456,8 +456,13 @@ object AttentiveSdk {
 
     /**
      * Stream of email submissions from any [com.attentive.androidsdk.creatives.Creative].
-     * Emits each time a user submits their email in a creative. Does not replay past
-     * submissions to new collectors.
+     * Emits each time a user submits their email in a creative.
+     *
+     * Submissions are only delivered to collectors that are active when they happen. A submission
+     * made while nothing is collecting is dropped, and new collectors don't receive past
+     * submissions. Collect from an app-wide scope (for example, one started in
+     * `Application.onCreate`) rather than a screen or lifecycle-bound scope, so submissions made
+     * while that screen is stopped or being recreated aren't missed.
      */
     @JvmStatic
     val creativeEmailLeads: SharedFlow<CreativeEmailLead> = _creativeEmailLeads.asSharedFlow()

@@ -35,6 +35,16 @@ class CreativeEmailLeadParserTest {
     }
 
     @Test
+    fun parse_withForwardedOrigin_removesOriginFromRawPayload() {
+        val message =
+            """{"action":"EMAIL_LEAD","email":"user@example.com","metadata":{"a":1},"__origin":"https://creatives.attn.tv"}"""
+
+        val lead = CreativeEmailLeadParser.parse(message)
+
+        assertEquals("""{"action":"EMAIL_LEAD","email":"user@example.com","metadata":{"a":1}}""", lead?.rawPayload)
+    }
+
+    @Test
     fun parse_withInvalidJson_returnsNull() {
         assertNull(CreativeEmailLeadParser.parse("{not json"))
     }

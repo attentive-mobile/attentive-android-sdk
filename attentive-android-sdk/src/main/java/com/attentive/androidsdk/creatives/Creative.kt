@@ -430,7 +430,6 @@ class Creative internal constructor(
                 replyProxy: JavaScriptReplyProxy?,
             ->
             val messageData = message.data
-            Timber.i("Creative message data %s", messageData)
             if (messageData != null) {
                 // Non-JSON string messages (posted directly as string literals by the injected JS)
                 if (messageData == "TIMED OUT") {
@@ -495,9 +494,14 @@ class Creative internal constructor(
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
                             }
                             "EMAIL_LEAD" -> {
-                                Timber.d("Email lead: %s", messageData)
-                                CreativeEmailLeadParser.parse(messageData)?.let {
-                                    AttentiveSdk.emitCreativeEmailLead(it)
+                                val origin = jsonObject.optString(MESSAGE_ORIGIN_KEY)
+                                if (origin in CREATIVE_LISTENER_ALLOWED_ORIGINS) {
+                                    Timber.d("Email lead received")
+                                    CreativeEmailLeadParser.parse(messageData)?.let {
+                                        AttentiveSdk.emitCreativeEmailLead(it)
+                                    }
+                                } else {
+                                    Timber.w("Ignoring email lead from untrusted origin: %s", origin)
                                 }
                             }
                             "IMPRESSION" -> Timber.d("Impression: %s", messageData)
@@ -506,6 +510,7 @@ class Creative internal constructor(
                         }
                         return@WebMessageListener
                     }
+                    Timber.i("Creative message data %s", messageData)
                 } catch (e: Exception) {
                     Timber.e("Error parsing JSON message: %s", e.message)
                 }
@@ -616,6 +621,9 @@ class Creative internal constructor(
 
     companion object {
         private val CREATIVE_LISTENER_ALLOWED_ORIGINS = setOf("https://creatives.attn.tv")
+
+        /** Key the injected JS adds to each forwarded message, holding the posting frame's origin. */
+        internal const val MESSAGE_ORIGIN_KEY = "__origin"
         private val EXTERNAL_APP_SCHEMES = setOf("sms", "smsto", "tel", "mailto", "http", "https")
         private const val CREATIVE_LISTENER_JS =
             "javascript:(async function() {\n" +
@@ -628,7 +636,7 @@ class Creative internal constructor(
                 "        function(event){\n" +
                 "            if (event.data && event.data.__attentive) {\n" +
                 "                console.log(event.data.__attentive);\n " +
-                "                CREATIVE_LISTENER.postMessage(JSON.stringify(event.data.__attentive));\n" +
+                "                CREATIVE_LISTENER.postMessage(JSON.stringify(Object.assign({}, event.data.__attentive, {__origin: event.origin})));\n" +
                 "            }\n" +
                 "        },\n" +
                 "    false);\n" +
