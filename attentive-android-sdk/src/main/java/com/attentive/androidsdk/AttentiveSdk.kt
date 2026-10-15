@@ -35,8 +35,13 @@ import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.FlowCollector
+import com.attentive.androidsdk.creatives.CreativeEmailLead
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -442,6 +447,32 @@ object AttentiveSdk {
     @get:JvmStatic
     val domain: String
         get() = config.domain
+
+    private val _creativeEmailLeads =
+        MutableSharedFlow<CreativeEmailLead>(
+            extraBufferCapacity = 16,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+
+    /**
+     * Stream of email submissions from any [com.attentive.androidsdk.creatives.Creative].
+     * Emits each time a user submits their email on an email page of a creative, and when a page
+     * that asks for email and phone together is submitted with an email the creative didn't
+     * already have. An email already emitted since the creative was last triggered isn't emitted
+     * again from a later page.
+     *
+     * Submissions are only delivered to collectors that are active when they happen. A submission
+     * made while nothing is collecting is dropped, and new collectors don't receive past
+     * submissions. Collect from an app-wide scope (for example, one started in
+     * `Application.onCreate`) rather than a screen or lifecycle-bound scope, so submissions made
+     * while that screen is stopped or being recreated aren't missed.
+     */
+    @JvmStatic
+    val creativeEmailLeads: SharedFlow<CreativeEmailLead> = _creativeEmailLeads.asSharedFlow()
+
+    internal fun emitCreativeEmailLead(lead: CreativeEmailLead) {
+        _creativeEmailLeads.tryEmit(lead)
+    }
 
     /**
      * Records an analytics event with Attentive in a fire-and-forget manner. Errors are

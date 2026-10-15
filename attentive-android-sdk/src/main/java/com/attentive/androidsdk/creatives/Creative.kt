@@ -27,6 +27,8 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewCompat.WebMessageListener
 import androidx.webkit.WebViewFeature
 import com.attentive.androidsdk.AttentiveConfig
+import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.internal.creatives.CreativeEmailLeadParser
 import com.attentive.androidsdk.internal.util.CreativeUrlFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +84,9 @@ class Creative internal constructor(
     private var triggerCallback: CreativeTriggerCallback? = null
 
     private val triggerQueue = mutableListOf<() -> Unit>()
+
+    // Emails emitted on AttentiveSdk.creativeEmailLeads since the last trigger, lowercased.
+    private val reportedLeadEmails = mutableSetOf<String>()
 
     private val imeLayoutListener = ViewTreeObserver.OnGlobalLayoutListener { webView?.avoidImeOverlap(parentView) }
 
@@ -181,6 +186,7 @@ class Creative internal constructor(
         Timber.i("trigger method called with parameters - callback: %s, creativeId: %s", callback, creativeId)
 
         triggerCallback = callback
+        reportedLeadEmails.clear()
 
         if (!isWebViewReady) {
             Timber.i("WebView not ready yet, queueing trigger")
@@ -428,7 +434,6 @@ class Creative internal constructor(
                 replyProxy: JavaScriptReplyProxy?,
             ->
             val messageData = message.data
-            Timber.i("Creative message data %s", messageData)
             if (messageData != null) {
                 // Non-JSON string messages (posted directly as string literals by the injected JS)
                 if (messageData == "TIMED OUT") {
@@ -492,17 +497,48 @@ class Creative internal constructor(
                                 Timber.d("Resize frame: %s", messageData)
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
                             }
+                            "EMAIL_LEAD", "LEAD" -> {
+                                val origin = jsonObject.optString(MESSAGE_ORIGIN_KEY)
+                                if (origin in CREATIVE_LISTENER_ALLOWED_ORIGINS) {
+                                    onLeadMessage(action.uppercase(), messageData)
+                                } else {
+                                    Timber.w("Ignoring %s from untrusted origin: %s", action, origin)
+                                }
+                            }
                             "IMPRESSION" -> Timber.d("Impression: %s", messageData)
                             "CLOSE" -> closeCreative()
                             else -> Timber.d("Unknown action: %s", action)
                         }
                         return@WebMessageListener
                     }
+                    Timber.i("Creative message data %s", messageData)
                 } catch (e: Exception) {
                     Timber.e("Error parsing JSON message: %s", e.message)
                 }
             }
         }
+    }
+
+    private fun onLeadMessage(
+        action: String,
+        messageData: String,
+    ) {
+        if (action == "EMAIL_LEAD") {
+            Timber.d("Email lead received")
+            CreativeEmailLeadParser.parse(messageData)?.let { lead ->
+                lead.email?.let { reportedLeadEmails += it.lowercase() }
+                AttentiveSdk.emitCreativeEmailLead(lead)
+            }
+            return
+        }
+        val lead = CreativeEmailLeadParser.parseLead(messageData)
+        val email = lead?.email?.lowercase()
+        if (lead == null || email == null || !reportedLeadEmails.add(email)) {
+            Timber.d("Lead received without a new email")
+            return
+        }
+        Timber.d("Lead received with a new email")
+        AttentiveSdk.emitCreativeEmailLead(lead)
     }
 
     @VisibleForTesting
@@ -608,6 +644,9 @@ class Creative internal constructor(
 
     companion object {
         private val CREATIVE_LISTENER_ALLOWED_ORIGINS = setOf("https://creatives.attn.tv")
+
+        /** Key the injected JS adds to each forwarded message, holding the posting frame's origin. */
+        internal const val MESSAGE_ORIGIN_KEY = "__origin"
         private val EXTERNAL_APP_SCHEMES = setOf("sms", "smsto", "tel", "mailto", "http", "https")
         private const val CREATIVE_LISTENER_JS =
             "javascript:(async function() {\n" +
@@ -620,7 +659,7 @@ class Creative internal constructor(
                 "        function(event){\n" +
                 "            if (event.data && event.data.__attentive) {\n" +
                 "                console.log(event.data.__attentive);\n " +
-                "                CREATIVE_LISTENER.postMessage(JSON.stringify(event.data.__attentive));\n" +
+                "                CREATIVE_LISTENER.postMessage(JSON.stringify(Object.assign({}, event.data.__attentive, {__origin: event.origin})));\n" +
                 "            }\n" +
                 "        },\n" +
                 "    false);\n" +
