@@ -456,7 +456,10 @@ object AttentiveSdk {
 
     /**
      * Stream of email submissions from any [com.attentive.androidsdk.creatives.Creative].
-     * Emits each time a user submits their email in a creative.
+     * Emits each time a user submits their email on an email page of a creative, and when a page
+     * that asks for email and phone together is submitted with an email the creative didn't
+     * already have. An email already emitted since the creative was last triggered isn't emitted
+     * again from a later page.
      *
      * Submissions are only delivered to collectors that are active when they happen. A submission
      * made while nothing is collecting is dropped, and new collectors don't receive past

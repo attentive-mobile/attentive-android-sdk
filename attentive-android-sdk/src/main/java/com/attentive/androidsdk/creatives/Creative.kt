@@ -85,6 +85,9 @@ class Creative internal constructor(
 
     private val triggerQueue = mutableListOf<() -> Unit>()
 
+    // Emails emitted on AttentiveSdk.creativeEmailLeads since the last trigger, lowercased.
+    private val reportedLeadEmails = mutableSetOf<String>()
+
     private val imeLayoutListener = ViewTreeObserver.OnGlobalLayoutListener { webView?.avoidImeOverlap(parentView) }
 
     @VisibleForTesting
@@ -183,6 +186,7 @@ class Creative internal constructor(
         Timber.i("trigger method called with parameters - callback: %s, creativeId: %s", callback, creativeId)
 
         triggerCallback = callback
+        reportedLeadEmails.clear()
 
         if (!isWebViewReady) {
             Timber.i("WebView not ready yet, queueing trigger")
@@ -493,15 +497,12 @@ class Creative internal constructor(
                                 Timber.d("Resize frame: %s", messageData)
                                 // Ignore RESIZE_FRAME, we're using OPEN messages instead
                             }
-                            "EMAIL_LEAD" -> {
+                            "EMAIL_LEAD", "LEAD" -> {
                                 val origin = jsonObject.optString(MESSAGE_ORIGIN_KEY)
                                 if (origin in CREATIVE_LISTENER_ALLOWED_ORIGINS) {
-                                    Timber.d("Email lead received")
-                                    CreativeEmailLeadParser.parse(messageData)?.let {
-                                        AttentiveSdk.emitCreativeEmailLead(it)
-                                    }
+                                    onLeadMessage(action.uppercase(), messageData)
                                 } else {
-                                    Timber.w("Ignoring email lead from untrusted origin: %s", origin)
+                                    Timber.w("Ignoring %s from untrusted origin: %s", action, origin)
                                 }
                             }
                             "IMPRESSION" -> Timber.d("Impression: %s", messageData)
@@ -516,6 +517,28 @@ class Creative internal constructor(
                 }
             }
         }
+    }
+
+    private fun onLeadMessage(
+        action: String,
+        messageData: String,
+    ) {
+        if (action == "EMAIL_LEAD") {
+            Timber.d("Email lead received")
+            CreativeEmailLeadParser.parse(messageData)?.let { lead ->
+                lead.email?.let { reportedLeadEmails += it.lowercase() }
+                AttentiveSdk.emitCreativeEmailLead(lead)
+            }
+            return
+        }
+        val lead = CreativeEmailLeadParser.parseLead(messageData)
+        val email = lead?.email?.lowercase()
+        if (lead == null || email == null || !reportedLeadEmails.add(email)) {
+            Timber.d("Lead received without a new email")
+            return
+        }
+        Timber.d("Lead received with a new email")
+        AttentiveSdk.emitCreativeEmailLead(lead)
     }
 
     @VisibleForTesting

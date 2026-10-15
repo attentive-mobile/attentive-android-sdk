@@ -45,6 +45,34 @@ class CreativeEmailLeadParserTest {
     }
 
     @Test
+    fun parseLead_withNewEmail_returnsLead() {
+        val message =
+            """{"action":"LEAD","email":"new@example.com","userEmail":"known@example.com","phone":"+15555550100"}"""
+
+        assertEquals(CreativeEmailLead(email = "new@example.com", rawPayload = message), CreativeEmailLeadParser.parseLead(message))
+    }
+
+    @Test
+    fun parseLead_withoutUserEmail_returnsLead() {
+        val message = """{"action":"LEAD","email":"new@example.com"}"""
+
+        assertEquals("new@example.com", CreativeEmailLeadParser.parseLead(message)?.email)
+    }
+
+    @Test
+    fun parseLead_withKnownEmail_returnsNull() {
+        val message = """{"action":"LEAD","email":"Known@Example.com","userEmail":"known@example.com"}"""
+
+        assertNull(CreativeEmailLeadParser.parseLead(message))
+    }
+
+    @Test
+    fun parseLead_withoutEmail_returnsNull() {
+        assertNull(CreativeEmailLeadParser.parseLead("""{"action":"LEAD","phone":"+15555550100"}"""))
+        assertNull(CreativeEmailLeadParser.parseLead("""{"action":"LEAD","email":""}"""))
+    }
+
+    @Test
     fun parse_withInvalidJson_returnsNull() {
         assertNull(CreativeEmailLeadParser.parse("{not json"))
     }

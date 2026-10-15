@@ -99,8 +99,27 @@ class CreativeEmailLeadTest {
     }
 
     @Test
+    fun leadWithNewEmail_isEmitted() {
+        postFromTop("{action:'LEAD', email:'twoinone@example.com', phone:'+15555550100', userEmail:'known@example.com'}")
+
+        val lead = awaitLead { it.email == "twoinone@example.com" }
+        assertEquals("LEAD", JSONObject(lead.rawPayload).getString("action"))
+    }
+
+    @Test
+    fun leadRepeatingAnEmittedOrKnownEmail_isNotEmitted() {
+        postFromTop("{action:'EMAIL_LEAD', email:'first@example.com'}")
+        postFromTop("{action:'LEAD', email:'First@Example.com', phone:'+15555550100'}")
+        postFromTop("{action:'LEAD', email:'known@example.com', userEmail:'known@example.com'}")
+        postFromTop("{action:'LEAD', phone:'+15555550100'}")
+        postFromTop("{action:'EMAIL_LEAD', email:'sentinel@example.com'}")
+
+        awaitLead { it.email == "sentinel@example.com" }
+        assertEquals(listOf("first@example.com", "sentinel@example.com"), leads.map { it.email })
+    }
+
+    @Test
     fun otherActions_areNotEmitted() {
-        postFromTop("{action:'LEAD', email:'lead@example.com', phone:'+15555550100'}")
         postFromTop("{action:'IMPRESSION', email:'impression@example.com'}")
         postFromTop("{action:'EMAIL_LEAD', email:'sentinel@example.com'}")
 
