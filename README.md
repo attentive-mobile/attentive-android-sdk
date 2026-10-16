@@ -52,9 +52,9 @@ For all of these, follow the relevant sections of this README.
 __*** NOTE: To function properly, the SDK must be initialized as soon as possible after application startup. This is required for us to properly track metrics (app open events, etc) ***__
 
 ```kotlin
-// Create an AttentiveConfig with your attentive domain, in production mode, with an Application context
+// Create an AttentiveConfig with your attentive domain, in production mode, with an Application
 val attentiveConfig = AttentiveConfig.Builder()
-        .applicationContext(getApplicationContext())
+        .applicationContext(getApplication())
         .domain("YOUR_ATTENTIVE_DOMAIN")
         .mode(AttentiveConfig.Mode.PRODUCTION)
         // Optional: only needed if using push notifications (see Step 4)
