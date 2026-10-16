@@ -382,6 +382,18 @@ removed in a future major version.
 To force a specific creative to display while debugging, trigger it by creative ID as shown in
 [Trigger a Specific Creative](#trigger-a-specific-creative) above. This will ignore all fatigue rules evaluated by the Attentive backend.
 
+#### 5. Listen for Email Signups (optional)
+
+Subscribe to `AttentiveSdk.creativeEmailLeads` to locally react to the signup in your app, for example to identify the user or update your own records.
+
+```kotlin
+AttentiveSdk.creativeEmailLeads.collect { lead ->
+    lead.email?.let { email ->
+        // Handle the submitted email
+    }
+}
+```
+
 ## Step 4 (optional) - Integrate With Push
 
 Push notification support is  **enabled by default** but can be disabled. The core SDK functionality — event tracking, creatives, and user identification — works without any push setup. Only follow this section if you want to send push notifications to your users via Attentive.
