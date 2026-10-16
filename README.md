@@ -387,11 +387,11 @@ To force a specific creative to display while debugging, trigger it by creative 
 Subscribe to `AttentiveSdk.creativeEmailLeads` to locally react to the signup in your app, for example to identify the user or update your own records.
 
 ```kotlin
-            AttentiveSdk.creativeEmailLeads.collect { lead ->
-                lead.email?.let { email ->
-                    // Handle the submitted email
-                }
-            }
+AttentiveSdk.creativeEmailLeads.collect { lead ->
+    lead.email?.let { email ->
+        // Handle the submitted email
+    }
+}
 ```
 
 ## Step 4 (optional) - Integrate With Push
