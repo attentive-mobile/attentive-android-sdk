@@ -3,7 +3,6 @@
 package com.attentive.androidsdk.inbox
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -60,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -92,6 +93,11 @@ import kotlin.math.roundToInt
 // Maximum time the pull-to-refresh spinner stays visible before we let the user
 // go, even if the underlying refresh is still retrying under the hood.
 private const val REFRESH_UI_TIMEOUT_MS = 8_000L
+
+// How far an unread row's background is blended from the inbox background toward
+// black (light backgrounds) or white (dark backgrounds), e.g. 0.04 produces
+// #F5F5F5 for the default white background.
+private const val UNREAD_ROW_TINT_FRACTION = 0.04f
 
 /**
  * Provides a single shared [ImageLoader] scoped to an [AttentiveInbox] tree so
@@ -172,7 +178,7 @@ private fun rememberTopLevelInboxImageLoader(): ImageLoader {
  * @param titleFontFamily Font family for message titles (null uses system default)
  * @param bodyFontFamily Font family for message body text (null uses system default)
  * @param timestampFontFamily Font family for timestamps (null uses system default)
- * @param onMessageClick Callback invoked when a message is clicked (default marks as read)
+ * @param onMessageClick Callback invoked when a message is clicked (does not mark as read)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -282,7 +288,7 @@ fun AttentiveInbox(
                 }
             }
         },
-        modifier = modifier,
+        modifier = modifier.background(backgroundColor),
     ) {
         if (inboxState.messages.isEmpty() && !inboxState.isLoadingMore) {
             EmptyInboxView(
@@ -305,20 +311,31 @@ fun AttentiveInbox(
                 titleFontFamily = titleFontFamily,
                 bodyFontFamily = bodyFontFamily,
                 timestampFontFamily = timestampFontFamily,
-                onMessageClick =
-                    onMessageClick ?: { message: Message ->
-                        if (!message.isRead) {
-                            AttentiveSdk.markRead(message.id)
-                        }
+                onMessageClick = { message: Message ->
+                    val url = message.actionUrl?.takeIf { it.isNotBlank() }
 
-                        // Handle deep link if actionUrl is present
-                        message.actionUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
-                            AttentiveSdk.trackInboxClick(message.id, url)
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            context.startActivity(intent)
+                    if (url != null) {
+                        AttentiveSdk.trackInboxClick(message.id, url)
+                    }
+
+                    onMessageClick?.invoke(message)
+
+                    if (onMessageClick == null && !message.isRead) {
+                        AttentiveSdk.markRead(message.id)
+                    }
+
+                    if (AttentiveSdk.automaticallyOpensInboxDeepLinks && url != null) {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                        } catch (e: Exception) {
+                            Timber.e(
+                                "Error opening the inbox action URL '%s'. Error message: '%s'",
+                                url,
+                                e.message,
+                            )
                         }
-                        Unit
-                    },
+                    }
+                },
             )
         }
     }
@@ -383,7 +400,7 @@ private fun MessageList(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(backgroundColor),
     ) {
         items(
             items = messages,
@@ -400,6 +417,7 @@ private fun MessageList(
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
                     swipeBackgroundColor = swipeBackgroundColor,
+                    backgroundColor = backgroundColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -656,6 +674,7 @@ private fun MessageItem(
     bodyTextColor: Color,
     timestampTextColor: Color,
     swipeBackgroundColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
@@ -663,6 +682,19 @@ private fun MessageItem(
     onSwipeMarkUnread: () -> Unit,
     onSwipeDelete: () -> Unit,
 ) {
+    fun inboxRowSurface(background: Color, isRead: Boolean): Color {
+        if (isRead) return background
+        val target = if (background.luminance() > 0.5f) Color.Black else Color.White
+        return Color(
+            red = background.red + (target.red - background.red) * UNREAD_ROW_TINT_FRACTION,
+            green = background.green + (target.green - background.green) * UNREAD_ROW_TINT_FRACTION,
+            blue = background.blue + (target.blue - background.blue) * UNREAD_ROW_TINT_FRACTION,
+            alpha = background.alpha,
+        )
+    }
+
+    val rowColor = inboxRowSurface(backgroundColor, message.isRead)
+
     SwipeToAction(
         swipeLeftAction =
             SwipeActionConfig(
@@ -689,6 +721,7 @@ private fun MessageItem(
                     titleTextColor = titleTextColor,
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
+                    backgroundColor = rowColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -701,6 +734,7 @@ private fun MessageItem(
                     titleTextColor = titleTextColor,
                     bodyTextColor = bodyTextColor,
                     timestampTextColor = timestampTextColor,
+                    backgroundColor = rowColor,
                     titleFontFamily = titleFontFamily,
                     bodyFontFamily = bodyFontFamily,
                     timestampFontFamily = timestampFontFamily,
@@ -717,13 +751,12 @@ private fun SmallMessageContent(
     titleTextColor: Color,
     bodyTextColor: Color,
     timestampTextColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
 ) {
-    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
-
     Row(
         modifier =
             Modifier
@@ -807,12 +840,12 @@ private fun LargeMessageContent(
     titleTextColor: Color,
     bodyTextColor: Color,
     timestampTextColor: Color,
+    backgroundColor: Color,
     titleFontFamily: FontFamily?,
     bodyFontFamily: FontFamily?,
     timestampFontFamily: FontFamily?,
     onClick: () -> Unit,
 ) {
-    val backgroundColor = if (message.isRead) Color.White else Color(0xFFF5F5F5)
 
     Card(
         modifier =
@@ -913,6 +946,7 @@ private fun SmallMessagePreview_UnreadWithImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,
@@ -937,6 +971,7 @@ private fun SmallMessagePreview_ReadWithImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,
@@ -961,6 +996,7 @@ private fun SmallMessagePreview_UnreadNoImage() {
         titleTextColor = Color.Black,
         bodyTextColor = Color(0xFF666666),
         timestampTextColor = Color(0xFF999999),
+        backgroundColor = Color.White,
         titleFontFamily = null,
         bodyFontFamily = null,
         timestampFontFamily = null,

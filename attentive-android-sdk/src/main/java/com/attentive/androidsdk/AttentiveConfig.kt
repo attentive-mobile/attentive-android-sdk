@@ -28,6 +28,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
     val pushEnabled: Boolean = builder._pushEnabled
+    val automaticallyOpensInboxDeepLinks: Boolean = builder._automaticallyOpensInboxDeepLinks
 
     private val visitorService =
         ClassFactory.buildVisitorService(ClassFactory.buildPersistentStorage(builder._context))
@@ -189,6 +190,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal var okHttpClient: OkHttpClient? = null
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
         internal var _pushEnabled: Boolean = true
+        internal var _automaticallyOpensInboxDeepLinks: Boolean = true
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
 
@@ -290,6 +292,11 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
                 this._pushEnabled = enabled
             }
 
+        fun automaticallyOpensInboxDeepLinks(enabled: Boolean) =
+            apply {
+                this._automaticallyOpensInboxDeepLinks = enabled
+            }
+
         /**
          * @throws IllegalStateException if [applicationContext], [mode], or [domain] was not set.
          */
@@ -308,7 +315,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                "logLevel=$logLevel, pushEnabled=$_pushEnabled)"
+                "logLevel=$logLevel, pushEnabled=$_pushEnabled, automaticallyOpensInboxDeepLinks=$_automaticallyOpensInboxDeepLinks)"
         }
     }
 
