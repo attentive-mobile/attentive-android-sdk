@@ -382,34 +382,17 @@ removed in a future major version.
 To force a specific creative to display while debugging, trigger it by creative ID as shown in
 [Trigger a Specific Creative](#trigger-a-specific-creative) above. This will ignore all fatigue rules evaluated by the Attentive backend.
 
-#### 5. Listen for Email Signups
+#### 5. Listen for Email Signups (optional)
 
-`AttentiveSdk.creativeEmailLeads` is a Kotlin `SharedFlow<CreativeEmailLead>` that emits when a user submits their email address in a creative. Use it to react to the signup in your app, for example to identify the user or update your own records.
+Subscribe to `AttentiveSdk.creativeEmailLeads` to locally react to the signup in your app, for example to identify the user or update your own records.
 
 ```kotlin
-class MyApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        // ... initialize the SDK
-
-        MainScope().launch {
             AttentiveSdk.creativeEmailLeads.collect { lead ->
                 lead.email?.let { email ->
                     // Handle the submitted email
                 }
             }
-        }
-    }
-}
 ```
-
-Each `CreativeEmailLead` has:
-- `email` - the submitted email address, or `null` if the creative didn't include one.
-- `rawPayload` - the full JSON message the creative posted, for fields not modeled on `CreativeEmailLead`, such as `creativeId`.
-
-A lead is emitted when the user submits an email page of the creative. A later page that carries an email the creative didn't already have, such as a page that asks for email and phone together, also emits a lead. An email that was already emitted since the creative was last triggered isn't emitted again.
-
-__*** NOTE: Leads are only delivered to collectors that are active when the email is submitted. A lead submitted while nothing is collecting is dropped, and new collectors don't receive past leads. Collect from an app-wide scope, such as one started in `Application.onCreate`, rather than a screen or lifecycle-bound scope. ***__
 
 ## Step 4 (optional) - Integrate With Push
 
