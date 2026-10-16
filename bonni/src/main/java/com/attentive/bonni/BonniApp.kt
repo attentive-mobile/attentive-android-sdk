@@ -1,20 +1,32 @@
 package com.attentive.bonni
 
 import android.app.Application
+import android.widget.Toast
 import com.attentive.androidsdk.AttentiveConfig
 import com.attentive.androidsdk.AttentiveLogLevel
 import com.attentive.androidsdk.AttentiveSdk
 import com.attentive.androidsdk.UserIdentifiers
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.bonni.database.AppDatabase
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 class BonniApp : Application() {
     override fun onCreate() {
         super.onCreate()
         appInstance = this
         initAttentiveTracker()
+        showCreativeEmailLeads()
         // Timber tree is planted by AttentiveSdk based on logLevel config
         AppDatabase.getInstance().initWithMockProducts()
+    }
+
+    private fun showCreativeEmailLeads() {
+        MainScope().launch {
+            AttentiveSdk.creativeEmailLeads.collect { lead ->
+                Toast.makeText(this@BonniApp, "Email lead: ${lead.email ?: "(no email)"}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun initAttentiveTracker() {
