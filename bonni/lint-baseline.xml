@@ -36,23 +36,23 @@
 
     <issue
         id="UnusedMaterial3ScaffoldPaddingParameter"
-        message="Content padding parameter innerPadding is not used"
-        errorLine1="    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->"
-        errorLine2="                                                  ~~~~~~~~~~~~">
+        message="Content padding parameter _ is not used"
+        errorLine1="    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->"
+        errorLine2="                                                  ~">
         <location
             file="src/main/java/com/attentive/bonni/welcome/WelcomeComposable.kt"
-            line="71"
+            line="66"
             column="51"/>
     </issue>
 
     <issue
         id="UnusedMaterial3ScaffoldPaddingParameter"
-        message="Content padding parameter innerPadding is not used"
-        errorLine1="    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->"
-        errorLine2="                                                                          ~~~~~~~~~~~~">
+        message="Content padding parameter _ is not used"
+        errorLine1="    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { _ ->"
+        errorLine2="                                                                          ~">
         <location
             file="src/main/java/com/attentive/bonni/welcome/WelcomeComposable.kt"
-            line="164"
+            line="161"
             column="75"/>
     </issue>
 
