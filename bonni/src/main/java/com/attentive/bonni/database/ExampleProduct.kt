@@ -9,5 +9,5 @@ import com.attentive.androidsdk.events.Item
 data class ExampleProduct(
     @PrimaryKey val id: String,
     @TypeConverters(Converters::class) val item: Item,
-    val image: ProductImage,
+    val imageId: Int,
 )

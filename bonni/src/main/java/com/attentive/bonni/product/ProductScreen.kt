@@ -36,9 +36,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -200,7 +201,7 @@ fun ProductCard(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painterResource(item.image.drawableRes),
+            ImageBitmap.imageResource(item.imageId),
             contentDescription = "T shirt",
             modifier =
                 Modifier
