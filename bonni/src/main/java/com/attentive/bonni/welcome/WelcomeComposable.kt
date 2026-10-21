@@ -47,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import com.attentive.bonni.R
 import com.attentive.bonni.Routes
+import com.attentive.bonni.RoutesScreens
 import com.attentive.bonni.cart.CartScreen
 import com.attentive.bonni.inbox.InboxScreen
 import com.attentive.bonni.inbox.LegacyInboxScreen
@@ -161,6 +162,7 @@ fun CreateAccountButton() {
 
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
+    RoutesScreens.Track(navController)
     Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
         NavHost(
             navController = navController,
