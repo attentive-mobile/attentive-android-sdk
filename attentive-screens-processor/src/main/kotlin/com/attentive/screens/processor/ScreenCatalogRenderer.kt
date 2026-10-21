@@ -10,7 +10,11 @@ internal object ScreenCatalogRenderer {
                 appendLine("package ${catalog.packageName}")
                 appendLine()
             }
+            if (catalog.composeTracking) appendLine("import androidx.compose.runtime.Composable")
+            appendLine("import androidx.navigation.NavController")
             appendLine("import com.attentive.androidsdk.screens.AttentiveScreenCatalog")
+            appendLine("import com.attentive.androidsdk.screens.AttentiveScreenTracking")
+            if (catalog.composeTracking) appendLine("import com.attentive.androidsdk.screens.TrackAttentiveScreens")
             appendLine()
             appendLine("$visibility object ${catalog.objectName} : AttentiveScreenCatalog {")
             for (screen in catalog.screens) {
@@ -31,6 +35,19 @@ internal object ScreenCatalogRenderer {
                 appendLine("            $key,")
             }
             appendLine("        )")
+            appendLine()
+            appendLine("    /** Starts tracking screens for [navController] with this catalog. Close the returned handle to stop. */")
+            appendLine("    @JvmStatic")
+            appendLine("    $visibility fun track(navController: NavController): AutoCloseable =")
+            appendLine("        AttentiveScreenTracking.trackNavigation(navController, this)")
+            if (catalog.composeTracking) {
+                appendLine()
+                appendLine("    /** Tracks screens for [navController] with this catalog while in composition. */")
+                appendLine("    @Composable")
+                appendLine("    $visibility fun Track(navController: NavController) {")
+                appendLine("        TrackAttentiveScreens(navController, this)")
+                appendLine("    }")
+            }
             appendLine("}")
         }
 

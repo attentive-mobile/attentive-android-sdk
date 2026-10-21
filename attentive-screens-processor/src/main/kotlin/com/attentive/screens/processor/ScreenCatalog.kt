@@ -23,6 +23,10 @@ internal data class CatalogScreen(
     val keyExpression: String,
 )
 
+/**
+ * @property composeTracking whether to also generate the `Track` composable, which needs Compose
+ * on the host's classpath.
+ */
 internal data class ScreenCatalog(
     val packageName: String,
     val objectName: String,
@@ -30,6 +34,7 @@ internal data class ScreenCatalog(
     val isInternal: Boolean,
     val screens: List<CatalogScreen>,
     val ignoredKeyExpressions: List<String>,
+    val composeTracking: Boolean = false,
 )
 
 internal sealed class CatalogResult {

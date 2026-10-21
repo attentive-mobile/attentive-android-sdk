@@ -10,8 +10,9 @@ package com.attentive.androidsdk.screens
  * enum class Routes { Home, ProductDetail, @IgnoreScreen Splash }
  * ```
  *
- * The processor writes `RoutesScreens`, which holds a constant per screen and is passed to
- * [AttentiveScreenTracking.trackNavigation].
+ * The processor writes `RoutesScreens`, which holds a constant per screen. Start tracking with
+ * `RoutesScreens.Track(navController)` in Compose or `RoutesScreens.track(navController)`
+ * elsewhere, which pass the catalog for you.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.BINARY)

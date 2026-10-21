@@ -22,7 +22,8 @@ class ScreenCatalogProcessorProvider : SymbolProcessorProvider {
 
 /**
  * Generates an `AttentiveScreenCatalog` named `<Type>Screens` for each enum or sealed type
- * annotated with `@AttentiveScreens`.
+ * annotated with `@AttentiveScreens`, with `track` and, when Compose is on the classpath, `Track`
+ * functions that start tracking with that catalog.
  *
  * Enum routes are keyed by `Entry.name`. Sealed routes are keyed by their serial name, which is
  * what type-safe navigation uses as the route: the `@SerialName` value, or the qualified class
@@ -33,13 +34,17 @@ internal class ScreenCatalogProcessor(
     private val logger: KSPLogger,
 ) : SymbolProcessor {
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        val composeTracking = resolver.getClassDeclarationByName(resolver.getKSNameFromString(COMPOSABLE)) != null
         resolver.getSymbolsWithAnnotation(ATTENTIVE_SCREENS)
             .filterIsInstance<KSClassDeclaration>()
-            .forEach(::generate)
+            .forEach { generate(it, composeTracking) }
         return emptyList()
     }
 
-    private fun generate(declaration: KSClassDeclaration) {
+    private fun generate(
+        declaration: KSClassDeclaration,
+        composeTracking: Boolean,
+    ) {
         val routes =
             when {
                 declaration.classKind == ClassKind.ENUM_CLASS -> enumRoutes(declaration)
@@ -74,7 +79,7 @@ internal class ScreenCatalogProcessor(
                 codeGenerator
                     .createNewFile(Dependencies(false, *files), packageName, result.catalog.objectName)
                     .bufferedWriter()
-                    .use { it.write(ScreenCatalogRenderer.render(result.catalog)) }
+                    .use { it.write(ScreenCatalogRenderer.render(result.catalog.copy(composeTracking = composeTracking))) }
             }
         }
     }
@@ -147,5 +152,6 @@ internal class ScreenCatalogProcessor(
         const val IGNORE_SCREEN = "com.attentive.androidsdk.screens.IgnoreScreen"
         const val SERIALIZABLE = "kotlinx.serialization.Serializable"
         const val SERIAL_NAME = "kotlinx.serialization.SerialName"
+        const val COMPOSABLE = "androidx.compose.runtime.Composable"
     }
 }
