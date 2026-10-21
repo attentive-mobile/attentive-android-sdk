@@ -32,11 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +52,7 @@ import com.attentive.bonni.Routes
 import com.attentive.bonni.SimpleToolbar
 import com.attentive.bonni.database.ExampleCartItem
 import com.attentive.bonni.database.ExampleProduct
+import com.attentive.bonni.database.ProductImage
 import com.attentive.bonni.product.ProductTitle
 import java.math.BigDecimal
 import java.util.Currency
@@ -164,7 +164,7 @@ fun ItemInCart(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                ImageBitmap.imageResource(item.product.imageId),
+                painterResource(item.product.image.drawableRes),
                 contentDescription = "T shirt",
                 modifier =
                     Modifier
@@ -231,7 +231,7 @@ fun CartItemPreview() {
                 Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
                     .name("Test Product")
                     .build(),
-                R.drawable.stick1,
+                ProductImage.STICK1,
             ),
             2,
         )
@@ -257,7 +257,7 @@ fun CartScreenContentPreview() {
                                 Item.Builder("productId", "variantId", Price(BigDecimal(20.0), Currency.getInstance(Locale.getDefault())))
                                     .name("Test Product")
                                     .build(),
-                                R.drawable.stick1,
+                                ProductImage.STICK1,
                             ),
                             2,
                         ),
@@ -268,7 +268,7 @@ fun CartScreenContentPreview() {
                                 Item.Builder("productId2", "variantId2", Price(BigDecimal(15.0), Currency.getInstance(Locale.getDefault())))
                                     .name("Another Product")
                                     .build(),
-                                R.drawable.stick1,
+                                ProductImage.STICK1,
                             ),
                             1,
                         ),

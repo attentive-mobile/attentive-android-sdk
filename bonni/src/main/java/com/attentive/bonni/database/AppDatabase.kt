@@ -7,7 +7,6 @@ import androidx.room.TypeConverters
 import com.attentive.androidsdk.events.Item
 import com.attentive.androidsdk.events.Price
 import com.attentive.bonni.BonniApp
-import com.attentive.bonni.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.count
@@ -18,7 +17,7 @@ import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
 
-@Database(entities = [ExampleCartItem::class, ExampleProduct::class, Account::class], version = 1)
+@Database(entities = [ExampleCartItem::class, ExampleProduct::class, Account::class], version = 2)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cartItemDao(): ExampleCartItemDao
@@ -34,12 +33,12 @@ abstract class AppDatabase : RoomDatabase() {
                 return@launch
             }
             val itemCount = 4
-            val imageIds =
+            val images =
                 listOf(
-                    R.drawable.superscreen,
-                    R.drawable.stick1,
-                    R.drawable.balm2,
-                    R.drawable.balm3,
+                    ProductImage.SUPERSCREEN,
+                    ProductImage.STICK1,
+                    ProductImage.BALM2,
+                    ProductImage.BALM3,
                 )
             val names = listOf("Protective Sunscreen", "The Stick", "The Balm", "The Balm")
             val prices =
@@ -56,7 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
             for (i in 0..<itemCount) {
                 val item =
                     Item.Builder("productId$i", "variantId$i", prices[i]).name(names[i]).build()
-                val product = ExampleProduct("$i", item, imageIds[i])
+                val product = ExampleProduct("$i", item, images[i])
                 Timber.d("initWithMockProducts: $product")
                 productItemDao().insert(product)
             }
@@ -74,7 +73,8 @@ abstract class AppDatabase : RoomDatabase() {
                         BonniApp.getInstance().applicationContext,
                         AppDatabase::class.java,
                         "app_database",
-                    ).build()
+                    ).fallbackToDestructiveMigration(dropAllTables = true)
+                        .build()
                 INSTANCE = instance
                 instance
             }
