@@ -3,7 +3,9 @@ package com.attentive.androidsdk.screens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.navigation.NavController
+import com.attentive.androidsdk.internal.screens.LoggingScreenViewReporter
 import com.attentive.androidsdk.internal.screens.ScreenNavigationListener
+import com.attentive.androidsdk.internal.screens.ScreenViewReporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,8 @@ object AttentiveScreenTracking {
     @JvmStatic
     val currentScreen: StateFlow<AttentiveScreen?> = _currentScreen.asStateFlow()
 
+    internal var reporter: ScreenViewReporter = LoggingScreenViewReporter()
+
     /**
      * Starts tracking screens for [navController]. Close the returned handle to stop.
      *
@@ -37,7 +41,11 @@ object AttentiveScreenTracking {
         navController: NavController,
         catalog: AttentiveScreenCatalog? = null,
     ): AutoCloseable {
-        val listener = ScreenNavigationListener(catalog) { _currentScreen.value = it }
+        val listener =
+            ScreenNavigationListener(catalog) {
+                _currentScreen.value = it
+                reporter.report(it)
+            }
         navController.addOnDestinationChangedListener(listener)
         return AutoCloseable { navController.removeOnDestinationChangedListener(listener) }
     }
