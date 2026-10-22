@@ -71,6 +71,10 @@ object AttentiveSdk {
                     "Please call AttentiveSdk.initialize() in your Application.onCreate() method.",
             )
 
+    /** The initialized config, or null before [initialize]. */
+    internal val configOrNull: AttentiveConfig?
+        get() = _config
+
     private val _inboxState = MutableStateFlow(InboxState())
 
     /**

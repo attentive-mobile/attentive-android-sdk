@@ -87,6 +87,7 @@ androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-p
 
 # Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-runtime = { group = "androidx.navigation", name = "navigation-runtime", version.ref = "navigationCompose" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -142,6 +143,9 @@ engage-core = { group = "com.google.android.engage", name = "engage-core", versi
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# KSP
+ksp-api = { group = "com.google.devtools.ksp", name = "symbol-processing-api", version.ref = "ksp" }
 
 # Lint
 lint-api = { group = "com.android.tools.lint", name = "lint-api", version.ref = "lintApi" }
