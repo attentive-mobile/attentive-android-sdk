@@ -64,12 +64,11 @@ fun WelcomeScreenContent(
     var newAccount by remember { mutableStateOf(false) }
     var existingAccount by remember { mutableStateOf(false) }
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
                     .paint(
                         painterResource(R.drawable.background),
                         contentScale = ContentScale.FillHeight,
@@ -167,7 +166,6 @@ fun WelcomeScreen(navController: NavHostController) {
         NavHost(
             navController = navController,
             startDestination = Routes.WelcomeScreenRoute.name,
-            modifier = Modifier.padding(innerPadding),
         ) {
             composable(Routes.WelcomeScreenRoute.name) {
                 WelcomeScreenContent(navController)
