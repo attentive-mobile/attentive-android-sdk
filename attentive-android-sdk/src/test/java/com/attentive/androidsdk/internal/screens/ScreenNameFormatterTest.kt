@@ -78,4 +78,18 @@ class ScreenNameFormatterTest {
         assertFalse(ScreenNameFormatter.isValidScreenName("2fa"))
         assertFalse(ScreenNameFormatter.isValidScreenName(""))
     }
+
+    @Test
+    fun fromRoute_longRoute_truncatesTo64CharactersWithoutTrailingUnderscore() {
+        val name = ScreenNameFormatter.fromRoute("A".repeat(10) + "Bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "CcccccccccScreen")
+
+        assertEquals(64, name?.length)
+        assertFalse(name.orEmpty().endsWith("_"))
+    }
+
+    @Test
+    fun fromLabel_longLabel_truncatesTo64Characters() {
+        assertEquals("a".repeat(64), ScreenNameFormatter.fromLabel("a".repeat(100)))
+        assertEquals("a".repeat(63), ScreenNameFormatter.fromLabel("a".repeat(63) + " bcd"))
+    }
 }
