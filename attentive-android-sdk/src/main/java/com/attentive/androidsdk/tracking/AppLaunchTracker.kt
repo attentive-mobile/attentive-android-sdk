@@ -9,6 +9,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.AttentiveApi
 import com.attentive.androidsdk.AttentiveEventTracker
+import com.attentive.androidsdk.internal.context.AttentiveContextStore
+import com.attentive.androidsdk.internal.context.LaunchSource
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.internal.util.toJsonEncodedString
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +22,8 @@ import timber.log.Timber
 
 internal class AppLaunchTracker(
     internal val application: Application,
-    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle
+    internal val lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
+    private val contextStore: () -> AttentiveContextStore? = { null },
 ) : DefaultLifecycleObserver {
     init {
         registerAppLaunchTracker()
@@ -40,6 +43,7 @@ internal class AppLaunchTracker(
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
         Timber.d("onStart")
+        contextStore()?.onForeground(System.currentTimeMillis())
         AttentiveEventTracker.instance.config?.applicationContext?.let {
             CoroutineScope(Dispatchers.IO).launch {
                 AttentiveEventTracker.instance.registerPushToken(it)
@@ -55,6 +59,7 @@ internal class AppLaunchTracker(
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
         hasSentLaunchEvent = false
+        contextStore()?.onBackground(System.currentTimeMillis())
     }
 
     fun registerAppLaunchTracker() {
@@ -98,6 +103,7 @@ internal class AppLaunchTracker(
                 if (wasLaunchedFromNotification) {
                     Timber.d("Launched from notification")
                     launchEvents.add(AttentiveApi.LaunchType.DIRECT_OPEN)
+                    contextStore()?.onLaunch(LaunchSource.PUSH, emptyMap(), null)
                     // Clear the flag so subsequent resumes from launcher don't trigger another DIRECT_OPEN
                     activity.intent?.removeExtra(LAUNCHED_FROM_NOTIFICATION)
                 }

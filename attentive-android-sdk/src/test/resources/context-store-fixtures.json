@@ -1,0 +1,205 @@
+[
+  {
+    "name": "first screen of a session has no previous screen",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 }
+    ],
+    "expect": {
+      "screen": {
+        "currentScreenName": "home",
+        "currentScreenUrl": "app://com.example.shop/home",
+        "previousScreenName": null,
+        "previousScreenDurationMs": null,
+        "screenIndex": 1
+      }
+    }
+  },
+  {
+    "name": "previous screen duration counts foreground time only",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "background", "atMs": 4000 },
+      { "op": "foreground", "atMs": 60000 },
+      { "op": "screen", "name": "product_detail", "atMs": 61000 }
+    ],
+    "expect": {
+      "screen": {
+        "currentScreenName": "product_detail",
+        "previousScreenName": "home",
+        "previousScreenDurationMs": 5000,
+        "screenIndex": 2
+      }
+    }
+  },
+  {
+    "name": "background longer than 30 minutes starts a new session",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "screen", "name": "cart", "atMs": 1000 },
+      { "op": "background", "atMs": 2000 },
+      { "op": "foreground", "atMs": 1802000 }
+    ],
+    "expect": {
+      "screen": {
+        "currentScreenName": null,
+        "previousScreenName": null,
+        "screenIndex": 0
+      },
+      "launch": { "source": "organic" }
+    }
+  },
+  {
+    "name": "background shorter than 30 minutes keeps the session",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "background", "atMs": 1000 },
+      { "op": "foreground", "atMs": 1000000 },
+      { "op": "screen", "name": "cart", "atMs": 1000000 }
+    ],
+    "expect": {
+      "screen": {
+        "currentScreenName": "cart",
+        "previousScreenName": "home",
+        "previousScreenDurationMs": 1000,
+        "screenIndex": 2
+      }
+    }
+  },
+  {
+    "name": "recently viewed keeps 3 distinct products, newest first",
+    "steps": [
+      { "op": "productView", "productIds": ["a"], "atMs": 0 },
+      { "op": "productView", "productIds": ["b"], "atMs": 1 },
+      { "op": "productView", "productIds": ["c"], "atMs": 2 },
+      { "op": "productView", "productIds": ["a"], "atMs": 3 },
+      { "op": "productView", "productIds": ["d"], "atMs": 4 }
+    ],
+    "expect": {
+      "products": { "recentlyViewedIds": ["d", "a", "c"] }
+    }
+  },
+  {
+    "name": "purchase empties the cart but keeps viewed products",
+    "steps": [
+      { "op": "productView", "productIds": ["a"], "atMs": 0 },
+      { "op": "addToCart", "productIds": ["a"], "atMs": 1 },
+      { "op": "addToCart", "productIds": ["b"], "atMs": 2 },
+      { "op": "purchase", "atMs": 3 }
+    ],
+    "expect": {
+      "products": { "recentlyViewedIds": ["a"], "recentlyAddedToCartIds": [] }
+    }
+  },
+  {
+    "name": "cart before purchase is newest first",
+    "steps": [
+      { "op": "addToCart", "productIds": ["a"], "atMs": 1 },
+      { "op": "addToCart", "productIds": ["b"], "atMs": 2 }
+    ],
+    "expect": {
+      "products": { "recentlyAddedToCartIds": ["b", "a"] }
+    }
+  },
+  {
+    "name": "opening link keeps only UTMs and strips the query",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "openUrl", "url": "https://shop.example.com/p/123?utm_source=sms&utm_campaign=fall&email=a%40b.com&ref=x#top", "atMs": 0 }
+    ],
+    "expect": {
+      "launch": {
+        "source": "universal_link",
+        "utmParams": { "source": "sms", "campaign": "fall" },
+        "landingUrl": "https://shop.example.com/p/123"
+      }
+    }
+  },
+  {
+    "name": "custom scheme link is a deep link",
+    "steps": [
+      { "op": "openUrl", "url": "myshop://product/123?utm_medium=push", "atMs": 0 }
+    ],
+    "expect": {
+      "launch": {
+        "source": "deep_link",
+        "utmParams": { "medium": "push" },
+        "landingUrl": "myshop://product/123"
+      }
+    }
+  },
+  {
+    "name": "each UTM key expires 30 minutes after it was last set",
+    "steps": [
+      { "op": "openUrl", "url": "https://shop.example.com/?utm_source=sms&utm_medium=text", "atMs": 0 },
+      { "op": "openUrl", "url": "https://shop.example.com/?utm_source=email", "atMs": 1200000 },
+      { "op": "read", "atMs": 1900000 }
+    ],
+    "expect": {
+      "launch": { "utmParams": { "source": "email" } }
+    }
+  },
+  {
+    "name": "link opened mid-session does not start a new session",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "openUrl", "url": "myshop://cart", "atMs": 1000 },
+      { "op": "screen", "name": "cart", "atMs": 1000 }
+    ],
+    "expect": {
+      "screen": { "previousScreenName": "home", "screenIndex": 2 },
+      "launch": { "source": "deep_link", "landingUrl": "myshop://cart" }
+    }
+  },
+  {
+    "name": "clear wipes everything",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "openUrl", "url": "https://shop.example.com/?utm_source=sms", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "productView", "productIds": ["a"], "atMs": 1 },
+      { "op": "addToCart", "productIds": ["a"], "atMs": 2 },
+      { "op": "clear", "atMs": 3 }
+    ],
+    "expect": {
+      "screen": { "currentScreenName": null, "screenIndex": 0 },
+      "products": { "recentlyViewedIds": [], "recentlyAddedToCartIds": [] },
+      "launch": { "source": "organic", "utmParams": {}, "landingUrl": null }
+    }
+  },
+  {
+    "name": "process restart keeps products and the session within 30 minutes",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "productView", "productIds": ["a"], "atMs": 1 },
+      { "op": "background", "atMs": 1000 },
+      { "op": "restart", "atMs": 2000 },
+      { "op": "foreground", "atMs": 3000 },
+      { "op": "screen", "name": "cart", "atMs": 3000 }
+    ],
+    "expect": {
+      "screen": { "previousScreenName": "home", "previousScreenDurationMs": 1000, "screenIndex": 2 },
+      "products": { "recentlyViewedIds": ["a"] }
+    }
+  },
+  {
+    "name": "process restart after 30 minutes keeps products but starts a new session",
+    "steps": [
+      { "op": "foreground", "atMs": 0 },
+      { "op": "screen", "name": "home", "atMs": 0 },
+      { "op": "productView", "productIds": ["a"], "atMs": 1 },
+      { "op": "background", "atMs": 1000 },
+      { "op": "restart", "atMs": 1900000 },
+      { "op": "foreground", "atMs": 1900000 }
+    ],
+    "expect": {
+      "screen": { "currentScreenName": null, "screenIndex": 0 },
+      "products": { "recentlyViewedIds": ["a"] }
+    }
+  }
+]

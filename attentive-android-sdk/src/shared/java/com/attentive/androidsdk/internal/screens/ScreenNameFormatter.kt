@@ -5,6 +5,9 @@ package com.attentive.androidsdk.internal.screens
  * `attentive-screens-processor`, so names generated at build time match names derived at runtime.
  */
 internal object ScreenNameFormatter {
+    /** Longest screen name kept. Longer names are cut to this length. */
+    const val MAX_LENGTH = 64
+
     private val suffixes = listOf("Route", "Screen", "Destination")
 
     private val separators = Regex("[\\s\\-.]+")
@@ -39,13 +42,16 @@ internal object ScreenNameFormatter {
             }
             .filter { it.isNotEmpty() }
             .joinToString("_")
+            .truncate()
             .ifEmpty { null }
     }
 
     /** Turns free text such as a destination label into a snake_case screen name. */
-    fun fromLabel(label: String): String? = toSnakeCase(label).ifEmpty { null }
+    fun fromLabel(label: String): String? = toSnakeCase(label).truncate().ifEmpty { null }
 
     fun isValidScreenName(name: String): Boolean = name.matches(Regex("[a-z][a-z0-9_]*"))
+
+    private fun String.truncate(): String = take(MAX_LENGTH).trimEnd('_')
 
     private fun stripSuffixes(word: String): String {
         var result = word

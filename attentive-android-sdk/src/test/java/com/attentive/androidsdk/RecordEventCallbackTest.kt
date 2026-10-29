@@ -41,6 +41,7 @@ class RecordEventCallbackTest {
                 .build(),
         )
         whenever(mockConfig.apiVersion).thenReturn(ApiVersion.OLD)
+        whenever(mockConfig.contextStore).thenReturn(mock())
     }
 
     @Test

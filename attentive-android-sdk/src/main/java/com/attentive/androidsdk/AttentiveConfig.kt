@@ -3,6 +3,8 @@ package com.attentive.androidsdk
 import android.app.Application
 import android.content.Context
 import androidx.annotation.ColorRes
+import com.attentive.androidsdk.internal.context.AttentiveContextStore
+import com.attentive.androidsdk.internal.context.PersistentContextStore
 import com.attentive.androidsdk.internal.events.InfoEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.internal.util.AppInfo
@@ -35,6 +37,9 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
     override var userIdentifiers =
         UserIdentifiers.Builder().withVisitorId(visitorService.visitorId).build()
+
+    internal val contextStore: AttentiveContextStore =
+        PersistentContextStore(ClassFactory.buildPersistentStorage(builder._context), builder._context.packageName)
 
     internal val attentiveApi: AttentiveApi
     private val settingsService: SettingsService =
@@ -79,6 +84,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         Timber.i("Resetting user identifiers with new visitor ID")
         val newVisitorId = visitorService.createNewVisitorId()
         userIdentifiers = UserIdentifiers.Builder().withVisitorId(newVisitorId).build()
+        contextStore.clear()
     }
 
     /**
