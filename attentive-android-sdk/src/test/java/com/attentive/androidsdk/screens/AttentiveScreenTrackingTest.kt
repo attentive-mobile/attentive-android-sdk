@@ -3,6 +3,9 @@ package com.attentive.androidsdk.screens
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
+import com.attentive.androidsdk.AttentiveSdk
+import com.attentive.androidsdk.internal.context.InMemoryStorage
+import com.attentive.androidsdk.internal.context.PersistentContextStore
 import com.attentive.androidsdk.internal.screens.LoggingScreenViewReporter
 import com.attentive.androidsdk.internal.screens.ScreenViewReporter
 import org.junit.After
@@ -19,6 +22,8 @@ class AttentiveScreenTrackingTest {
     @After
     fun tearDown() {
         AttentiveScreenTracking.reporter = LoggingScreenViewReporter()
+        AttentiveScreenTracking.contextStore = { AttentiveSdk.configOrNull?.contextStore }
+        AttentiveScreenTracking.clock = System::currentTimeMillis
     }
 
     @Test
@@ -38,5 +43,28 @@ class AttentiveScreenTrackingTest {
 
         assertEquals(listOf(AttentiveScreen("cart", "CartScreen")), reported)
         assertEquals(AttentiveScreen("cart", "CartScreen"), AttentiveScreenTracking.currentScreen.value)
+    }
+
+    @Test
+    fun trackScreen_name_reportsSnakeCaseScreenAndUpdatesContext() {
+        AttentiveScreenTracking.reporter = ScreenViewReporter { reported += it }
+        val store = PersistentContextStore(InMemoryStorage().mock, "com.example.shop") { 0 }
+        AttentiveScreenTracking.contextStore = { store }
+        AttentiveScreenTracking.clock = { 100 }
+
+        AttentiveScreenTracking.trackScreen("Product Detail")
+
+        assertEquals(listOf(AttentiveScreen("product_detail", null)), reported)
+        assertEquals("product_detail", store.screen.currentScreenName)
+        assertEquals(1, store.screen.screenIndex)
+    }
+
+    @Test
+    fun trackScreen_unusableName_isIgnored() {
+        AttentiveScreenTracking.reporter = ScreenViewReporter { reported += it }
+
+        AttentiveScreenTracking.trackScreen("  !!  ")
+
+        assertEquals(emptyList<AttentiveScreen>(), reported)
     }
 }

@@ -2,6 +2,7 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.events.Event
+import com.attentive.androidsdk.internal.context.recordEvent
 import com.attentive.androidsdk.internal.network.ApiVersion
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenProvider
@@ -46,7 +47,7 @@ class AttentiveEventTracker private constructor() {
 
             if (!::launchTracker.isInitialized) {
                 Timber.d("Initializing AppLaunchTracker")
-                launchTracker = AppLaunchTracker(config.applicationContext)
+                launchTracker = AppLaunchTracker(config.applicationContext, contextStore = { this.config.contextStore })
             } else {
                 Timber.d("AppLaunchTracker already initialized")
             }
@@ -96,6 +97,7 @@ class AttentiveEventTracker private constructor() {
         if (!::config.isInitialized) {
             return Result.failure(IllegalStateException("AttentiveEventTracker must be initialized before use"))
         }
+        config.contextStore.recordEvent(event, System.currentTimeMillis())
 
         return if (config.apiVersion == ApiVersion.OLD) {
             suspendCancellableCoroutine { continuation ->

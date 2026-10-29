@@ -5,12 +5,15 @@ package com.attentive.androidsdk
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.attentive.androidsdk.events.Event
 import com.attentive.androidsdk.inbox.InboxState
 import com.attentive.androidsdk.inbox.Message
 import com.attentive.androidsdk.inbox.Style
+import com.attentive.androidsdk.internal.context.AppContextReader
+import com.attentive.androidsdk.internal.context.OpenUrlParser
 import com.attentive.androidsdk.internal.identity.IdentitySyncDecision
 import com.attentive.androidsdk.internal.identity.IdentitySyncRecord
 import com.attentive.androidsdk.internal.identity.IdentitySyncStore
@@ -493,6 +496,39 @@ object AttentiveSdk {
     fun recordEvent(event: Event) {
         AttentiveEventTracker.instance.recordEvent(event)
     }
+
+    /**
+     * Records the link the app was opened with. Call it from each entry point that receives a
+     * link, such as `onCreate` and `onNewIntent` of the Activity that handles deep links.
+     *
+     * The launch source and the `utm_source`, `utm_medium`, `utm_campaign`, `utm_term` and
+     * `utm_content` parameters are kept on the device, each UTM for 30 minutes. The rest of the
+     * query string is dropped. Nothing is sent to Attentive.
+     */
+    @JvmStatic
+    fun handleOpenUrl(url: String) {
+        val store = configOrNull?.contextStore ?: run {
+            Timber.w("Ignoring opened URL: AttentiveSdk is not initialized")
+            return
+        }
+        val opened = openUrlParser.parse(url) ?: run {
+            Timber.w("Ignoring opened URL that is not an absolute URI")
+            return
+        }
+        store.onLaunch(opened.source, opened.utms, opened.landingUrl)
+    }
+
+    /** See [handleOpenUrl]. */
+    @JvmStatic
+    fun handleOpenUrl(uri: Uri) {
+        handleOpenUrl(uri.toString())
+    }
+
+    private val openUrlParser = OpenUrlParser()
+
+    /** What the user is doing in the app, for the creative context builder. Null before [initialize]. */
+    internal val appContext: AppContextReader?
+        get() = configOrNull?.contextStore
 
     /**
      * Records an analytics event with Attentive and suspends until the request completes.
