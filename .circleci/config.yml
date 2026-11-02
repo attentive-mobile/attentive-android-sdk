@@ -197,6 +197,14 @@ jobs:
             - gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
             - gradle-snapshot-v1-
       - run:
+          name: Install SDK Build Tools 36
+          command: |
+            for i in 1 2 3; do
+              sdkmanager "build-tools;36.0.0" && break
+              echo "Attempt $i failed, retrying in 10s..."
+              sleep 10
+            done
+      - run:
           name: Verify Snapshot Tests
           command: ./gradlew :bonni:verifyRoborazziDebug
       - save_cache:
