@@ -35,6 +35,13 @@ class CreativeEmailLeadParserTest {
     }
 
     @Test
+    fun parse_withPaddedEmail_returnsTrimmedEmail() {
+        val message = """{"action":"EMAIL_LEAD","email":"  user@example.com\n"}"""
+
+        assertEquals("user@example.com", CreativeEmailLeadParser.parse(message)?.email)
+    }
+
+    @Test
     fun parse_withForwardedOrigin_removesOriginFromRawPayload() {
         val message =
             """{"action":"EMAIL_LEAD","email":"user@example.com","metadata":{"a":1},"__origin":"https://creatives.attn.tv"}"""
@@ -67,9 +74,24 @@ class CreativeEmailLeadParserTest {
     }
 
     @Test
+    fun parseLead_withPaddedKnownEmail_returnsNull() {
+        val message = """{"action":"LEAD","email":" known@example.com ","userEmail":"known@example.com"}"""
+
+        assertNull(CreativeEmailLeadParser.parseLead(message))
+    }
+
+    @Test
+    fun parseLead_withPaddedNewEmail_returnsTrimmedEmail() {
+        val message = """{"action":"LEAD","email":" new@example.com ","userEmail":"known@example.com"}"""
+
+        assertEquals("new@example.com", CreativeEmailLeadParser.parseLead(message)?.email)
+    }
+
+    @Test
     fun parseLead_withoutEmail_returnsNull() {
         assertNull(CreativeEmailLeadParser.parseLead("""{"action":"LEAD","phone":"+15555550100"}"""))
         assertNull(CreativeEmailLeadParser.parseLead("""{"action":"LEAD","email":""}"""))
+        assertNull(CreativeEmailLeadParser.parseLead("""{"action":"LEAD","email":"   "}"""))
     }
 
     @Test
