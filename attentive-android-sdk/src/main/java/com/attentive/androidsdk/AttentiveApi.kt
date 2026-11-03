@@ -190,7 +190,6 @@ internal class AttentiveApi(
             return Result.failure(IllegalStateException(msg))
         }
 
-        // Send each request - the interceptor will handle geo-domain adjustment
         for (request in baseEventRequests) {
             try {
                 val eventDataJson = baseEventRequestJson.encodeToString(
