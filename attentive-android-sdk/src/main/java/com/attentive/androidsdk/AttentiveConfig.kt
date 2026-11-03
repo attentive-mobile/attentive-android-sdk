@@ -234,7 +234,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         private val allowApiVersionOverride = true
 
         /**
-         * Currently a no-op for integrators — gated behind a private flag.
+         * Sets the event-API version. Defaults to [ApiVersion.OLD]. Debug/testing use only.
          */
         fun apiVersion(apiVersion: ApiVersion) =
             apply {
