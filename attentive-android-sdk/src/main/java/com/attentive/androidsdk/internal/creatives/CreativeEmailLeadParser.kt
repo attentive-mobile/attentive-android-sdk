@@ -50,5 +50,5 @@ internal object CreativeEmailLeadParser {
         )
 
     private fun JsonObject.stringOrNull(key: String): String? =
-        (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull?.takeIf { it.isNotBlank() }
+        (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 }

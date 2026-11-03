@@ -11,6 +11,7 @@ import com.attentive.bonni.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class ShippingScreenViewModel : ViewModel() {
     fun placeOrder() {
@@ -20,7 +21,7 @@ class ShippingScreenViewModel : ViewModel() {
             items?.forEach {
                 baseItems.add(it.product.item)
             }
-            val order = Order.Builder().orderId("anOrderId").build()
+            val order = Order.Builder().orderId(UUID.randomUUID().toString()).build()
             val cart = Cart.Builder().cartId("aCartId").cartCoupon("someCoupon").build()
             val purchaseEvent = PurchaseEvent.Builder(baseItems, order).cart(cart).build()
             AttentiveEventTracker.instance.recordEvent(purchaseEvent)

@@ -28,9 +28,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -67,6 +65,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -470,7 +469,7 @@ private enum class SwipeDirection {
  */
 private data class SwipeActionConfig(
     val backgroundColor: Color,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val iconDescription: String,
     val onAction: () -> Unit,
     val animateOffScreen: Boolean = false,
@@ -699,7 +698,7 @@ private fun MessageItem(
         swipeLeftAction =
             SwipeActionConfig(
                 backgroundColor = swipeBackgroundColor,
-                icon = Icons.Filled.MailOutline,
+                icon = ImageVector.vectorResource(R.drawable.attentive_inbox_ic_mark_unread),
                 iconDescription = "Mark as unread",
                 onAction = onSwipeMarkUnread,
                 animateOffScreen = false,
@@ -707,7 +706,7 @@ private fun MessageItem(
         swipeRightAction =
             SwipeActionConfig(
                 backgroundColor = Color.Red,
-                icon = Icons.Filled.Delete,
+                icon = ImageVector.vectorResource(R.drawable.attentive_inbox_ic_delete),
                 iconDescription = "Delete",
                 onAction = onSwipeDelete,
                 animateOffScreen = true,
