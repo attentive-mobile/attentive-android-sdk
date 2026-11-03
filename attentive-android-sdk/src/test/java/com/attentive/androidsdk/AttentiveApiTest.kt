@@ -16,6 +16,7 @@ import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.google.gson.JsonParser
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -593,6 +594,39 @@ class AttentiveApiTest {
         Assert.assertEquals("o", events[0].asJsonObject.get("ist").asString)   // DIRECT_OPEN
         Assert.assertEquals("al", events[1].asJsonObject.get("ist").asString)  // APP_LAUNCHED
     }
+
+    @Test
+    fun recordEvent_postsToMobileEndpointOnEventsHost() =
+        runTest {
+            // Arrange
+            val capturedRequests = mutableListOf<Request>()
+            val interceptorClient =
+                OkHttpClient.Builder()
+                    .addInterceptor { chain ->
+                        val request = chain.request()
+                        capturedRequests.add(request)
+                        Response.Builder()
+                            .request(request)
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(204)
+                            .message("No Content")
+                            .body("".toResponseBody())
+                            .build()
+                    }
+                    .build()
+            val testApi = AttentiveApi(interceptorClient, "games", FakeAttentiveIdentityProvider())
+
+            // Act
+            val result = testApi.recordEvent(buildAddToCartEventWithAllFields(), ALL_USER_IDENTIFIERS, DOMAIN)
+
+            // Assert
+            Assert.assertTrue(result.isSuccess)
+            Assert.assertEquals(1, capturedRequests.size)
+            val url = capturedRequests[0].url
+            Assert.assertEquals(AttentiveApi.ATTENTIVE_EVENTS_ENDPOINT_HOST, url.host)
+            Assert.assertEquals("/mobile", url.encodedPath)
+            assertRequestMethodIsPost(capturedRequests[0])
+        }
 
     private data class CapturedApiRequest(
         val request: Request,
