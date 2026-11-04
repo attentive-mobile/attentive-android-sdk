@@ -47,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import com.attentive.bonni.R
 import com.attentive.bonni.Routes
+import com.attentive.bonni.RoutesScreens
 import com.attentive.bonni.cart.CartScreen
 import com.attentive.bonni.inbox.InboxScreen
 import com.attentive.bonni.inbox.LegacyInboxScreen
@@ -66,10 +67,12 @@ fun WelcomeScreenContent(
     Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
         Box(
             modifier =
-                Modifier.paint(
-                    painterResource(R.drawable.background),
-                    contentScale = ContentScale.FillHeight,
-                ),
+                Modifier
+                    .fillMaxSize()
+                    .paint(
+                        painterResource(R.drawable.background),
+                        contentScale = ContentScale.FillHeight,
+                    ),
         ) {
             Column(
                 modifier =
@@ -126,7 +129,7 @@ fun SignInButton(
 @Composable
 fun ContinueAsGuestButton(navController: NavHostController = rememberNavController()) {
     Button(
-        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+        colors = ButtonDefaults.buttonColors(containerColor = White),
         shape = RectangleShape,
         onClick = { navController.navigate(Routes.ProductScreenRoute.name) },
         modifier =
@@ -158,8 +161,12 @@ fun CreateAccountButton() {
 
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
-    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { _ ->
-        NavHost(navController = navController, startDestination = Routes.WelcomeScreenRoute.name) {
+    RoutesScreens.Track(navController)
+    Scaffold(modifier = Modifier.fillMaxSize(), containerColor = White) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Routes.WelcomeScreenRoute.name,
+        ) {
             composable(Routes.WelcomeScreenRoute.name) {
                 WelcomeScreenContent(navController)
             }
@@ -195,7 +202,7 @@ fun AccountNameTextFieldPreview() {
         value = "",
         onValueChange = { },
         label = { Text("Account Name") },
-        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White),
+        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = White),
     )
 }
 
@@ -313,6 +320,4 @@ fun SignInForm(
     }
 }
 
-@Composable
-fun SignOutButton() {
-}
+

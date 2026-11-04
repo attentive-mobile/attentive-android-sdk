@@ -26,4 +26,5 @@ dependencyResolutionManagement {
 rootProject.name = "Attentive Android SDK"
 include ':attentive-android-sdk'
 include ':attentive-lint'
+include ':attentive-screens-processor'
 include ':bonni'

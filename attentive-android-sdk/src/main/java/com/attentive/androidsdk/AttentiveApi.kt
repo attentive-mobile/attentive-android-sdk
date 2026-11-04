@@ -30,6 +30,7 @@ import com.attentive.androidsdk.internal.network.UserUpdateRequest
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.attentive.androidsdk.push.AttentivePush
 import com.attentive.androidsdk.push.TokenProvider
+import com.attentive.androidsdk.screens.AttentiveScreen
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -741,6 +742,33 @@ private fun mapCustomEvent(
             referrer = "",
             locationHref = null
         )
+    )
+}
+
+/**
+ * Builds a PageView request for a screen. The screen name goes in `locationHref` and the
+ * previous screen's name in `referrer`. Returns null when there is no visitor ID.
+ */
+internal fun mapScreenViewEvent(
+    screen: AttentiveScreen,
+    previousScreen: AttentiveScreen?,
+    userIdentifiers: UserIdentifiers,
+    domain: String
+): BaseEventRequest? {
+    val visitorId = userIdentifiers.visitorId
+    if (visitorId.isNullOrEmpty()) return null
+
+    return BaseEventRequest(
+        visitorId = visitorId,
+        version = AppInfo.attentiveSDKVersion,
+        attentiveDomain = domain,
+        eventType = EventType.PageView,
+        timestamp = getCurrentTimestamp(),
+        identifiers = buildIdentifiers(userIdentifiers),
+        eventMetadata = PageViewMetadata(),
+        sourceType = SourceType.mobile,
+        referrer = previousScreen?.name ?: "",
+        locationHref = screen.name
     )
 }
 
