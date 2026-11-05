@@ -16,10 +16,12 @@ import com.attentive.androidsdk.internal.network.ProductViewMetadataDto
 import com.attentive.androidsdk.internal.network.PurchaseMetadataDto
 import com.attentive.androidsdk.internal.util.AppInfo
 import com.google.gson.JsonParser
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -39,6 +41,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
+import java.util.Collections
 import java.util.Currency
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
@@ -592,6 +595,85 @@ class AttentiveApiTest {
         Assert.assertEquals(2, events.size())
         Assert.assertEquals("o", events[0].asJsonObject.get("ist").asString)   // DIRECT_OPEN
         Assert.assertEquals("al", events[1].asJsonObject.get("ist").asString)  // APP_LAUNCHED
+    }
+
+    @Test
+    fun recordEvent_postsToMobileEndpointOnEventsHost() =
+        runTest {
+            // Arrange
+            val capturedRequests = mutableListOf<Request>()
+            val testApi = AttentiveApi(buildRecordingClient(capturedRequests), "games", FakeAttentiveIdentityProvider())
+
+            // Act
+            val result = testApi.recordEvent(buildAddToCartEventWithAllFields(), ALL_USER_IDENTIFIERS, DOMAIN)
+
+            // Assert
+            Assert.assertTrue(result.isSuccess)
+            Assert.assertEquals(1, capturedRequests.size)
+            assertMobileEventRequest(capturedRequests[0], "AddToCart")
+        }
+
+    @Test
+    fun recordEventCall_postsToMobileEndpointOnEventsHost() {
+        // Arrange
+        val capturedRequests = Collections.synchronizedList(mutableListOf<Request>())
+        val testApi = AttentiveApi(buildRecordingClient(capturedRequests), "games", FakeAttentiveIdentityProvider())
+        val latch = CountDownLatch(1)
+        var succeeded = false
+
+        // Act
+        testApi.recordEventCall(
+            buildAddToCartEventWithAllFields(),
+            ALL_USER_IDENTIFIERS,
+            DOMAIN,
+            object : AttentiveApiCallback {
+                override fun onSuccess() {
+                    succeeded = true
+                    latch.countDown()
+                }
+
+                override fun onFailure(message: String?) {
+                    latch.countDown()
+                }
+            },
+        )
+
+        // Assert
+        Assert.assertTrue(latch.await(5, TimeUnit.SECONDS))
+        Assert.assertTrue(succeeded)
+        Assert.assertEquals(1, capturedRequests.size)
+        assertMobileEventRequest(capturedRequests[0], "AddToCart")
+    }
+
+    private fun buildRecordingClient(capturedRequests: MutableList<Request>): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                capturedRequests.add(request)
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(204)
+                    .message("No Content")
+                    .body("".toResponseBody())
+                    .build()
+            }
+            .build()
+
+    private fun assertMobileEventRequest(
+        request: Request,
+        expectedEventType: String,
+    ) {
+        Assert.assertEquals(AttentiveApi.ATTENTIVE_EVENTS_ENDPOINT_HOST, request.url.host)
+        Assert.assertEquals("/mobile", request.url.encodedPath)
+        assertRequestMethodIsPost(request)
+
+        val body = requireNotNull(request.body as? FormBody) { "Expected a form-encoded body" }
+        Assert.assertEquals(1, body.size)
+        Assert.assertEquals("d", body.name(0))
+        val eventData = JsonParser.parseString(body.value(0)).asJsonObject
+        Assert.assertEquals(expectedEventType, eventData.get("eventType").asString)
+        Assert.assertEquals(DOMAIN, eventData.get("attentiveDomain").asString)
     }
 
     private data class CapturedApiRequest(

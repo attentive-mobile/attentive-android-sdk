@@ -190,7 +190,6 @@ internal class AttentiveApi(
             return Result.failure(IllegalStateException(msg))
         }
 
-        // Send each request - the interceptor will handle geo-domain adjustment
         for (request in baseEventRequests) {
             try {
                 val eventDataJson = baseEventRequestJson.encodeToString(
@@ -198,7 +197,7 @@ internal class AttentiveApi(
                     request
                 )
                 Timber.d("Sending event JSON: $eventDataJson")
-                val response = api.sendEventSuspend(eventDataJson)
+                val response = eventsApi.sendMobileEventSuspend(eventDataJson)
                 if (response.isSuccessful) {
                     Timber.i("Successfully sent ${request.eventType} event")
                 } else {
@@ -263,7 +262,7 @@ internal class AttentiveApi(
                 )
                 Timber.d("Sending event JSON: $eventDataJson")
 
-                val call = api.sendEvent(eventDataJson)
+                val call = eventsApi.sendMobileEvent(eventDataJson)
                 call.enqueue(object : retrofit2.Callback<Unit> {
                     override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
                         if (response.isSuccessful) {
