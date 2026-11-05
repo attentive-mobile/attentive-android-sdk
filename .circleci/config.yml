@@ -35,7 +35,7 @@ environment: &default_environment
 executors:
   android-executor:
     docker:
-      - image: cimg/android:2026.02.1
+      - image: cimg/android:2026.10.1
     resource_class: large
     environment:
       <<: *default_environment
@@ -196,18 +196,6 @@ jobs:
           keys:
             - gradle-snapshot-v1-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "bonni/build.gradle" }}
             - gradle-snapshot-v1-
-      - run:
-          name: Install SDK Build Tools 36
-          command: |
-            for i in 1 2 3; do
-              sdkmanager "build-tools;36.0.0" && exit 0
-              if [ "$i" -lt 3 ]; then
-                echo "Attempt $i failed, retrying in 10s..."
-                sleep 10
-              fi
-            done
-            echo "Failed to install build-tools;36.0.0 after 3 attempts"
-            exit 1
       - run:
           name: Verify Snapshot Tests
           command: ./gradlew :bonni:verifyRoborazziDebug
