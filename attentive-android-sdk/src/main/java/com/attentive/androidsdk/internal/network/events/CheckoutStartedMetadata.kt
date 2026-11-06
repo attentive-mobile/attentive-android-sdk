@@ -1,10 +1,11 @@
 package com.attentive.androidsdk.internal.network.events
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+@SerialName("CheckoutStarted")
 data class CheckoutStartedMetadata(
-    val eventType: String = "CheckoutStarted",
     val orderId: String? = null,
     val currency: String? = null,
     val orderTotal: String? = null,
