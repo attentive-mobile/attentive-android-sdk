@@ -3,8 +3,6 @@ package com.attentive.androidsdk.internal.network
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
@@ -19,12 +17,6 @@ interface RetrofitApiService {
     @POST("user-update")
     fun updateUser(
         @Body request: UserUpdateRequest,
-    ): Call<Unit>
-
-    @FormUrlEncoded
-    @POST("mobile")
-    fun sendEvent(
-        @Field("d") eventData: String,
     ): Call<Unit>
 
     @Headers("Content-Type: application/json")
@@ -55,12 +47,6 @@ interface RetrofitApiService {
     @POST("user-update")
     suspend fun updateUserSuspend(
         @Body request: UserUpdateRequest,
-    ): Response<Unit>
-
-    @FormUrlEncoded
-    @POST("mobile")
-    suspend fun sendEventSuspend(
-        @Field("d") eventData: String,
     ): Response<Unit>
 
     @Headers("Content-Type: application/json")
