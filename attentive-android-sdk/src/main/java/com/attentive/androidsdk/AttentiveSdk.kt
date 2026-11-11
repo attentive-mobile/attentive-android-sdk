@@ -133,13 +133,7 @@ object AttentiveSdk {
      */
     private var inboxGeneration: Long = 0L
 
-    /**
-     * Set when an inbox fetch was held back for want of an FCM push token, and cleared by
-     * [awaitPushTokenThenRefreshInbox] when it makes good on it. Carries the debt across the
-     * gap between the two, so a deferred fetch is never lost. A token landing mid-deferral can
-     * produce one redundant refresh; a warm start, where the token is already known, produces
-     * none.
-     */
+    /** True while an inbox fetch is waiting for a push token. */
     private val inboxDeferredForPushToken = AtomicBoolean(false)
 
     /**
@@ -264,31 +258,15 @@ object AttentiveSdk {
     private fun fcmPushToken(): String? =
         TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
 
-    /**
-     * Persists the FCM token in [config]'s storage across launches — for push-enabled apps
-     * only. An app that ran with push and later ships `pushEnabled(false)` would otherwise
-     * restore its old token, and every inbox request would carry it despite the opt-out.
-     */
+    /** Persists the push token across launches when push is enabled. */
     @VisibleForTesting
     internal fun attachPushTokenStorage(config: AttentiveConfig) {
         TokenProvider.getInstance().bindStorage(config.persistentStorage.takeIf { config.pushEnabled })
     }
 
     /**
-     * True when an inbox request must wait rather than go out now, because this app has push
-     * enabled but Firebase has not produced a token yet (MSDK-586). The backend rejects a
-     * token-less inbox request with a 401, so sending one spends a round trip and returns
-     * nothing; the request is deferred to [awaitPushTokenThenRefreshInbox] instead.
-     *
-     * Apps that opted out of push with `AttentiveConfig.Builder.pushEnabled(false)` never get a
-     * token at all, so gating them would mean no inbox ever. They are deliberately not gated and
-     * keep requesting with visitor ID, email and phone as before.
-     *
-     * Records the deferral in [inboxDeferredForPushToken] as a side effect, so the caller only
-     * has to decide whether to proceed. The token is checked again after recording it: a token
-     * arriving between a single check and the set could be seen by the waiter while the flag
-     * was still clear, leaving the debt with no one to pay it. With the re-check, either this
-     * call sees the token and proceeds, or the set happened first and the waiter will see it.
+     * Returns true, and marks a fetch as pending, when push is enabled but no push token is
+     * available yet. Push-disabled apps are never deferred.
      */
     private fun shouldDeferInboxForPushToken(): Boolean {
         if (!config.pushEnabled || fcmPushToken() != null) return false
@@ -296,19 +274,7 @@ object AttentiveSdk {
         return fcmPushToken() == null
     }
 
-    /**
-     * Makes good on an inbox fetch that [shouldDeferInboxForPushToken] held back, as soon as a
-     * token exists.
-     *
-     * [initializeInbox] runs the moment the host app shows the inbox or its unread badge, which
-     * on a cold start is usually before Firebase has answered. Without this, nothing would ever
-     * retry that first fetch: the only other refresh triggers are a screen resume and an incoming
-     * push, and a user sitting on the inbox they just opened sees neither.
-     *
-     * Suspends until the first non-blank token. If Firebase never produces one this never
-     * resumes, which is the intended "no token, no inbox request" behaviour rather than a leak —
-     * it is one coroutine parked on a [StateFlow] in [inboxScope].
-     */
+    /** Waits for a push token, then runs any inbox fetch that was deferred for lack of one. */
     @VisibleForTesting
     internal suspend fun awaitPushTokenThenRefreshInbox() {
         TokenProvider.getInstance().tokenFlow.first { !it.isNullOrBlank() }
@@ -519,8 +485,6 @@ object AttentiveSdk {
     fun initialize(config: AttentiveConfig) {
         synchronized(inboxInitLock) {
             this._config = config
-            // Before anything can ask for a token, so a persisted one lets the inbox proceed
-            // immediately instead of racing Firebase.
             attachPushTokenStorage(config)
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)

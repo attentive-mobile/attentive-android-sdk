@@ -30,10 +30,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
     val pushEnabled: Boolean = builder._pushEnabled
     val automaticallyOpensInboxDeepLinks: Boolean = builder._automaticallyOpensInboxDeepLinks
 
-    /**
-     * The SDK's [PersistentStorage], built once here and handed to every component that
-     * persists state, so none of them constructs its own.
-     */
+    /** Shared storage for SDK components that persist state. */
     internal val persistentStorage: PersistentStorage =
         ClassFactory.buildPersistentStorage(builder._context)
 

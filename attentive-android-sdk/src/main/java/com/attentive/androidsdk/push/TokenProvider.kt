@@ -13,22 +13,13 @@ import kotlin.coroutines.resume
 class TokenProvider {
     private val _tokenFlow = MutableStateFlow<String?>(null)
 
-    /**
-     * Emits the FCM token as it becomes known: null on a cold start, then non-null once
-     * [loadPersistedToken] hydrates it from disk or a Firebase fetch returns.
-     *
-     * Callers that must not run token-less — the inbox, which the backend rejects with a 401
-     * when `push_token` is absent — collect this rather than reading [token] once and giving up.
-     */
+    /** The current FCM token; null until one is restored or fetched. */
     internal val tokenFlow: StateFlow<String?> = _tokenFlow.asStateFlow()
 
     @Volatile
     private var storage: PersistentStorage? = null
 
-    /**
-     * The current FCM token. Once [bindStorage] has attached storage, every assignment is
-     * written through to it, so the next launch can restore it without racing Firebase.
-     */
+    /** The current FCM token. Saved to the bound storage, if any, when set. */
     internal var token: String?
         get() = _tokenFlow.value
         set(value) {
@@ -37,9 +28,8 @@ class TokenProvider {
         }
 
     /**
-     * Backs [token] with [storage]. Restores the persisted token when none is in memory yet —
-     * the in-memory value stays the fast path and is never replaced by the stored copy, which
-     * may be staler. Passing null detaches storage, so nothing is restored or written.
+     * Persists [token] to [storage] and restores the saved token if none is in memory.
+     * Pass null to stop persisting.
      */
     internal fun bindStorage(storage: PersistentStorage?) {
         this.storage = storage
@@ -47,7 +37,6 @@ class TokenProvider {
         val persisted = storage.read(PUSH_TOKEN_KEY)
         if (persisted.isNullOrBlank()) return
         Timber.d("Restored persisted FCM push token")
-        // Bypasses the setter: the value came from storage, so writing it back is redundant.
         _tokenFlow.value = persisted
     }
 

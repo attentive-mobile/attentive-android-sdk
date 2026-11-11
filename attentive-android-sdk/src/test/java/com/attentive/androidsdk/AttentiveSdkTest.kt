@@ -99,10 +99,7 @@ class AttentiveSdkTest {
         field.set(AttentiveSdk, config)
     }
 
-    /**
-     * Resets the MSDK-586 deferral debt. It is process-global state on the AttentiveSdk object,
-     * so a test that defers a fetch would otherwise leave the next one owing a refresh.
-     */
+    /** Resets the pending-fetch flag, which is global state on the AttentiveSdk object. */
     private fun setInboxDeferredForPushToken(deferred: Boolean) {
         val field = AttentiveSdk::class.java.getDeclaredField("inboxDeferredForPushToken")
         field.isAccessible = true
@@ -728,8 +725,6 @@ class AttentiveSdkTest {
 
     @Test
     fun refreshInbox_defersRequest_whenPushTokenMissing() {
-        // MSDK-586: on a cold start the inbox opens before Firebase has returned a token. The
-        // backend rejects a token-less inbox request with a 401, so none must be sent.
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         setInboxApi(inboxApi)
         TokenProvider.getInstance().token = null
@@ -755,8 +750,6 @@ class AttentiveSdkTest {
 
     @Test
     fun refreshInbox_proceedsWithoutPushToken_whenPushDisabled() {
-        // An app that opted out with pushEnabled(false) never gets a token, so gating it would
-        // mean no inbox at all. It keeps requesting on visitor ID, email and phone.
         setConfig(buildConfig(pushEnabled = false))
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         runBlocking {
@@ -785,7 +778,6 @@ class AttentiveSdkTest {
         setInboxApi(inboxApi)
         TokenProvider.getInstance().token = null
 
-        // The fetch a cold start would have made, held back for want of a token.
         runBlocking { AttentiveSdk.refreshInbox() }
         runBlocking { verify(inboxApi, never()).getMessages(any(), any()) }
 
@@ -802,8 +794,6 @@ class AttentiveSdkTest {
 
     @Test
     fun awaitPushTokenThenRefreshInbox_doesNotRefetch_whenNothingWasDeferred() {
-        // A warm launch already has a token, so the initial fetch went out and the waiter owes
-        // nothing. Firing anyway would double every warm start's inbox request.
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         setInboxApi(inboxApi)
         TokenProvider.getInstance().token = PUSH_TOKEN
@@ -815,9 +805,6 @@ class AttentiveSdkTest {
 
     @Test
     fun initialInboxFetch_isNotDuplicated_whenTokenAlreadyKnown() {
-        // A warm launch already has its token, so initializeInbox's first fetch goes out and the
-        // waiter launched beside it owes nothing. Exactly one request is the guarantee here:
-        // a second would double every warm start's inbox traffic.
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         runBlocking {
             whenever(inboxApi.getMessages(any(), any()))
@@ -847,8 +834,6 @@ class AttentiveSdkTest {
 
     @Test
     fun attachPushTokenStorage_ignoresPersistedToken_whenPushDisabled() {
-        // An app that ran with push and later ships pushEnabled(false) must not resurrect its
-        // old token — every inbox request would carry it despite the opt-out.
         storedValues[TokenProvider.PUSH_TOKEN_KEY] = PERSISTED_PUSH_TOKEN
         TokenProvider.getInstance().token = null
 
