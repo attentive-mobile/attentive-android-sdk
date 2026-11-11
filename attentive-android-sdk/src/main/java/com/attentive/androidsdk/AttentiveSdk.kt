@@ -258,7 +258,11 @@ object AttentiveSdk {
     private fun fcmPushToken(): String? =
         TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
 
-    /** Persists the push token across launches when push is enabled. */
+    /**
+     * Persists the push token across launches when push is enabled.
+     *
+     * @param config The configuration whose storage holds the token.
+     */
     @VisibleForTesting
     internal fun attachPushTokenStorage(config: AttentiveConfig) {
         TokenProvider.getInstance().bindStorage(config.persistentStorage.takeIf { config.pushEnabled })

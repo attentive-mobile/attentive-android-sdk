@@ -30,6 +30,8 @@ class TokenProvider {
     /**
      * Persists [token] to [storage] and restores the saved token if none is in memory.
      * Pass null to stop persisting.
+     *
+     * @param storage Where to persist the token, or null to stop.
      */
     internal fun bindStorage(storage: PersistentStorage?) {
         this.storage = storage
@@ -72,6 +74,7 @@ class TokenProvider {
         }
     }
 
+    /** Saves [value] to [storage], or deletes the saved token when [value] is blank. */
     private fun persist(
         storage: PersistentStorage,
         value: String?,
