@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -49,6 +50,7 @@ import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 
 object AttentiveSdk {
 
@@ -132,6 +134,14 @@ object AttentiveSdk {
     private var inboxGeneration: Long = 0L
 
     /**
+     * Set when an inbox fetch was held back for want of an FCM push token, and cleared by
+     * [awaitPushTokenThenRefreshInbox] when it makes good on it. Carries the debt across the
+     * gap between the two, so a token that arrives in that window still produces exactly one
+     * refresh rather than none or two.
+     */
+    private val inboxDeferredForPushToken = AtomicBoolean(false)
+
+    /**
      * Opts this app in to the inbox: builds the API client and fetches the first page of
      * messages plus the unread count in the background. Observe [inboxState] for results.
      *
@@ -180,6 +190,9 @@ object AttentiveSdk {
             // refreshes come from the AttentiveInbox composable's ON_RESUME observer and
             // from sendNotification() on push receipt.
             inboxScope.launch { refreshInbox() }
+            if (config.pushEnabled) {
+                inboxScope.launch { awaitPushTokenThenRefreshInbox() }
+            }
             true
         }
 
@@ -190,6 +203,10 @@ object AttentiveSdk {
     internal suspend fun refreshInbox() {
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInbox — inbox API not configured")
+            return
+        }
+        if (shouldDeferInboxForPushToken()) {
+            Timber.d("Deferring refreshInbox — waiting for the FCM push token")
             return
         }
         paginationLock.withLock {
@@ -245,6 +262,48 @@ object AttentiveSdk {
 
     private fun fcmPushToken(): String? =
         TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
+
+    /**
+     * True when an inbox request must wait rather than go out now, because this app has push
+     * enabled but Firebase has not produced a token yet (MSDK-586). The backend rejects a
+     * token-less inbox request with a 401, so sending one spends a round trip and returns
+     * nothing; the request is deferred to [awaitPushTokenThenRefreshInbox] instead.
+     *
+     * Apps that opted out of push with `AttentiveConfig.Builder.pushEnabled(false)` never get a
+     * token at all, so gating them would mean no inbox ever. They are deliberately not gated and
+     * keep requesting with visitor ID, email and phone as before.
+     *
+     * Records the deferral in [inboxDeferredForPushToken] as a side effect, so the caller only
+     * has to decide whether to proceed.
+     */
+    private fun shouldDeferInboxForPushToken(): Boolean {
+        if (!config.pushEnabled) return false
+        if (fcmPushToken() != null) return false
+        inboxDeferredForPushToken.set(true)
+        return true
+    }
+
+    /**
+     * Makes good on an inbox fetch that [shouldDeferInboxForPushToken] held back, as soon as a
+     * token exists.
+     *
+     * [initializeInbox] runs the moment the host app shows the inbox or its unread badge, which
+     * on a cold start is usually before Firebase has answered. Without this, nothing would ever
+     * retry that first fetch: the only other refresh triggers are a screen resume and an incoming
+     * push, and a user sitting on the inbox they just opened sees neither.
+     *
+     * Suspends until the first non-blank token. If Firebase never produces one this never
+     * resumes, which is the intended "no token, no inbox request" behaviour rather than a leak —
+     * it is one coroutine parked on a [StateFlow] in [inboxScope].
+     */
+    @VisibleForTesting
+    internal suspend fun awaitPushTokenThenRefreshInbox() {
+        TokenProvider.getInstance().tokenFlow.first { !it.isNullOrBlank() }
+        if (inboxDeferredForPushToken.compareAndSet(true, false)) {
+            Timber.d("FCM push token arrived — running the inbox refresh that was deferred")
+            refreshInbox()
+        }
+    }
 
     private fun buildGetMessagesRequest(pageToken: String?): GetMessagesRequest? {
         val identifiers = config.userIdentifiers
@@ -362,6 +421,11 @@ object AttentiveSdk {
                 return
             }
 
+            if (shouldDeferInboxForPushToken()) {
+                Timber.d("Deferring loadMoreInboxMessages — waiting for the FCM push token")
+                return
+            }
+
             Timber.d("Loading more inbox messages from offset ${currentState.currentOffset}")
             _inboxState.value = currentState.copy(isLoadingMore = true)
 
@@ -442,6 +506,9 @@ object AttentiveSdk {
     fun initialize(config: AttentiveConfig) {
         synchronized(inboxInitLock) {
             this._config = config
+            // Before anything can ask for a token: a persisted one from a previous launch
+            // lets the inbox and event calls proceed immediately instead of racing Firebase.
+            TokenProvider.getInstance().loadPersistedToken(config.applicationContext)
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }
@@ -1051,6 +1118,10 @@ object AttentiveSdk {
     internal suspend fun refreshInboxUnreadCount() {
         val inboxApi = inboxApi ?: run {
             Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
+            return
+        }
+        if (shouldDeferInboxForPushToken()) {
+            Timber.d("Deferring refreshInboxUnreadCount — waiting for the FCM push token")
             return
         }
         val identifiers = config.userIdentifiers
