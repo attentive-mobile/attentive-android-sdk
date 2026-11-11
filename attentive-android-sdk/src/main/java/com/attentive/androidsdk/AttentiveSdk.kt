@@ -136,8 +136,9 @@ object AttentiveSdk {
     /**
      * Set when an inbox fetch was held back for want of an FCM push token, and cleared by
      * [awaitPushTokenThenRefreshInbox] when it makes good on it. Carries the debt across the
-     * gap between the two, so a token that arrives in that window still produces exactly one
-     * refresh rather than none or two.
+     * gap between the two, so a deferred fetch is never lost. A token landing mid-deferral can
+     * produce one redundant refresh; a warm start, where the token is already known, produces
+     * none.
      */
     private val inboxDeferredForPushToken = AtomicBoolean(false)
 
@@ -264,6 +265,16 @@ object AttentiveSdk {
         TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
 
     /**
+     * Persists the FCM token in [config]'s storage across launches — for push-enabled apps
+     * only. An app that ran with push and later ships `pushEnabled(false)` would otherwise
+     * restore its old token, and every inbox request would carry it despite the opt-out.
+     */
+    @VisibleForTesting
+    internal fun attachPushTokenStorage(config: AttentiveConfig) {
+        TokenProvider.getInstance().bindStorage(config.persistentStorage.takeIf { config.pushEnabled })
+    }
+
+    /**
      * True when an inbox request must wait rather than go out now, because this app has push
      * enabled but Firebase has not produced a token yet (MSDK-586). The backend rejects a
      * token-less inbox request with a 401, so sending one spends a round trip and returns
@@ -274,13 +285,15 @@ object AttentiveSdk {
      * keep requesting with visitor ID, email and phone as before.
      *
      * Records the deferral in [inboxDeferredForPushToken] as a side effect, so the caller only
-     * has to decide whether to proceed.
+     * has to decide whether to proceed. The token is checked again after recording it: a token
+     * arriving between a single check and the set could be seen by the waiter while the flag
+     * was still clear, leaving the debt with no one to pay it. With the re-check, either this
+     * call sees the token and proceeds, or the set happened first and the waiter will see it.
      */
     private fun shouldDeferInboxForPushToken(): Boolean {
-        if (!config.pushEnabled) return false
-        if (fcmPushToken() != null) return false
+        if (!config.pushEnabled || fcmPushToken() != null) return false
         inboxDeferredForPushToken.set(true)
-        return true
+        return fcmPushToken() == null
     }
 
     /**
@@ -506,9 +519,9 @@ object AttentiveSdk {
     fun initialize(config: AttentiveConfig) {
         synchronized(inboxInitLock) {
             this._config = config
-            // Before anything can ask for a token: a persisted one from a previous launch
-            // lets the inbox and event calls proceed immediately instead of racing Firebase.
-            TokenProvider.getInstance().loadPersistedToken(config.applicationContext)
+            // Before anything can ask for a token, so a persisted one lets the inbox proceed
+            // immediately instead of racing Firebase.
+            attachPushTokenStorage(config)
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }

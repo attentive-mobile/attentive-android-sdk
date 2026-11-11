@@ -1,7 +1,7 @@
 package com.attentive.androidsdk.push
 
 import android.content.Context
-import com.attentive.androidsdk.ClassFactory
+import com.attentive.androidsdk.PersistentStorage
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,22 +22,32 @@ class TokenProvider {
      */
     internal val tokenFlow: StateFlow<String?> = _tokenFlow.asStateFlow()
 
+    @Volatile
+    private var storage: PersistentStorage? = null
+
+    /**
+     * The current FCM token. Once [bindStorage] has attached storage, every assignment is
+     * written through to it, so the next launch can restore it without racing Firebase.
+     */
     internal var token: String?
         get() = _tokenFlow.value
         set(value) {
             _tokenFlow.value = value
+            storage?.let { persist(it, value) }
         }
 
     /**
-     * Seeds [token] from the last token written to disk, so a warm launch has one before
-     * Firebase answers. The in-memory value stays the fast path: an existing one is never
-     * replaced by the persisted copy, which may be staler.
+     * Backs [token] with [storage]. Restores the persisted token when none is in memory yet —
+     * the in-memory value stays the fast path and is never replaced by the stored copy, which
+     * may be staler. Passing null detaches storage, so nothing is restored or written.
      */
-    internal fun loadPersistedToken(context: Context) {
-        if (!_tokenFlow.value.isNullOrBlank()) return
-        val persisted = ClassFactory.buildPersistentStorage(context).read(PUSH_TOKEN_KEY)
+    internal fun bindStorage(storage: PersistentStorage?) {
+        this.storage = storage
+        if (storage == null || !_tokenFlow.value.isNullOrBlank()) return
+        val persisted = storage.read(PUSH_TOKEN_KEY)
         if (persisted.isNullOrBlank()) return
         Timber.d("Restored persisted FCM push token")
+        // Bypasses the setter: the value came from storage, so writing it back is redundant.
         _tokenFlow.value = persisted
     }
 
@@ -53,7 +63,6 @@ class TokenProvider {
                     if (task.isSuccessful) {
                         val resultToken = task.result
                         token = resultToken
-                        persistToken(context, resultToken)
                         continuation.resume(
                             Result.success(
                                 TokenFetchResult(
@@ -74,15 +83,10 @@ class TokenProvider {
         }
     }
 
-    /**
-     * Mirrors the freshly fetched token to disk so the next cold start can read it back
-     * immediately instead of racing Firebase again.
-     */
-    private fun persistToken(
-        context: Context,
+    private fun persist(
+        storage: PersistentStorage,
         value: String?,
     ) {
-        val storage = ClassFactory.buildPersistentStorage(context)
         if (value.isNullOrBlank()) {
             storage.delete(PUSH_TOKEN_KEY)
         } else {

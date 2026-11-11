@@ -143,6 +143,7 @@ class AttentiveSdkTest {
         storedValues.clear()
         factoryMocks.close()
         mockedAppInfo?.close()
+        TokenProvider.getInstance().bindStorage(null)
         TokenProvider.getInstance().token = null
         setInboxApi(null)
         setInboxState(InboxState())
@@ -813,6 +814,50 @@ class AttentiveSdkTest {
     }
 
     @Test
+    fun initialInboxFetch_isNotDuplicated_whenTokenAlreadyKnown() {
+        // A warm launch already has its token, so initializeInbox's first fetch goes out and the
+        // waiter launched beside it owes nothing. Exactly one request is the guarantee here:
+        // a second would double every warm start's inbox traffic.
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any()))
+                .thenReturn(InboxResponse(messages = emptyList(), nextPageToken = null))
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = PUSH_TOKEN
+
+        runBlocking {
+            AttentiveSdk.refreshInbox()
+            AttentiveSdk.awaitPushTokenThenRefreshInbox()
+        }
+
+        runBlocking { verify(inboxApi, Mockito.times(1)).getMessages(any(), any()) }
+    }
+
+    @Test
+    fun attachPushTokenStorage_restoresPersistedToken_whenPushEnabled() {
+        storedValues[TokenProvider.PUSH_TOKEN_KEY] = PERSISTED_PUSH_TOKEN
+        TokenProvider.getInstance().token = null
+
+        AttentiveSdk.attachPushTokenStorage(buildConfig(pushEnabled = true))
+
+        assertEquals(PERSISTED_PUSH_TOKEN, TokenProvider.getInstance().token)
+    }
+
+    @Test
+    fun attachPushTokenStorage_ignoresPersistedToken_whenPushDisabled() {
+        // An app that ran with push and later ships pushEnabled(false) must not resurrect its
+        // old token — every inbox request would carry it despite the opt-out.
+        storedValues[TokenProvider.PUSH_TOKEN_KEY] = PERSISTED_PUSH_TOKEN
+        TokenProvider.getInstance().token = null
+
+        AttentiveSdk.attachPushTokenStorage(buildConfig(pushEnabled = false))
+
+        assertNull(TokenProvider.getInstance().token)
+    }
+
+    @Test
     fun refreshInbox_mapsInboxMessageDtoFields() {
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         runBlocking {
@@ -1202,6 +1247,7 @@ class AttentiveSdkTest {
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
         private const val PUSH_TOKEN = "testPushToken"
+        private const val PERSISTED_PUSH_TOKEN = "persistedPushToken"
         private const val EMAIL = "user@example.com"
         private const val OTHER_EMAIL = "other@example.com"
         private const val PHONE = "+15551234567"
