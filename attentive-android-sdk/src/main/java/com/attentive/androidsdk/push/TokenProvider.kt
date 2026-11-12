@@ -2,12 +2,25 @@ package com.attentive.androidsdk.push
 
 import android.content.Context
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import kotlin.coroutines.resume
 
 class TokenProvider {
-    internal var token: String? = null
+    private val _tokenFlow = MutableStateFlow<String?>(null)
+
+    /** The current FCM token; null until one is fetched in this process. */
+    internal val tokenFlow: StateFlow<String?> = _tokenFlow.asStateFlow()
+
+    /** The current FCM token, held in memory only. */
+    internal var token: String?
+        get() = _tokenFlow.value
+        set(value) {
+            _tokenFlow.value = value
+        }
 
     internal suspend fun getToken(context: Context): Result<TokenFetchResult> {
         return getTokenFromFirebase(context)
@@ -20,7 +33,7 @@ class TokenProvider {
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         val resultToken = task.result
-                        token = task.result
+                        token = resultToken
                         continuation.resume(
                             Result.success(
                                 TokenFetchResult(
@@ -42,14 +55,9 @@ class TokenProvider {
     }
 
     companion object {
-        private lateinit var INSTANCE: TokenProvider
+        private val INSTANCE = TokenProvider()
 
         @JvmStatic
-        fun getInstance(): TokenProvider {
-            if (!::INSTANCE.isInitialized) {
-                INSTANCE = TokenProvider()
-            }
-            return INSTANCE
-        }
+        fun getInstance(): TokenProvider = INSTANCE
     }
 }

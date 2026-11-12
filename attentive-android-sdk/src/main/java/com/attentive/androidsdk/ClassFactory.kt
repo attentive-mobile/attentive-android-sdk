@@ -2,6 +2,7 @@ package com.attentive.androidsdk
 
 import android.content.Context
 import com.attentive.androidsdk.internal.network.AttentiveHttpLogger
+import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import com.attentive.androidsdk.internal.network.RetryInterceptor
 import com.attentive.androidsdk.internal.network.UserAgentInterceptor
 import com.attentive.androidsdk.internal.network.buffer.BufferDatabase
@@ -11,6 +12,8 @@ import com.attentive.androidsdk.internal.network.buffer.RoomBufferedRequestQueue
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 object ClassFactory {
     /**
@@ -97,6 +100,24 @@ object ClassFactory {
     ): AttentiveApi {
         return AttentiveApi(okHttpClient, domain, identityProvider)
     }
+
+    /**
+     * Builds the Retrofit client for the inbox API.
+     *
+     * @param baseUrl The inbox host, ending in `/`.
+     * @param okHttpClient The client that carries inbox requests.
+     */
+    @JvmStatic
+    internal fun buildInboxApi(
+        baseUrl: String,
+        okHttpClient: OkHttpClient,
+    ): RetrofitInboxApiService =
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(RetrofitInboxApiService::class.java)
 
     fun buildSettingsService(persistentStorage: PersistentStorage): SettingsService {
         return SettingsService(persistentStorage)
