@@ -259,16 +259,6 @@ object AttentiveSdk {
         TokenProvider.getInstance().token?.takeIf { it.isNotBlank() }?.let { "fcm:$it" }
 
     /**
-     * Persists the push token across launches when push is enabled.
-     *
-     * @param config The configuration whose storage holds the token.
-     */
-    @VisibleForTesting
-    internal fun attachPushTokenStorage(config: AttentiveConfig) {
-        TokenProvider.getInstance().bindStorage(config.persistentStorage.takeIf { config.pushEnabled })
-    }
-
-    /**
      * Returns true, and marks a fetch as pending, when push is enabled but no push token is
      * available yet. Push-disabled apps are never deferred.
      */
@@ -489,7 +479,6 @@ object AttentiveSdk {
     fun initialize(config: AttentiveConfig) {
         synchronized(inboxInitLock) {
             this._config = config
-            attachPushTokenStorage(config)
             AttentiveEventTracker.instance.initializeInternal(config)
             FlushWorker.recoverOrphansAndSchedule(config.applicationContext)
         }

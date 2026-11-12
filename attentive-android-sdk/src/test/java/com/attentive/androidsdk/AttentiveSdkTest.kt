@@ -140,7 +140,6 @@ class AttentiveSdkTest {
         storedValues.clear()
         factoryMocks.close()
         mockedAppInfo?.close()
-        TokenProvider.getInstance().bindStorage(null)
         TokenProvider.getInstance().token = null
         setInboxApi(null)
         setInboxState(InboxState())
@@ -823,26 +822,6 @@ class AttentiveSdkTest {
     }
 
     @Test
-    fun attachPushTokenStorage_restoresPersistedToken_whenPushEnabled() {
-        storedValues[TokenProvider.PUSH_TOKEN_KEY] = PERSISTED_PUSH_TOKEN
-        TokenProvider.getInstance().token = null
-
-        AttentiveSdk.attachPushTokenStorage(buildConfig(pushEnabled = true))
-
-        assertEquals(PERSISTED_PUSH_TOKEN, TokenProvider.getInstance().token)
-    }
-
-    @Test
-    fun attachPushTokenStorage_ignoresPersistedToken_whenPushDisabled() {
-        storedValues[TokenProvider.PUSH_TOKEN_KEY] = PERSISTED_PUSH_TOKEN
-        TokenProvider.getInstance().token = null
-
-        AttentiveSdk.attachPushTokenStorage(buildConfig(pushEnabled = false))
-
-        assertNull(TokenProvider.getInstance().token)
-    }
-
-    @Test
     fun refreshInbox_mapsInboxMessageDtoFields() {
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         runBlocking {
@@ -1232,7 +1211,6 @@ class AttentiveSdkTest {
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
         private const val PUSH_TOKEN = "testPushToken"
-        private const val PERSISTED_PUSH_TOKEN = "persistedPushToken"
         private const val EMAIL = "user@example.com"
         private const val OTHER_EMAIL = "other@example.com"
         private const val PHONE = "+15551234567"

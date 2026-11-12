@@ -1,7 +1,6 @@
 package com.attentive.androidsdk.push
 
 import android.content.Context
-import com.attentive.androidsdk.PersistentStorage
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,34 +12,15 @@ import kotlin.coroutines.resume
 class TokenProvider {
     private val _tokenFlow = MutableStateFlow<String?>(null)
 
-    /** The current FCM token; null until one is restored or fetched. */
+    /** The current FCM token; null until one is fetched in this process. */
     internal val tokenFlow: StateFlow<String?> = _tokenFlow.asStateFlow()
 
-    @Volatile
-    private var storage: PersistentStorage? = null
-
-    /** The current FCM token. Saved to the bound storage, if any, when set. */
+    /** The current FCM token, held in memory only. */
     internal var token: String?
         get() = _tokenFlow.value
         set(value) {
             _tokenFlow.value = value
-            storage?.let { persist(it, value) }
         }
-
-    /**
-     * Persists [token] to [storage] and restores the saved token if none is in memory.
-     * Pass null to stop persisting.
-     *
-     * @param storage Where to persist the token, or null to stop.
-     */
-    internal fun bindStorage(storage: PersistentStorage?) {
-        this.storage = storage
-        if (storage == null || !_tokenFlow.value.isNullOrBlank()) return
-        val persisted = storage.read(PUSH_TOKEN_KEY)
-        if (persisted.isNullOrBlank()) return
-        Timber.d("Restored persisted FCM push token")
-        _tokenFlow.value = persisted
-    }
 
     internal suspend fun getToken(context: Context): Result<TokenFetchResult> {
         return getTokenFromFirebase(context)
@@ -74,21 +54,7 @@ class TokenProvider {
         }
     }
 
-    /** Saves [value] to [storage], or deletes the saved token when [value] is blank. */
-    private fun persist(
-        storage: PersistentStorage,
-        value: String?,
-    ) {
-        if (value.isNullOrBlank()) {
-            storage.delete(PUSH_TOKEN_KEY)
-        } else {
-            storage.save(PUSH_TOKEN_KEY, value)
-        }
-    }
-
     companion object {
-        internal const val PUSH_TOKEN_KEY = "com.attentive.androidsdk.FCM_PUSH_TOKEN"
-
         private lateinit var INSTANCE: TokenProvider
 
         @JvmStatic
