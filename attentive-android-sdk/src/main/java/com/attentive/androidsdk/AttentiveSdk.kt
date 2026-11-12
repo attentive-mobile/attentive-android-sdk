@@ -42,13 +42,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -136,6 +135,10 @@ object AttentiveSdk {
     /** True while an inbox fetch is waiting for a push token. */
     private val inboxDeferredForPushToken = AtomicBoolean(false)
 
+    /** The `fcm:`-prefixed push token the current [inboxState] messages were fetched with. */
+    @Volatile
+    private var lastInboxFetchPushToken: String? = null
+
     /**
      * Opts this app in to the inbox: builds the API client and fetches the first page of
      * messages plus the unread count in the background. Observe [inboxState] for results.
@@ -173,12 +176,7 @@ object AttentiveSdk {
                 ClassFactory.buildUserAgentInterceptor(context),
                 null,
             )
-            inboxApi = Retrofit.Builder()
-                .baseUrl(inboxBaseUrl)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(RetrofitInboxApiService::class.java)
+            inboxApi = ClassFactory.buildInboxApi(inboxBaseUrl, client)
             Timber.d("Inbox API configured with base URL: $inboxBaseUrl")
 
             // Initial fetch so observers see real data without any further calls. Later
@@ -186,7 +184,7 @@ object AttentiveSdk {
             // from sendNotification() on push receipt.
             inboxScope.launch { refreshInbox() }
             if (config.pushEnabled) {
-                inboxScope.launch { awaitPushTokenThenRefreshInbox() }
+                inboxScope.launch { watchPushTokenForInbox() }
             }
             true
         }
@@ -222,6 +220,7 @@ object AttentiveSdk {
                 }
                 val messages = response.messages.map { it.toMessage() }
                 nextPageToken = response.nextPageToken
+                lastInboxFetchPushToken = request.pushToken
                 _inboxState.value = InboxState(
                     messages = messages,
                     unreadCount = messages.count { !it.isRead },
@@ -251,6 +250,7 @@ object AttentiveSdk {
     internal fun resetInboxForIdentityChange() {
         inboxGeneration += 1
         nextPageToken = null
+        lastInboxFetchPushToken = null
         _inboxState.value = InboxState()
         Timber.d("Inbox state reset for identity change (generation=$inboxGeneration)")
     }
@@ -268,14 +268,25 @@ object AttentiveSdk {
         return fcmPushToken() == null
     }
 
-    /** Waits for a push token, then runs any inbox fetch that was deferred for lack of one. */
+    /**
+     * Watches the push token for as long as the inbox runs. Refreshes the inbox when a token
+     * arrives for a fetch that was deferred, or when the token differs from the one the current
+     * messages were fetched with. Never returns; cancel the calling coroutine to stop it.
+     */
     @VisibleForTesting
-    internal suspend fun awaitPushTokenThenRefreshInbox() {
-        TokenProvider.getInstance().tokenFlow.first { !it.isNullOrBlank() }
-        if (inboxDeferredForPushToken.compareAndSet(true, false)) {
-            Timber.d("FCM push token arrived — running the inbox refresh that was deferred")
-            refreshInbox()
-        }
+    internal suspend fun watchPushTokenForInbox() {
+        TokenProvider.getInstance().tokenFlow
+            .filter { !it.isNullOrBlank() }
+            .distinctUntilChanged()
+            .collect { token ->
+                val deferred = inboxDeferredForPushToken.compareAndSet(true, false)
+                val fetchedWith = lastInboxFetchPushToken
+                val rotated = fetchedWith != null && fetchedWith != "fcm:$token"
+                if (deferred || rotated) {
+                    Timber.d("FCM push token changed (deferred=$deferred, rotated=$rotated) — refreshing inbox")
+                    refreshInbox()
+                }
+            }
     }
 
     private fun buildGetMessagesRequest(pageToken: String?): GetMessagesRequest? {
