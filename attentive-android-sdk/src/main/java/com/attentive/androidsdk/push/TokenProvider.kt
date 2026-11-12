@@ -55,14 +55,9 @@ class TokenProvider {
     }
 
     companion object {
-        private lateinit var INSTANCE: TokenProvider
+        private val INSTANCE = TokenProvider()
 
         @JvmStatic
-        fun getInstance(): TokenProvider {
-            if (!::INSTANCE.isInitialized) {
-                INSTANCE = TokenProvider()
-            }
-            return INSTANCE
-        }
+        fun getInstance(): TokenProvider = INSTANCE
     }
 }
