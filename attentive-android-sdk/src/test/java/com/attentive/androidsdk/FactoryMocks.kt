@@ -1,9 +1,11 @@
 package com.attentive.androidsdk
 
 import com.attentive.androidsdk.ClassFactory.buildAttentiveApi
+import com.attentive.androidsdk.ClassFactory.buildInboxApi
 import com.attentive.androidsdk.ClassFactory.buildOkHttpClient
 import com.attentive.androidsdk.ClassFactory.buildPersistentStorage
 import com.attentive.androidsdk.ClassFactory.buildVisitorService
+import com.attentive.androidsdk.internal.network.RetrofitInboxApiService
 import okhttp3.OkHttpClient
 import org.mockito.MockedStatic
 import org.mockito.Mockito
@@ -20,6 +22,11 @@ class FactoryMocks private constructor(
 ) : AutoCloseable {
     override fun close() {
         classFactoryMockedStatic.close()
+    }
+
+    /** Makes the inbox client built by `initializeInbox()` the given [api]. */
+    internal fun stubInboxApi(api: RetrofitInboxApiService) {
+        classFactoryMockedStatic.`when`<Any> { buildInboxApi(any(), any()) }.thenReturn(api)
     }
 
     companion object {
@@ -65,6 +72,9 @@ class FactoryMocks private constructor(
                     any(),
                 )
             }.thenReturn(attentiveApi)
+            classFactoryMockedStatic.`when`<Any> {
+                buildInboxApi(any(), any())
+            }.thenCallRealMethod()
 
             return FactoryMocks(
                 classFactoryMockedStatic,

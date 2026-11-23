@@ -9,6 +9,7 @@ import com.attentive.androidsdk.inbox.Style
 import com.attentive.androidsdk.internal.identity.IdentitySyncStore
 import com.attentive.androidsdk.internal.network.DeleteMessageRequest
 import com.attentive.androidsdk.internal.network.DeleteMessageResponse
+import com.attentive.androidsdk.internal.network.GetMessagesRequest
 import com.attentive.androidsdk.internal.network.InboxMessageDto
 import com.attentive.androidsdk.internal.network.InboxResponse
 import com.attentive.androidsdk.internal.network.MarkMessagesReadEntry
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import retrofit2.Response
 import com.attentive.androidsdk.internal.util.Constants
 import com.attentive.androidsdk.push.TokenProvider
@@ -78,16 +80,30 @@ class AttentiveSdkTest {
         // Set push token on the real TokenProvider singleton
         TokenProvider.getInstance().token = PUSH_TOKEN
 
-        val config = AttentiveConfig.Builder()
+        // Set _config directly to avoid AttentiveEventTracker.initialize which requires main looper
+        setConfig(buildConfig())
+        setInboxDeferredForPushToken(false)
+    }
+
+    private fun buildConfig(pushEnabled: Boolean = true): AttentiveConfig =
+        AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(AttentiveConfig.Mode.DEBUG)
             .applicationContext(mock(Application::class.java))
+            .pushEnabled(pushEnabled)
             .build()
 
-        // Set _config directly to avoid AttentiveEventTracker.initialize which requires main looper
+    private fun setConfig(config: AttentiveConfig) {
         val field = AttentiveSdk::class.java.getDeclaredField("_config")
         field.isAccessible = true
         field.set(AttentiveSdk, config)
+    }
+
+    /** Resets the pending-fetch flag, which is global state on the AttentiveSdk object. */
+    private fun setInboxDeferredForPushToken(deferred: Boolean) {
+        val field = AttentiveSdk::class.java.getDeclaredField("inboxDeferredForPushToken")
+        field.isAccessible = true
+        (field.get(AttentiveSdk) as java.util.concurrent.atomic.AtomicBoolean).set(deferred)
     }
 
     /**
@@ -128,6 +144,8 @@ class AttentiveSdkTest {
         setInboxApi(null)
         setInboxState(InboxState())
         setNextPageToken(null)
+        setInboxDeferredForPushToken(false)
+        setLastInboxFetchPushToken(null)
     }
 
     private fun setInboxApi(api: RetrofitInboxApiService?) {
@@ -706,6 +724,177 @@ class AttentiveSdkTest {
     }
 
     @Test
+    fun refreshInbox_defersRequest_whenPushTokenMissing() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = null
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+
+        runBlocking {
+            verify(inboxApi, never()).getMessages(any(), any())
+            verify(inboxApi, never()).getUnreadCount(any(), any())
+        }
+    }
+
+    @Test
+    fun refreshInboxUnreadCount_defersRequest_whenPushTokenMissing() {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = null
+
+        runBlocking { AttentiveSdk.refreshInboxUnreadCount() }
+
+        runBlocking { verify(inboxApi, never()).getUnreadCount(any(), any()) }
+    }
+
+    @Test
+    fun refreshInbox_proceedsWithoutPushToken_whenPushDisabled() {
+        setConfig(buildConfig(pushEnabled = false))
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any()))
+                .thenReturn(InboxResponse(messages = emptyList(), nextPageToken = null))
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = null
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+
+        val bodyCaptor = argumentCaptor<GetMessagesRequest>()
+        runBlocking { verify(inboxApi).getMessages(any(), bodyCaptor.capture()) }
+        assertNull(bodyCaptor.firstValue.pushToken)
+    }
+
+    @Test
+    fun watchPushTokenForInbox_runsDeferredFetch_whenTokenArrives() {
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = null
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+        runBlocking { verify(inboxApi, never()).getMessages(any(), any()) }
+
+        launchPushTokenWatcher()
+        TokenProvider.getInstance().token = PUSH_TOKEN
+
+        val bodyCaptor = argumentCaptor<GetMessagesRequest>()
+        runBlocking { verify(inboxApi, Mockito.timeout(ASYNC_TIMEOUT_MS)).getMessages(any(), bodyCaptor.capture()) }
+        assertEquals("fcm:$PUSH_TOKEN", bodyCaptor.firstValue.pushToken)
+    }
+
+    @Test
+    fun watchPushTokenForInbox_doesNotRefetch_whenNothingWasDeferred() {
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = PUSH_TOKEN
+
+        launchPushTokenWatcher()
+
+        runBlocking { verify(inboxApi, Mockito.after(SETTLE_MS).never()).getMessages(any(), any()) }
+    }
+
+    @Test
+    fun initialInboxFetch_isNotDuplicated_whenTokenAlreadyKnown() {
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = PUSH_TOKEN
+
+        runBlocking { AttentiveSdk.refreshInbox() }
+        launchPushTokenWatcher()
+
+        runBlocking { verify(inboxApi, Mockito.after(SETTLE_MS).times(1)).getMessages(any(), any()) }
+    }
+
+    @Test
+    fun watchPushTokenForInbox_refetches_whenTokenRotates() {
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        TokenProvider.getInstance().token = PUSH_TOKEN
+        runBlocking { AttentiveSdk.refreshInbox() }
+
+        launchPushTokenWatcher()
+        TokenProvider.getInstance().token = ROTATED_PUSH_TOKEN
+
+        val bodyCaptor = argumentCaptor<GetMessagesRequest>()
+        runBlocking {
+            verify(inboxApi, Mockito.timeout(ASYNC_TIMEOUT_MS).times(2)).getMessages(any(), bodyCaptor.capture())
+        }
+        assertEquals("fcm:$ROTATED_PUSH_TOKEN", bodyCaptor.lastValue.pushToken)
+    }
+
+    @Test
+    fun startInbox_defersInitialFetch_untilPushTokenArrives() {
+        val inboxApi = stubbedInboxApi()
+        factoryMocks.stubInboxApi(inboxApi)
+        TokenProvider.getInstance().token = null
+
+        AttentiveSdk.startInbox()
+
+        awaitUntil { isInboxDeferredForPushToken() }
+        runBlocking { verify(inboxApi, never()).getMessages(any(), any()) }
+
+        TokenProvider.getInstance().token = PUSH_TOKEN
+
+        val bodyCaptor = argumentCaptor<GetMessagesRequest>()
+        runBlocking { verify(inboxApi, Mockito.timeout(ASYNC_TIMEOUT_MS)).getMessages(any(), bodyCaptor.capture()) }
+        assertEquals("fcm:$PUSH_TOKEN", bodyCaptor.firstValue.pushToken)
+        runBlocking { verify(inboxApi, Mockito.after(SETTLE_MS).times(1)).getMessages(any(), any()) }
+    }
+
+    @Test
+    fun loadMoreInboxMessages_defersRequest_whenPushTokenMissing() {
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        setInboxState(InboxState(hasMoreMessages = true))
+        TokenProvider.getInstance().token = null
+
+        runBlocking { AttentiveSdk.loadMoreInboxMessages() }
+
+        runBlocking { verify(inboxApi, never()).getMessages(any(), any()) }
+        assertFalse(AttentiveSdk.inboxState.value.isLoadingMore)
+        assertTrue(isInboxDeferredForPushToken())
+    }
+
+    /** An inbox API mock that answers every fetch with an empty inbox. */
+    private fun stubbedInboxApi(): RetrofitInboxApiService {
+        val inboxApi = mock(RetrofitInboxApiService::class.java)
+        runBlocking {
+            whenever(inboxApi.getMessages(any(), any()))
+                .thenReturn(InboxResponse(messages = emptyList(), nextPageToken = null))
+            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
+        }
+        return inboxApi
+    }
+
+    /** Starts the push token watcher on the inbox scope, which tearDown cancels. */
+    private fun launchPushTokenWatcher() {
+        AttentiveSdk.inboxScope.launch { AttentiveSdk.watchPushTokenForInbox() }
+    }
+
+    private fun isInboxDeferredForPushToken(): Boolean {
+        val field = AttentiveSdk::class.java.getDeclaredField("inboxDeferredForPushToken")
+        field.isAccessible = true
+        return (field.get(AttentiveSdk) as java.util.concurrent.atomic.AtomicBoolean).get()
+    }
+
+    private fun setLastInboxFetchPushToken(token: String?) {
+        val field = AttentiveSdk::class.java.getDeclaredField("lastInboxFetchPushToken")
+        field.isAccessible = true
+        field.set(AttentiveSdk, token)
+    }
+
+    /** Polls [condition] until it holds, failing the test after [ASYNC_TIMEOUT_MS]. */
+    private fun awaitUntil(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + ASYNC_TIMEOUT_MS
+        while (!condition()) {
+            if (System.currentTimeMillis() > deadline) fail("Condition not met within ${ASYNC_TIMEOUT_MS}ms")
+            Thread.sleep(10)
+        }
+    }
+
+    @Test
     fun refreshInbox_mapsInboxMessageDtoFields() {
         val inboxApi = mock(RetrofitInboxApiService::class.java)
         runBlocking {
@@ -1095,6 +1284,9 @@ class AttentiveSdkTest {
         private const val VISITOR_ID = "visitorIdValue"
         private const val NEW_VISITOR_ID = "newVisitorIdValue"
         private const val PUSH_TOKEN = "testPushToken"
+        private const val ROTATED_PUSH_TOKEN = "rotatedPushToken"
+        private const val ASYNC_TIMEOUT_MS = 2_000L
+        private const val SETTLE_MS = 300L
         private const val EMAIL = "user@example.com"
         private const val OTHER_EMAIL = "other@example.com"
         private const val PHONE = "+15551234567"
