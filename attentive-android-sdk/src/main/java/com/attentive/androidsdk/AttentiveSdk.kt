@@ -105,6 +105,16 @@ object AttentiveSdk {
 
     private var inboxApi: RetrofitInboxApiService? = null
 
+    /** True when the config turns the inbox on: both `inboxEnabled` and `pushEnabled`. */
+    private val isInboxEnabled: Boolean
+        get() = _config?.let { it.inboxEnabled && it.pushEnabled } ?: false
+
+    /** The inbox client to send requests with, or null when the inbox isn't running. */
+    private val activeInboxApi: RetrofitInboxApiService?
+        get() = inboxApi?.takeIf { isInboxEnabled }
+
+    private var inboxDisabledWarningLogged = false
+
     private const val INBOX_BASE_URL_META_KEY = "com.attentive.sdk.INBOX_BASE_URL"
 
     private const val DEFAULT_INBOX_HOST = "https://mobile.attentivemobile.com/"
@@ -165,6 +175,15 @@ object AttentiveSdk {
     internal fun initializeInbox(): Boolean =
         synchronized(inboxInitLock) {
             if (inboxApi != null) return@synchronized false
+            if (!isInboxEnabled) {
+                if (!inboxDisabledWarningLogged) {
+                    inboxDisabledWarningLogged = true
+                    val flag = if (config.pushEnabled) "inboxEnabled(false)" else "pushEnabled(false)"
+                    Timber.w("Inbox is disabled via AttentiveConfig.Builder.$flag; no inbox requests will be sent")
+                }
+                _inboxState.value = InboxState(hasMoreMessages = false)
+                return@synchronized false
+            }
             val context = config.applicationContext
             val inboxBaseUrl = DEFAULT_INBOX_HOST
             inboxHost = inboxBaseUrl
@@ -194,8 +213,8 @@ object AttentiveSdk {
      * [inboxState]. Safe to call repeatedly (e.g., on screen resume or push receipt).
      */
     internal suspend fun refreshInbox() {
-        val inboxApi = inboxApi ?: run {
-            Timber.d("Skipping refreshInbox — inbox API not configured")
+        val inboxApi = activeInboxApi ?: run {
+            Timber.d("Skipping refreshInbox — inbox not running")
             return
         }
         if (shouldDeferInboxForPushToken()) {
@@ -251,7 +270,7 @@ object AttentiveSdk {
         inboxGeneration += 1
         nextPageToken = null
         lastInboxFetchPushToken = null
-        _inboxState.value = InboxState()
+        _inboxState.value = InboxState(hasMoreMessages = isInboxEnabled)
         Timber.d("Inbox state reset for identity change (generation=$inboxGeneration)")
     }
 
@@ -405,6 +424,11 @@ object AttentiveSdk {
                 return
             }
 
+            if (!isInboxEnabled) {
+                Timber.d("Skipping loadMoreInboxMessages — inbox is disabled")
+                return
+            }
+
             if (shouldDeferInboxForPushToken()) {
                 Timber.d("Deferring loadMoreInboxMessages — waiting for the FCM push token")
                 return
@@ -415,7 +439,7 @@ object AttentiveSdk {
 
             try {
                 val offsetToFetch = currentState.currentOffset
-                val inboxApi = inboxApi
+                val inboxApi = activeInboxApi
                 val generation = inboxGeneration
 
                 if (inboxApi != null) {
@@ -692,7 +716,7 @@ object AttentiveSdk {
         AttentivePush.getInstance().sendNotification(remoteMessage)
         val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
             .isAtLeast(Lifecycle.State.STARTED)
-        if (inboxApi != null && isForeground) {
+        if (activeInboxApi != null && isForeground) {
             CoroutineScope(Dispatchers.IO).launch { refreshInbox() }
         }
     }
@@ -1097,8 +1121,8 @@ object AttentiveSdk {
      * Refreshes the unread inbox message count from the server and updates [inboxState].
      */
     internal suspend fun refreshInboxUnreadCount() {
-        val inboxApi = inboxApi ?: run {
-            Timber.d("Skipping refreshInboxUnreadCount — inbox API not configured")
+        val inboxApi = activeInboxApi ?: run {
+            Timber.d("Skipping refreshInboxUnreadCount — inbox not running")
             return
         }
         if (shouldDeferInboxForPushToken()) {
@@ -1149,7 +1173,7 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId marked as read")
-        inboxApi?.also { api ->
+        activeInboxApi?.also { api ->
             val visitorId = config.userIdentifiers.visitorId
             if (visitorId == null) {
                 Timber.w("Skipping markRead network call — visitor id is null")
@@ -1198,7 +1222,7 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId marked as unread")
-        inboxApi?.also { api ->
+        activeInboxApi?.also { api ->
             val visitorId = config.userIdentifiers.visitorId
             if (visitorId == null) {
                 Timber.w("Skipping markUnread network call — visitor id is null")
@@ -1242,7 +1266,7 @@ object AttentiveSdk {
                 unreadCount = updatedMessages.count { !it.isRead },
             )
         Timber.d("Message $messageId deleted from inbox")
-        val inboxApi = inboxApi ?: return
+        val inboxApi = activeInboxApi ?: return
         val visitorId = config.userIdentifiers.visitorId
         if (visitorId == null) {
             Timber.w("Skipping deleteMessage network call — visitor id is null")
@@ -1265,7 +1289,7 @@ object AttentiveSdk {
      * Reports a click on an inbox message link to the backend. Fire-and-forget.
      */
     fun trackInboxClick(messageId: String, actionUrl: String? = null) {
-        val inboxApi = inboxApi ?: return
+        val inboxApi = activeInboxApi ?: return
         val visitorId = config.userIdentifiers.visitorId
         if (visitorId == null) {
             Timber.w("Skipping trackInboxClick — visitor id is null")

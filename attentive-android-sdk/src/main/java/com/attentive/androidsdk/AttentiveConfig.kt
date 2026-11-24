@@ -28,6 +28,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         builder._notificationIconBackgroundColorResource
     override var logLevel: AttentiveLogLevel? = null
     val pushEnabled: Boolean = builder._pushEnabled
+    val inboxEnabled: Boolean = builder._inboxEnabled
     val automaticallyOpensInboxDeepLinks: Boolean = builder._automaticallyOpensInboxDeepLinks
 
     private val visitorService =
@@ -190,6 +191,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         internal var okHttpClient: OkHttpClient? = null
         internal var logLevel: AttentiveLogLevel = AttentiveLogLevel.STANDARD
         internal var _pushEnabled: Boolean = true
+        internal var _inboxEnabled: Boolean = true
         internal var _automaticallyOpensInboxDeepLinks: Boolean = true
 
         internal var apiVersion: ApiVersion = ApiVersion.OLD
@@ -278,6 +280,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
          * When set to `false`, the SDK will:
          * - Not fetch the FCM token or call `/token`.
          * - Not send app-launch / direct-open events to `/mtctrl`.
+         * - Turn off the inbox, regardless of [inboxEnabled].
          *
          * Marketing opt-in / opt-out calls remain functional with `pushEnabled = false`;
          * they are sent without a push token in the payload.
@@ -290,6 +293,18 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
         fun pushEnabled(enabled: Boolean) =
             apply {
                 this._pushEnabled = enabled
+            }
+
+        /**
+         * Controls whether the inbox runs. Defaults to `true`. Contact your CSM before using
+         * the inbox.
+         *
+         * The inbox runs only when both this and [pushEnabled] are `true`. When it's off, the
+         * SDK sends no inbox requests and [AttentiveSdk.inboxState] stays empty.
+         */
+        fun inboxEnabled(enabled: Boolean) =
+            apply {
+                this._inboxEnabled = enabled
             }
 
         fun automaticallyOpensInboxDeepLinks(enabled: Boolean) =
@@ -315,7 +330,7 @@ class AttentiveConfig private constructor(builder: Builder) : AttentiveConfigInt
 
         override fun toString(): String {
             return "Builder(context=$_context, mode=$_mode, domain=$_domain, okHttpClient=$okHttpClient, " +
-                "logLevel=$logLevel, pushEnabled=$_pushEnabled, automaticallyOpensInboxDeepLinks=$_automaticallyOpensInboxDeepLinks)"
+                "logLevel=$logLevel, pushEnabled=$_pushEnabled, inboxEnabled=$_inboxEnabled, automaticallyOpensInboxDeepLinks=$_automaticallyOpensInboxDeepLinks)"
         }
     }
 

@@ -409,7 +409,7 @@ val config = AttentiveConfig.Builder()
     .build()
 ```
 
-With `pushEnabled(false)` the SDK will not receive push notifications from Attentive.
+With `pushEnabled(false)` the SDK will not receive push notifications from Attentive. It also turns off the [inbox](#step-5-optional---inbox), which needs push.
 
 The conditions for your users to receive push notifications are as follows:
 1. You have initialized the Attentive SDK with a valid domain and a notification icon resource id.
@@ -510,6 +510,19 @@ Without this, the SDK cannot detect notification taps when the app is brought fr
 ## Step 5 (optional) - Inbox
 
 > **Note:** The inbox is currently an MVP. Please contact your CSM to discuss access before enabling it in production.
+
+The inbox is on by default. To turn it off, pass `inboxEnabled(false)` to the config builder:
+
+```kotlin
+val config = AttentiveConfig.Builder()
+    .applicationContext(this)
+    .domain("YOUR_DOMAIN")
+    .mode(AttentiveConfig.Mode.PRODUCTION)
+    .inboxEnabled(false)
+    .build()
+```
+
+The inbox runs only when both `inboxEnabled` and `pushEnabled` are `true`, so `pushEnabled(false)` turns it off too. When the inbox is off, the SDK sends no inbox requests, `AttentiveInbox` shows its empty state, and `inboxState` stays empty. The SDK logs a warning that names the flag that turned it off.
 
 The SDK ships an in-app message inbox — a Jetpack Compose component (`AttentiveInbox`) that displays messages sent to the user, backed by a `StateFlow` you can also observe directly for things like a badge count on your tab bar.
 

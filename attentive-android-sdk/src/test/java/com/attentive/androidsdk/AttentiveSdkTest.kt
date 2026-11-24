@@ -85,12 +85,13 @@ class AttentiveSdkTest {
         setInboxDeferredForPushToken(false)
     }
 
-    private fun buildConfig(pushEnabled: Boolean = true): AttentiveConfig =
+    private fun buildConfig(pushEnabled: Boolean = true, inboxEnabled: Boolean = true): AttentiveConfig =
         AttentiveConfig.Builder()
             .domain(DOMAIN)
             .mode(AttentiveConfig.Mode.DEBUG)
             .applicationContext(mock(Application::class.java))
             .pushEnabled(pushEnabled)
+            .inboxEnabled(inboxEnabled)
             .build()
 
     private fun setConfig(config: AttentiveConfig) {
@@ -749,22 +750,116 @@ class AttentiveSdkTest {
     }
 
     @Test
-    fun refreshInbox_proceedsWithoutPushToken_whenPushDisabled() {
+    fun refreshInbox_makesNoRequest_whenPushDisabled() {
         setConfig(buildConfig(pushEnabled = false))
-        val inboxApi = mock(RetrofitInboxApiService::class.java)
-        runBlocking {
-            whenever(inboxApi.getMessages(any(), any()))
-                .thenReturn(InboxResponse(messages = emptyList(), nextPageToken = null))
-            whenever(inboxApi.getUnreadCount(any(), any())).thenReturn(UnreadCountResponse(0))
-        }
+        val inboxApi = stubbedInboxApi()
         setInboxApi(inboxApi)
         TokenProvider.getInstance().token = null
 
         runBlocking { AttentiveSdk.refreshInbox() }
 
-        val bodyCaptor = argumentCaptor<GetMessagesRequest>()
-        runBlocking { verify(inboxApi).getMessages(any(), bodyCaptor.capture()) }
-        assertNull(bodyCaptor.firstValue.pushToken)
+        Mockito.verifyNoInteractions(inboxApi)
+    }
+
+    @Test
+    fun inboxEnabled_defaultsToTrue() {
+        val config = AttentiveConfig.Builder()
+            .domain(DOMAIN)
+            .mode(AttentiveConfig.Mode.DEBUG)
+            .applicationContext(mock(Application::class.java))
+            .build()
+
+        assertTrue(config.inboxEnabled)
+    }
+
+    @Test
+    fun builderToString_includesInboxEnabled() {
+        val builder = AttentiveConfig.Builder()
+            .domain(DOMAIN)
+            .mode(AttentiveConfig.Mode.DEBUG)
+            .applicationContext(mock(Application::class.java))
+            .inboxEnabled(false)
+
+        assertTrue(builder.toString().contains("inboxEnabled=false"))
+    }
+
+    @Test
+    fun initializeInbox_fetches_withDefaultConfig() {
+        val inboxApi = stubbedInboxApi()
+        factoryMocks.stubInboxApi(inboxApi)
+
+        assertTrue(AttentiveSdk.initializeInbox())
+
+        runBlocking { verify(inboxApi, Mockito.timeout(ASYNC_TIMEOUT_MS)).getMessages(any(), any()) }
+    }
+
+    @Test
+    fun initializeInbox_makesNoRequestAndShowsEmptyState_whenInboxDisabled() {
+        assertInitializeInboxIsOff(buildConfig(inboxEnabled = false))
+    }
+
+    @Test
+    fun initializeInbox_makesNoRequestAndShowsEmptyState_whenPushDisabled() {
+        assertInitializeInboxIsOff(buildConfig(pushEnabled = false))
+    }
+
+    @Test
+    fun inboxCalls_makeNoRequests_whenInboxDisabled() {
+        assertInboxCallsMakeNoRequests(buildConfig(inboxEnabled = false))
+    }
+
+    @Test
+    fun inboxCalls_makeNoRequests_whenPushDisabled() {
+        assertInboxCallsMakeNoRequests(buildConfig(pushEnabled = false))
+    }
+
+    @Test
+    fun resetInboxForIdentityChange_keepsNoMoreMessages_whenInboxDisabled() {
+        setConfig(buildConfig(inboxEnabled = false))
+
+        AttentiveSdk.resetInboxForIdentityChange()
+
+        assertEquals(InboxState(hasMoreMessages = false), AttentiveSdk.inboxState.value)
+    }
+
+    private fun assertInitializeInboxIsOff(config: AttentiveConfig) {
+        setConfig(config)
+        val inboxApi = stubbedInboxApi()
+        factoryMocks.stubInboxApi(inboxApi)
+        setInboxState(InboxState(isLoadingMore = true))
+
+        assertFalse(AttentiveSdk.initializeInbox())
+        AttentiveSdk.startInbox()
+
+        Thread.sleep(SETTLE_MS)
+        Mockito.verifyNoInteractions(inboxApi)
+        assertEquals(InboxState(hasMoreMessages = false), AttentiveSdk.inboxState.value)
+    }
+
+    /**
+     * Covers the paths that can request even after setup: the ON_RESUME and push-receipt
+     * refreshes, paging, and the message mutations. An inbox client is present so only the
+     * config gates them.
+     */
+    private fun assertInboxCallsMakeNoRequests(config: AttentiveConfig) {
+        setConfig(config)
+        val inboxApi = stubbedInboxApi()
+        setInboxApi(inboxApi)
+        setInboxState(InboxState(hasMoreMessages = true))
+
+        runBlocking {
+            AttentiveSdk.refreshInbox()
+            AttentiveSdk.refreshInboxUnreadCount()
+            AttentiveSdk.loadMoreInboxMessages()
+        }
+        AttentiveSdk.markRead(MESSAGE_ID)
+        AttentiveSdk.markUnread(MESSAGE_ID)
+        AttentiveSdk.deleteMessage(MESSAGE_ID)
+        AttentiveSdk.trackInboxClick(MESSAGE_ID)
+
+        Thread.sleep(SETTLE_MS)
+        Mockito.verifyNoInteractions(inboxApi)
+        assertTrue(AttentiveSdk.inboxState.value.messages.isEmpty())
     }
 
     @Test
@@ -1287,6 +1382,7 @@ class AttentiveSdkTest {
         private const val ROTATED_PUSH_TOKEN = "rotatedPushToken"
         private const val ASYNC_TIMEOUT_MS = 2_000L
         private const val SETTLE_MS = 300L
+        private const val MESSAGE_ID = "messageId"
         private const val EMAIL = "user@example.com"
         private const val OTHER_EMAIL = "other@example.com"
         private const val PHONE = "+15551234567"
