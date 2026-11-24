@@ -154,7 +154,7 @@ Wait for an explicit answer before proceeding.
 
 ### If the user answers **no**
 
-Disable push in the config to keep the SDK from fetching FCM tokens or sending app-launch / direct-open events:
+Disable push in the config to keep the SDK from fetching FCM tokens or sending app-launch / direct-open events. This also turns off the inbox:
 
 ```kotlin
 val attentiveConfig = AttentiveConfig.Builder()
