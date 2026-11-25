@@ -82,6 +82,9 @@ roborazzi {
 
 dependencies {
     implementation project(path: ':attentive-android-sdk')
+    // Apps outside this repo would use the published artifact, at the same version as the SDK:
+    // ksp("com.attentive:attentive-screens-processor:<sdk version>")
+    ksp(project(':attentive-screens-processor'))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)

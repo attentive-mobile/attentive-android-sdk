@@ -109,7 +109,8 @@ android {
     sourceSets {
         main {
             java {
-                srcDirs 'src/main/java'
+                // src/shared is also compiled into :attentive-screens-processor
+                srcDirs 'src/main/java', 'src/shared/java'
             }
         }
         test {
@@ -143,6 +144,10 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Navigation (screen tracking). compileOnly: hosts that track screens already include it.
+    compileOnly(libs.androidx.navigation.runtime)
+    testImplementation(libs.androidx.navigation.runtime)
     androidTestImplementation(libs.androidx.test.runner)
 
     // Google Material
